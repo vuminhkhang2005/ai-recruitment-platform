@@ -48,3 +48,19 @@ logging:
     com.talentbridge.backend: DEBUG
     org.hibernate.SQL: INFO
     org.springframework.web: INFO
+
+# Application Security & JWT Properties
+app:
+  jwt:
+    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    access-token-expiration-ms: 1800000 # 30 mins
+    refresh-token-expiration-ms: 604800000 # 7 days
+    cookie-name-access: accessToken
+    cookie-name-refresh: refreshToken
+    cookie-secure: false # Set true in HTTPS production
+    same-site: Lax
+  oauth2:
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:talentbridge-google-client-id}
+    linkedin:
+      client-id: ${LINKEDIN_CLIENT_ID:talentbridge-linkedin-client-id}
