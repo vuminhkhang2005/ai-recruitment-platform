@@ -1,0 +1,185 @@
+{
+  "info": {
+    "_postman_id": "c7a8451f-d912-4cf3-b921-9922883344aa",
+    "name": "TalentBridge Recruitment Platform API",
+    "description": "Comprehensive Postman test collection for TalentBridge AI Recruitment Platform RESTful backend endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Jobs",
+      "item": [
+        {
+          "name": "1. Search Jobs (Default Pagination)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Search Jobs by Keyword (React)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs?keyword=React",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs"],
+              "query": [
+                { "key": "keyword", "value": "React" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Filter Jobs by Location City",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs?city=TP. H%E1%BB%93 Ch%C3%AD Minh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs"],
+              "query": [
+                { "key": "city", "value": "TP. Hồ Chí Minh" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Filter Jobs by Salary Range (30M - 60M)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs?minSalary=30000000&maxSalary=60000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs"],
+              "query": [
+                { "key": "minSalary", "value": "30000000" },
+                { "key": "maxSalary", "value": "60000000" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5. Get Job Details by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs", "{{jobId}}"]
+            }
+          }
+        },
+        {
+          "name": "6. Get Featured Jobs (Homepage)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs/featured",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs", "featured"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Companies",
+      "item": [
+        {
+          "name": "1. List Top Hiring Companies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/companies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "companies"]
+            }
+          }
+        },
+        {
+          "name": "2. Get Company by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/companies/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "companies", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "1. List All Career Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Applications",
+      "item": [
+        {
+          "name": "1. Quick Apply to Job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobId\": 1,\n  \"fullName\": \"Vũ Minh Khang\",\n  \"email\": \"khang.vu@example.com\",\n  \"phone\": \"0987654321\",\n  \"coverLetter\": \"Kính gửi Nhà tuyển dụng, tôi rất ấn tượng với dự án công nghệ của quý công ty và mong muốn được cống hiến năng lực của mình.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/applications/quick-apply",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "applications", "quick-apply"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "jobId",
+      "value": "1",
+      "type": "string"
+    }
+  ]
+}
