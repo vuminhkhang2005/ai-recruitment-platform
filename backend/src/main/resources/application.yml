@@ -1,0 +1,50 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: talentbridge-backend
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/ai_recruitment_db?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: root
+    password: ${DB_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 30000
+      pool-name: TalentBridgeHikariCP
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+# SpringDoc OpenAPI / Swagger 3.0 Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    try-it-out-enabled: true
+    display-request-duration: true
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.talentbridge.backend: DEBUG
+    org.hibernate.SQL: INFO
+    org.springframework.web: INFO
