@@ -310,8 +310,14 @@ export function App() {
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans flex flex-col selection:bg-emerald-100 selection:text-emerald-900 transition-colors duration-300">
       
-      {/* Live Backend Connection Indicator */}
-      <div className="fixed bottom-4 left-4 z-40 hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full text-xs font-medium backdrop-blur-md border shadow-soft-sm bg-white/95 dark:bg-slate-900/95 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 pointer-events-none select-none">
+      {/* Live Backend Connection Indicator (Clickable to open Swagger UI) */}
+      <a 
+        href="http://localhost:8080/swagger-ui/index.html" 
+        target="_blank" 
+        rel="noreferrer"
+        title="Bấm để mở tài liệu API Swagger UI"
+        className="fixed bottom-4 left-4 z-40 hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full text-xs font-medium backdrop-blur-md border shadow-soft-sm bg-white/95 dark:bg-slate-900/95 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:shadow-soft-md transition-all cursor-pointer group"
+      >
         <span className={`w-2 h-2 rounded-full ${backendStatus === 'online' ? 'bg-emerald-500 animate-pulse' : backendStatus === 'checking' ? 'bg-amber-500 animate-spin' : 'bg-slate-400'}`}></span>
         <span>
           {backendStatus === 'online' 
@@ -320,7 +326,8 @@ export function App() {
             ? 'Đang kiểm tra kết nối Backend...' 
             : 'Backend: Offline (Dùng Fallback Dataset)'}
         </span>
-      </div>
+        <span className="text-[10px] text-slate-400 group-hover:text-emerald-500 transition-colors">↗ Swagger UI</span>
+      </a>
 
       {/* Toast Notification */}
       {toastMessage && (

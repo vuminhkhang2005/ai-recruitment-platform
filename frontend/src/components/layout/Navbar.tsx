@@ -224,6 +224,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <span>{language === 'vi' ? 'Lộ trình' : 'Roadmap'}</span>
             </button>
+            <a 
+              href="http://localhost:8080/swagger-ui/index.html"
+              target="_blank"
+              rel="noreferrer"
+              title="Mở tài liệu API Swagger UI (Spring Boot)"
+              className="px-1.5 xl:px-2.5 py-1.5 text-xs xl:text-sm font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 inline-flex items-center gap-1"
+            >
+              <span>Swagger UI</span>
+              <span className="text-[10px] text-emerald-500 font-extrabold px-1.5 py-0.5 bg-emerald-50 dark:bg-emerald-950/80 rounded border border-emerald-300 dark:border-emerald-700">API</span>
+            </a>
           </nav>
 
           {/* 3. Right Action Cluster */}
