@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.1" xmlns:uml="http://schema.omg.org/spec/UML/2.1" xmlns:xmi="http://schema.omg.org/spec/XMI/2.1">
+  <xmi:Documentation exporter="Enterprise Architect" exporterVersion="6.5"/>
+  <uml:Model xmi:type="uml:Model" xmi:id="EAID_MODEL_ROOT" name="AI_TalentBridge_UseCases">
+    
+    <!-- ACTORS -->
+    <packagedElement xmi:type="uml:Actor" xmi:id="ACTOR_CANDIDATE" name="Ứng viên (Candidate)"/>
+    <packagedElement xmi:type="uml:Actor" xmi:id="ACTOR_RECRUITER" name="Nhà tuyển dụng (Recruiter)"/>
+    <packagedElement xmi:type="uml:Actor" xmi:id="ACTOR_HIRING_MGR" name="Hiring Manager"/>
+    <packagedElement xmi:type="uml:Actor" xmi:id="ACTOR_ADMIN" name="Quản trị viên (Admin)"/>
+    <packagedElement xmi:type="uml:Actor" xmi:id="ACTOR_AI" name="AI Service (Secondary)"/>
+
+    <!-- PACKAGE: PHAN HE UNG VIEN -->
+    <packagedElement xmi:type="uml:Package" xmi:id="PKG_CANDIDATE" name="Phân hệ Dành cho Ứng viên">
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_CAN_01" name="UC-CAN-01: Quản lý Hồ sơ Cá nhân"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_CAN_02" name="UC-CAN-02: Quản lý &amp; Tải lên CV">
+        <include xmi:type="uml:Include" xmi:id="INC_02_03" addition="UC_CAN_03"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_CAN_03" name="UC-CAN-03: Bóc tách CV bằng AI">
+        <include xmi:type="uml:Include" xmi:id="INC_03_04" addition="UC_CAN_04"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_CAN_04" name="UC-CAN-04: Đối soát &amp; Sửa thông tin AI"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_CAN_05" name="UC-CAN-05: Tìm kiếm Việc làm Hybrid"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_CAN_06" name="UC-CAN-06: Xem Điểm &amp; Giải thích Phù hợp">
+        <extend xmi:type="uml:Extend" xmi:id="EXT_05_06" extendedCase="UC_CAN_05"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_CAN_07" name="UC-CAN-07: Nộp Đơn Ứng tuyển">
+        <extend xmi:type="uml:Extend" xmi:id="EXT_06_07" extendedCase="UC_CAN_06"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_CAN_08" name="UC-CAN-08: Phân tích Khoảng cách Kỹ năng">
+        <extend xmi:type="uml:Extend" xmi:id="EXT_06_08" extendedCase="UC_CAN_06"/>
+        <include xmi:type="uml:Include" xmi:id="INC_08_09" addition="UC_CAN_09"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_CAN_09" name="UC-CAN-09: Nhận Lộ trình Học tập"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_CAN_10" name="UC-CAN-10: Chat với Trợ lý AI"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_CAN_11" name="UC-CAN-11: Quản lý Lịch Phỏng vấn"/>
+    </packagedElement>
+
+    <!-- PACKAGE: PHAN HE NHA TUYEN DUNG -->
+    <packagedElement xmi:type="uml:Package" xmi:id="PKG_RECRUITER" name="Phân hệ Dành cho Nhà tuyển dụng">
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_REC_01" name="UC-REC-01: Quản lý Hồ sơ Doanh nghiệp"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_REC_02" name="UC-REC-02: Đăng Tin Tuyển dụng">
+        <include xmi:type="uml:Include" xmi:id="INC_R02_R03" addition="UC_REC_03"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_REC_03" name="UC-REC-03: Phân tích JD bằng AI"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_REC_04" name="UC-REC-04: Quản lý Pipeline ATS Kanban">
+        <include xmi:type="uml:Include" xmi:id="INC_R04_R05" addition="UC_REC_05"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_REC_05" name="UC-REC-05: Xem Điểm &amp; Xếp hạng AI"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_REC_06" name="UC-REC-06: Tìm kiếm Hồ sơ Nhân tài"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_REC_07" name="UC-REC-07: Lên Lịch Phỏng vấn">
+        <extend xmi:type="uml:Extend" xmi:id="EXT_R04_R07" extendedCase="UC_REC_04"/>
+        <include xmi:type="uml:Include" xmi:id="INC_R07_R09" addition="UC_REC_09"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_REC_08" name="UC-REC-08: Chấm điểm Rubrics">
+        <extend xmi:type="uml:Extend" xmi:id="EXT_R07_R08" extendedCase="UC_REC_07"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_REC_09" name="UC-REC-09: Gửi Email Tuyển dụng"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="UC_REC_10" name="UC-REC-10: Xem Báo cáo Phễu Tuyển dụng"/>
+    </packagedElement>
+
+    <!-- ASSOCIATIONS: CANDIDATE -->
+    <packagedElement xmi:type="uml:Association" xmi:id="ASSOC_C_01">
+      <memberEnd xmi:idref="ACTOR_CANDIDATE"/>
+      <memberEnd xmi:idref="UC_CAN_01"/>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Association" xmi:id="ASSOC_C_02">
+      <memberEnd xmi:idref="ACTOR_CANDIDATE"/>
+      <memberEnd xmi:idref="UC_CAN_02"/>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Association" xmi:id="ASSOC_C_05">
+      <memberEnd xmi:idref="ACTOR_CANDIDATE"/>
+      <memberEnd xmi:idref="UC_CAN_05"/>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Association" xmi:id="ASSOC_C_10">
+      <memberEnd xmi:idref="ACTOR_CANDIDATE"/>
+      <memberEnd xmi:idref="UC_CAN_10"/>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Association" xmi:id="ASSOC_C_11">
+      <memberEnd xmi:idref="ACTOR_CANDIDATE"/>
+      <memberEnd xmi:idref="UC_CAN_11"/>
+    </packagedElement>
+
+    <!-- ASSOCIATIONS: RECRUITER -->
+    <packagedElement xmi:type="uml:Association" xmi:id="ASSOC_R_01">
+      <memberEnd xmi:idref="ACTOR_RECRUITER"/>
+      <memberEnd xmi:idref="UC_REC_01"/>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Association" xmi:id="ASSOC_R_02">
+      <memberEnd xmi:idref="ACTOR_RECRUITER"/>
+      <memberEnd xmi:idref="UC_REC_02"/>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Association" xmi:id="ASSOC_R_04">
+      <memberEnd xmi:idref="ACTOR_RECRUITER"/>
+      <memberEnd xmi:idref="UC_REC_04"/>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Association" xmi:id="ASSOC_R_06">
+      <memberEnd xmi:idref="ACTOR_RECRUITER"/>
+      <memberEnd xmi:idref="UC_REC_06"/>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Association" xmi:id="ASSOC_R_10">
+      <memberEnd xmi:idref="ACTOR_RECRUITER"/>
+      <memberEnd xmi:idref="UC_REC_10"/>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Association" xmi:id="ASSOC_HM_04">
+      <memberEnd xmi:idref="ACTOR_HIRING_MGR"/>
+      <memberEnd xmi:idref="UC_REC_04"/>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Association" xmi:id="ASSOC_HM_08">
+      <memberEnd xmi:idref="ACTOR_HIRING_MGR"/>
+      <memberEnd xmi:idref="UC_REC_08"/>
+    </packagedElement>
+
+  </uml:Model>
+</xmi:XMI>
