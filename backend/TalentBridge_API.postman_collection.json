@@ -1,13 +1,183 @@
 {
   "info": {
     "_postman_id": "c7a8451f-d912-4cf3-b921-9922883344aa",
-    "name": "TalentBridge Recruitment Platform API",
-    "description": "Comprehensive Postman test collection for TalentBridge AI Recruitment Platform RESTful backend endpoints.",
+    "name": "TalentBridge AI Recruitment Platform RESTful API",
+    "description": "Comprehensive Postman test collection for TalentBridge AI Recruitment Platform RESTful backend endpoints including Auth (JWT, HttpOnly Cookie, OAuth2), Jobs CRUD, Applications CRUD, Companies CRUD, and User Profile.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "Jobs",
+      "name": "1. Authentication & Security",
+      "item": [
+        {
+          "name": "1. Register Candidate",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"candidate.test@talentbridge.vn\",\n  \"password\": \"Candidate@123\",\n  \"fullName\": \"Trần Văn Ứng Viên\",\n  \"phone\": \"0912345678\",\n  \"role\": \"CANDIDATE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "2. Register Recruiter",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"recruiter.test@talentbridge.vn\",\n  \"password\": \"Recruiter@123\",\n  \"fullName\": \"Lê Thị Tuyển Dụng\",\n  \"phone\": \"0988776655\",\n  \"role\": \"RECRUITER\",\n  \"companyId\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "3. Login Candidate (Sets HttpOnly Cookies & Bearer Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.accessToken) {",
+                  "    pm.environment.set(\"candidateToken\", jsonData.data.accessToken);",
+                  "    pm.environment.set(\"refreshToken\", jsonData.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"candidate@talentbridge.vn\",\n  \"password\": \"Candidate@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "4. Login Recruiter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.accessToken) {",
+                  "    pm.environment.set(\"recruiterToken\", jsonData.data.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"recruiter@talentbridge.vn\",\n  \"password\": \"Recruiter@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "5. Refresh Access Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "6. Get Current Authenticated User (/auth/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{candidateToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "7. OAuth2 Login (Google / LinkedIn)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idToken\": \"google-mock-id-token-abc-123\",\n  \"email\": \"google.user@example.com\",\n  \"fullName\": \"Google User Test\",\n  \"avatarUrl\": \"https://lh3.googleusercontent.com/a/default-user\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/oauth2/google",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "oauth2", "google"]
+            }
+          }
+        },
+        {
+          "name": "8. Logout (Revoke Token & Clear Cookies)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{candidateToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Jobs Management",
       "item": [
         {
           "name": "1. Search Jobs (Default Pagination)",
@@ -26,65 +196,35 @@
           }
         },
         {
-          "name": "2. Search Jobs by Keyword (React)",
+          "name": "2. Search Jobs by Keyword & City",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/jobs?keyword=React",
+              "raw": "{{baseUrl}}/api/v1/jobs?keyword=Senior&city=TP. Hồ Chí Minh",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "jobs"],
               "query": [
-                { "key": "keyword", "value": "React" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "3. Filter Jobs by Location City",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/jobs?city=TP. H%E1%BB%93 Ch%C3%AD Minh",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "jobs"],
-              "query": [
+                { "key": "keyword", "value": "Senior" },
                 { "key": "city", "value": "TP. Hồ Chí Minh" }
               ]
             }
           }
         },
         {
-          "name": "4. Filter Jobs by Salary Range (30M - 60M)",
+          "name": "3. Get Job Details by ID",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/jobs?minSalary=30000000&maxSalary=60000000",
+              "raw": "{{baseUrl}}/api/v1/jobs/1",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "jobs"],
-              "query": [
-                { "key": "minSalary", "value": "30000000" },
-                { "key": "maxSalary", "value": "60000000" }
-              ]
+              "path": ["api", "v1", "jobs", "1"]
             }
           }
         },
         {
-          "name": "5. Get Job Details by ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/jobs/{{jobId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "jobs", "{{jobId}}"]
-            }
-          }
-        },
-        {
-          "name": "6. Get Featured Jobs (Homepage)",
+          "name": "4. Get Featured Recommended Jobs",
           "request": {
             "method": "GET",
             "header": [],
@@ -94,11 +234,185 @@
               "path": ["api", "v1", "jobs", "featured"]
             }
           }
+        },
+        {
+          "name": "5. Create Job (Recruiter Only - 201 Created)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{recruiterToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Principal AI Engineer (LLM & Agentic AI)\",\n  \"companyId\": 2,\n  \"description\": \"Xây dựng hệ thống agentic AI và mô hình ngôn ngữ lớn tại TalentBridge.\",\n  \"requirements\": \"Tối thiểu 5 năm kinh nghiệm về Python, PyTorch, LangChain, Transformers.\",\n  \"benefits\": \"Lương tháng 13, thưởng hiệu suất, cổ phiếu ESOP, bảo hiểm cao cấp.\",\n  \"jobType\": \"HYBRID\",\n  \"expLevel\": \"LEAD\",\n  \"minSalary\": 60000000,\n  \"maxSalary\": 100000000,\n  \"currency\": \"VND\",\n  \"locationCity\": \"TP. Hồ Chí Minh\",\n  \"locationAddress\": \"Z06 Đường số 13, KCX Tân Thuận, Quận 7\",\n  \"skills\": [\"Python\", \"PyTorch\", \"LLM\", \"Docker\", \"Kubernetes\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs"]
+            }
+          }
+        },
+        {
+          "name": "6. Update Job (Recruiter Only - 200 OK)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{recruiterToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Principal AI & MLOps Architect\",\n  \"minSalary\": 70000000,\n  \"maxSalary\": 120000000,\n  \"status\": \"PUBLISHED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs", "1"]
+            }
+          }
+        },
+        {
+          "name": "7. Change Job Status (Recruiter / Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{recruiterToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CLOSED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs/1/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs", "1", "status"]
+            }
+          }
+        },
+        {
+          "name": "8. Delete Job (Recruiter / Admin - 204 No Content)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{recruiterToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs", "1"]
+            }
+          }
         }
       ]
     },
     {
-      "name": "Companies",
+      "name": "3. Applications Management",
+      "item": [
+        {
+          "name": "1. Quick Apply (Public/Demo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobId\": 2,\n  \"fullName\": \"Vũ Minh Khang\",\n  \"email\": \"khang.vu@example.com\",\n  \"phone\": \"0987654321\",\n  \"coverLetter\": \"Tôi rất hào hứng được ứng tuyển vào vị trí này.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/applications/quick-apply",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "applications", "quick-apply"]
+            }
+          }
+        },
+        {
+          "name": "2. Submit Application (Candidate Role - 201 Created)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{candidateToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobId\": 3,\n  \"coverLetter\": \"Kính gửi quý công ty, tôi có 3 năm kinh nghiệm phát triển phần mềm với Java và React.\",\n  \"cvId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/applications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "applications"]
+            }
+          }
+        },
+        {
+          "name": "3. Get My Submitted Applications (Candidate)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{candidateToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/applications/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "applications", "me"]
+            }
+          }
+        },
+        {
+          "name": "4. Get Applications for Job (Recruiter Only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{recruiterToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/applications/job/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "applications", "job", "1"]
+            }
+          }
+        },
+        {
+          "name": "5. Update Application Stage (Recruiter Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{recruiterToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentStage\": \"INTERVIEW\",\n  \"rejectionReason\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/applications/1/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "applications", "1", "status"]
+            }
+          }
+        },
+        {
+          "name": "6. Withdraw Application (Candidate Only - 204)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{candidateToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/applications/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "applications", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Companies Management",
       "item": [
         {
           "name": "1. List Top Hiring Companies",
@@ -123,11 +437,80 @@
               "path": ["api", "v1", "companies", "1"]
             }
           }
+        },
+        {
+          "name": "3. Get Company Job Openings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/companies/2/jobs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "companies", "2", "jobs"]
+            }
+          }
+        },
+        {
+          "name": "4. Create Company (Recruiter / Admin - 201 Created)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{recruiterToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"MoMo - M_Service\",\n  \"logoUrl\": \"/logos/momo.svg\",\n  \"website\": \"https://momo.vn\",\n  \"industry\": \"Fintech & Payments\",\n  \"companySize\": \"1000-2000 nhân viên\",\n  \"taxCode\": \"0309998888\",\n  \"city\": \"TP. Hồ Chí Minh\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/companies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "companies"]
+            }
+          }
         }
       ]
     },
     {
-      "name": "Categories",
+      "name": "5. User Profile Management",
+      "item": [
+        {
+          "name": "1. Get My Profile (/users/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{candidateToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "me"]
+            }
+          }
+        },
+        {
+          "name": "2. Update My Profile (/users/me)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{candidateToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyễn Văn An (Fullstack Specialist)\",\n  \"phone\": \"0909998877\",\n  \"headline\": \"Senior Fullstack Engineer & System Architect\",\n  \"city\": \"TP. Hồ Chí Minh\",\n  \"isOpenToWork\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Job Categories",
       "item": [
         {
           "name": "1. List All Career Categories",
@@ -142,32 +525,6 @@
           }
         }
       ]
-    },
-    {
-      "name": "Applications",
-      "item": [
-        {
-          "name": "1. Quick Apply to Job",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"jobId\": 1,\n  \"fullName\": \"Vũ Minh Khang\",\n  \"email\": \"khang.vu@example.com\",\n  \"phone\": \"0987654321\",\n  \"coverLetter\": \"Kính gửi Nhà tuyển dụng, tôi rất ấn tượng với dự án công nghệ của quý công ty và mong muốn được cống hiến năng lực của mình.\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/applications/quick-apply",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "applications", "quick-apply"]
-            }
-          }
-        }
-      ]
     }
   ],
   "variable": [
@@ -177,8 +534,18 @@
       "type": "string"
     },
     {
-      "key": "jobId",
-      "value": "1",
+      "key": "candidateToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "recruiterToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
       "type": "string"
     }
   ]

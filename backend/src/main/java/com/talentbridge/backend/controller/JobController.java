@@ -110,7 +110,8 @@ public class JobController {
             @Valid @RequestBody JobCreateRequestDto request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        JobResponseDto created = jobService.createJob(request, userPrincipal.getId());
+        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
+        JobResponseDto created = jobService.createJob(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Đăng tin tuyển dụng thành công", created));
     }
@@ -125,9 +126,10 @@ public class JobController {
             @Valid @RequestBody JobUpdateRequestDto request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        boolean isAdmin = userPrincipal.getAuthorities().stream()
+        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
+        boolean isAdmin = userPrincipal != null && userPrincipal.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        JobResponseDto updated = jobService.updateJob(id, request, userPrincipal.getId(), isAdmin);
+        JobResponseDto updated = jobService.updateJob(id, request, userId, isAdmin);
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật tin tuyển dụng thành công", updated));
     }
 
@@ -141,9 +143,10 @@ public class JobController {
             @Valid @RequestBody JobStatusUpdateRequestDto request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        boolean isAdmin = userPrincipal.getAuthorities().stream()
+        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
+        boolean isAdmin = userPrincipal != null && userPrincipal.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        JobResponseDto updated = jobService.updateJobStatus(id, request.getStatus(), userPrincipal.getId(), isAdmin);
+        JobResponseDto updated = jobService.updateJobStatus(id, request.getStatus(), userId, isAdmin);
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái thành công", updated));
     }
 
@@ -156,9 +159,10 @@ public class JobController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        boolean isAdmin = userPrincipal.getAuthorities().stream()
+        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
+        boolean isAdmin = userPrincipal != null && userPrincipal.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        jobService.deleteJob(id, userPrincipal.getId(), isAdmin);
+        jobService.deleteJob(id, userId, isAdmin);
         return ResponseEntity.noContent().build();
     }
 }

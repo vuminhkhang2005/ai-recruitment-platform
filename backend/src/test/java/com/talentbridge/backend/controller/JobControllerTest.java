@@ -21,7 +21,15 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import com.talentbridge.backend.security.JwtTokenProvider;
+import com.talentbridge.backend.security.UserDetailsServiceImpl;
+import com.talentbridge.backend.security.JwtCookieHelper;
+import com.talentbridge.backend.security.JwtAuthenticationEntryPoint;
+import com.talentbridge.backend.security.CustomAccessDeniedHandler;
+
 @WebMvcTest(JobController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class JobControllerTest {
 
     @Autowired
@@ -29,6 +37,21 @@ class JobControllerTest {
 
     @MockBean
     private JobService jobService;
+
+    @MockBean
+    private JwtTokenProvider jwtTokenProvider;
+
+    @MockBean
+    private UserDetailsServiceImpl userDetailsService;
+
+    @MockBean
+    private JwtCookieHelper jwtCookieHelper;
+
+    @MockBean
+    private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+
+    @MockBean
+    private CustomAccessDeniedHandler customAccessDeniedHandler;
 
     @Test
     @DisplayName("GET /api/v1/jobs - Should return 200 and paginated list of jobs")

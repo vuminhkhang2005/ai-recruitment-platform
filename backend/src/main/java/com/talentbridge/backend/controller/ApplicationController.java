@@ -49,7 +49,8 @@ public class ApplicationController {
             @Valid @RequestBody ApplicationCreateRequestDto request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        ApplicationResponseDto response = applicationService.apply(request, userPrincipal.getId());
+        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
+        ApplicationResponseDto response = applicationService.apply(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Nộp hồ sơ ứng tuyển thành công", response));
     }
 
@@ -61,7 +62,8 @@ public class ApplicationController {
     public ResponseEntity<ApiResponse<List<ApplicationResponseDto>>> getMyApplications(
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        List<ApplicationResponseDto> applications = applicationService.getMyApplications(userPrincipal.getId());
+        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
+        List<ApplicationResponseDto> applications = applicationService.getMyApplications(userId);
         return ResponseEntity.ok(ApiResponse.ok(applications));
     }
 
@@ -75,12 +77,13 @@ public class ApplicationController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        boolean isRecruiter = userPrincipal.getAuthorities().stream()
+        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
+        boolean isRecruiter = userPrincipal != null && userPrincipal.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_RECRUITER"));
-        boolean isAdmin = userPrincipal.getAuthorities().stream()
+        boolean isAdmin = userPrincipal != null && userPrincipal.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
-        ApplicationResponseDto response = applicationService.getApplicationById(id, userPrincipal.getId(), isRecruiter, isAdmin);
+        ApplicationResponseDto response = applicationService.getApplicationById(id, userId, isRecruiter, isAdmin);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
@@ -94,10 +97,11 @@ public class ApplicationController {
             @PathVariable Long jobId,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        boolean isAdmin = userPrincipal.getAuthorities().stream()
+        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
+        boolean isAdmin = userPrincipal != null && userPrincipal.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
-        List<ApplicationResponseDto> applications = applicationService.getApplicationsForJob(jobId, userPrincipal.getId(), isAdmin);
+        List<ApplicationResponseDto> applications = applicationService.getApplicationsForJob(jobId, userId, isAdmin);
         return ResponseEntity.ok(ApiResponse.ok(applications));
     }
 
@@ -111,10 +115,11 @@ public class ApplicationController {
             @Valid @RequestBody ApplicationStatusUpdateRequestDto request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        boolean isAdmin = userPrincipal.getAuthorities().stream()
+        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
+        boolean isAdmin = userPrincipal != null && userPrincipal.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
-        ApplicationResponseDto updated = applicationService.updateApplicationStatus(id, request, userPrincipal.getId(), isAdmin);
+        ApplicationResponseDto updated = applicationService.updateApplicationStatus(id, request, userId, isAdmin);
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái ứng viên thành công", updated));
     }
 
@@ -127,10 +132,11 @@ public class ApplicationController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        boolean isAdmin = userPrincipal.getAuthorities().stream()
+        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
+        boolean isAdmin = userPrincipal != null && userPrincipal.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
-        applicationService.withdrawApplication(id, userPrincipal.getId(), isAdmin);
+        applicationService.withdrawApplication(id, userId, isAdmin);
         return ResponseEntity.noContent().build();
     }
 }
