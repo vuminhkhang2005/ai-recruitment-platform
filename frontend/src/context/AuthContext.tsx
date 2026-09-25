@@ -92,7 +92,7 @@ interface AuthContextType {
   logout: () => void;
   toggleSaveJob: (jobId: string) => boolean;
   isJobSaved: (jobId: string) => boolean;
-  applyJob: (job: { id: string; title: string; company: string }) => boolean;
+  applyJob: (job: { id: string; title: string; company: string }, resumeUrl?: string, coverLetter?: string) => boolean;
   isJobApplied: (jobId: string) => boolean;
   switchRole: () => void;
   updateProfile: (updated: Partial<User>) => void;

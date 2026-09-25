@@ -17,9 +17,14 @@ import { SavedJobsModal } from './components/profile/SavedJobsModal';
 import { AppliedJobsModal } from './components/profile/AppliedJobsModal';
 import { PostJobModal } from './components/home/PostJobModal';
 import { MOCK_JOBS, type Job } from './data/mockData';
-import { CheckCircle2, Sparkles, X } from 'lucide-react';
+import { CheckCircle2, Sparkles, X, Database } from 'lucide-react';
 import { useLanguage } from './i18n/LanguageContext';
 import { useAuth } from './context/AuthContext';
+import { 
+  fetchJobsFromApi, 
+  submitQuickApplyToApi, 
+  checkBackendHealth 
+} from './services/api';
 
 export function App() {
   const { t, language } = useLanguage();
@@ -38,8 +43,28 @@ export function App() {
       e.preventDefault();
     };
 
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash === '#profile') {
+        setCurrentView('profile');
+      } else if (hash === '#jobs' || hash === '#search') {
+        setCurrentView('jobs');
+      } else if (hash === '#career-ai' || hash === '#scanner') {
+        setCurrentView('career-ai');
+        setCareerAiTab('scanner');
+      } else if (hash === '#roadmap') {
+        setCurrentView('career-ai');
+        setCareerAiTab('roadmap');
+      } else if (!hash || hash === '#home') {
+        setCurrentView('home');
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+
     document.addEventListener('selectstart', handleSelectStart);
     return () => {
+      window.removeEventListener('hashchange', handleHashChange);
       document.removeEventListener('selectstart', handleSelectStart);
     };
   }, []);
@@ -124,6 +149,39 @@ export function App() {
     category: 'All'
   });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [backendTotalJobs, setBackendTotalJobs] = useState<number>(0);
+
+  // Initialize and synchronize with Spring Boot RESTful API (MySQL)
+  useEffect(() => {
+    let active = true;
+
+    async function syncBackendData() {
+      try {
+        const isOnline = await checkBackendHealth();
+        if (!active) return;
+        setBackendStatus(isOnline ? 'online' : 'offline');
+
+        if (isOnline) {
+          const result = await fetchJobsFromApi({ size: 50 });
+          if (!active) return;
+          if (result && result.jobs.length > 0) {
+            setJobsList(result.jobs);
+            setBackendTotalJobs(result.totalElements);
+            console.log(`[TalentBridge] Successfully loaded ${result.jobs.length} live jobs from Spring Boot MySQL backend!`);
+          }
+        }
+      } catch (err) {
+        console.warn('[TalentBridge] Could not sync with backend, staying on fallback dataset:', err);
+        if (active) setBackendStatus('offline');
+      }
+    }
+
+    syncBackendData();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -225,18 +283,45 @@ export function App() {
     );
   };
 
-  const handleQuickApply = (job: Job) => {
+  const handleQuickApply = async (job: Job) => {
     applyJob({ id: job.id, title: job.title, company: job.company });
-    showToast(
-      language === 'vi'
-        ? `Ứng tuyển nhanh thành công vào vị trí ${job.title} tại ${job.company}!`
-        : `Quick application submitted for ${job.title} at ${job.company}!`
-    );
+
+    const result = await submitQuickApplyToApi({
+      jobId: job.id,
+      candidateProfileId: 1,
+      fullName: 'Vũ Minh Khang',
+      email: '23110238@student.hcmute.edu.vn',
+      phone: '0901234567',
+      resumeUrl: 'https://s3.ap-southeast-1.amazonaws.com/talentbridge/cvs/resume_vuminhkhang.pdf',
+      coverLetter: `Ứng tuyển nhanh vào vị trí ${job.title} tại ${job.company}`
+    });
+
+    if (result.success) {
+      showToast(
+        language === 'vi'
+          ? `🎉 ${result.message || `Ứng tuyển thành công vào vị trí ${job.title} tại ${job.company}!`}`
+          : `🎉 Quick application submitted for ${job.title} at ${job.company}!`
+      );
+    } else {
+      showToast(`⚠️ ${result.message}`);
+    }
   };
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans flex flex-col selection:bg-emerald-100 selection:text-emerald-900 transition-colors duration-300">
       
+      {/* Live Backend Connection Indicator */}
+      <div className="fixed bottom-4 left-4 z-40 hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full text-xs font-medium backdrop-blur-md border shadow-soft-sm bg-white/95 dark:bg-slate-900/95 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 pointer-events-none select-none">
+        <span className={`w-2 h-2 rounded-full ${backendStatus === 'online' ? 'bg-emerald-500 animate-pulse' : backendStatus === 'checking' ? 'bg-amber-500 animate-spin' : 'bg-slate-400'}`}></span>
+        <span>
+          {backendStatus === 'online' 
+            ? `Backend API: Online (${backendTotalJobs || jobsList.length} jobs in MySQL)` 
+            : backendStatus === 'checking' 
+            ? 'Đang kiểm tra kết nối Backend...' 
+            : 'Backend: Offline (Dùng Fallback Dataset)'}
+        </span>
+      </div>
+
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-soft-2xl border border-slate-700 animate-slide-up">
