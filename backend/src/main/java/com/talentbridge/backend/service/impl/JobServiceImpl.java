@@ -1,14 +1,22 @@
 package com.talentbridge.backend.service.impl;
 
 import com.talentbridge.backend.common.PageResponse;
+import com.talentbridge.backend.dto.JobCreateRequestDto;
 import com.talentbridge.backend.dto.JobFilterRequestDto;
 import com.talentbridge.backend.dto.JobResponseDto;
+import com.talentbridge.backend.dto.JobUpdateRequestDto;
 import com.talentbridge.backend.entity.Company;
 import com.talentbridge.backend.entity.Job;
 import com.talentbridge.backend.entity.JobSkill;
+import com.talentbridge.backend.entity.RecruiterProfile;
+import com.talentbridge.backend.entity.Skill;
+import com.talentbridge.backend.exception.BadRequestException;
 import com.talentbridge.backend.exception.ResourceNotFoundException;
+import com.talentbridge.backend.repository.CompanyRepository;
 import com.talentbridge.backend.repository.JobRepository;
 import com.talentbridge.backend.repository.JobSkillRepository;
+import com.talentbridge.backend.repository.RecruiterProfileRepository;
+import com.talentbridge.backend.repository.SkillRepository;
 import com.talentbridge.backend.service.JobService;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
@@ -19,15 +27,21 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.Normalizer;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +49,12 @@ public class JobServiceImpl implements JobService {
 
     private final JobRepository jobRepository;
     private final JobSkillRepository jobSkillRepository;
+    private final CompanyRepository companyRepository;
+    private final RecruiterProfileRepository recruiterProfileRepository;
+    private final SkillRepository skillRepository;
+
+    private static final Pattern NONLATIN = Pattern.compile("[^\\w-]");
+    private static final Pattern WHITESPACE = Pattern.compile("[\\s]");
 
     @Override
     @Transactional(readOnly = true)
@@ -99,6 +119,188 @@ public class JobServiceImpl implements JobService {
         return jobRepository.findTop6ByStatusOrderByCreatedAtDesc("PUBLISHED").stream()
                 .map(this::mapToDto)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public JobResponseDto createJob(JobCreateRequestDto request, Long recruiterUserId) {
+        Long targetCompanyId = request.getCompanyId();
+        if (targetCompanyId == null) {
+            targetCompanyId = recruiterProfileRepository.findByUserId(recruiterUserId)
+                    .map(RecruiterProfile::getCompanyId)
+                    .orElse(2L); // Default fallback VNG
+        }
+
+        final Long resolvedCompanyId = targetCompanyId;
+        Company company = companyRepository.findById(resolvedCompanyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Company not found with ID: " + resolvedCompanyId));
+
+        String slug = toSlug(request.getTitle()) + "-" + UUID.randomUUID().toString().substring(0, 8);
+
+        Job job = Job.builder()
+                .uuid(UUID.randomUUID().toString())
+                .company(company)
+                .recruiterId(recruiterUserId)
+                .title(request.getTitle().trim())
+                .slug(slug)
+                .description(request.getDescription())
+                .requirements(request.getRequirements())
+                .benefits(request.getBenefits())
+                .jobType(StringUtils.hasText(request.getJobType()) ? request.getJobType().toUpperCase() : "FULL_TIME")
+                .expLevel(StringUtils.hasText(request.getExpLevel()) ? request.getExpLevel().toUpperCase() : "MIDDLE")
+                .minSalary(request.getMinSalary())
+                .maxSalary(request.getMaxSalary())
+                .currency(StringUtils.hasText(request.getCurrency()) ? request.getCurrency() : "VND")
+                .isSalaryNegotiable(Boolean.TRUE.equals(request.getIsSalaryNegotiable()))
+                .locationCity(StringUtils.hasText(request.getLocationCity()) ? request.getLocationCity() : "TP. Hồ Chí Minh")
+                .locationAddress(request.getLocationAddress())
+                .status("PUBLISHED")
+                .deadline(request.getDeadline() != null ? request.getDeadline() : LocalDateTime.now().plusDays(30))
+                .viewsCount(0)
+                .applicationsCount(0)
+                .publishedAt(LocalDateTime.now())
+                .build();
+
+        Job savedJob = jobRepository.save(job);
+
+        // Attach skills if provided
+        if (request.getSkills() != null && !request.getSkills().isEmpty()) {
+            for (String skillName : request.getSkills()) {
+                if (StringUtils.hasText(skillName)) {
+                    final String trimmedSkill = skillName.trim();
+                    Skill skill = skillRepository.findByNameIgnoreCase(trimmedSkill)
+                            .orElseGet(() -> skillRepository.save(Skill.builder()
+                                    .name(trimmedSkill)
+                                    .slug(toSlug(trimmedSkill))
+                                    .category("Tech")
+                                    .build()));
+
+                    JobSkill jobSkill = JobSkill.builder()
+                            .job(savedJob)
+                            .skill(skill)
+                            .isRequired(true)
+                            .minYearsExp(1)
+                            .weight(new BigDecimal("1.00"))
+                            .build();
+
+                    jobSkillRepository.save(jobSkill);
+                }
+            }
+        }
+
+        return mapToDto(savedJob);
+    }
+
+    @Override
+    @Transactional
+    public JobResponseDto updateJob(Long id, JobUpdateRequestDto request, Long recruiterUserId, boolean isAdmin) {
+        Job job = jobRepository.findByIdWithCompany(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Job not found with ID: " + id));
+
+        if (!isAdmin && !job.getRecruiterId().equals(recruiterUserId)) {
+            throw new AccessDeniedException("Bạn không có quyền chỉnh sửa tin tuyển dụng này");
+        }
+
+        if (StringUtils.hasText(request.getTitle())) {
+            job.setTitle(request.getTitle().trim());
+        }
+        if (request.getDescription() != null) {
+            job.setDescription(request.getDescription());
+        }
+        if (request.getRequirements() != null) {
+            job.setRequirements(request.getRequirements());
+        }
+        if (request.getBenefits() != null) {
+            job.setBenefits(request.getBenefits());
+        }
+        if (StringUtils.hasText(request.getJobType())) {
+            job.setJobType(request.getJobType().toUpperCase());
+        }
+        if (StringUtils.hasText(request.getExpLevel())) {
+            job.setExpLevel(request.getExpLevel().toUpperCase());
+        }
+        if (request.getMinSalary() != null) {
+            job.setMinSalary(request.getMinSalary());
+        }
+        if (request.getMaxSalary() != null) {
+            job.setMaxSalary(request.getMaxSalary());
+        }
+        if (StringUtils.hasText(request.getCurrency())) {
+            job.setCurrency(request.getCurrency());
+        }
+        if (request.getIsSalaryNegotiable() != null) {
+            job.setIsSalaryNegotiable(request.getIsSalaryNegotiable());
+        }
+        if (StringUtils.hasText(request.getLocationCity())) {
+            job.setLocationCity(request.getLocationCity());
+        }
+        if (request.getLocationAddress() != null) {
+            job.setLocationAddress(request.getLocationAddress());
+        }
+        if (StringUtils.hasText(request.getStatus())) {
+            job.setStatus(request.getStatus().toUpperCase());
+        }
+        if (request.getDeadline() != null) {
+            job.setDeadline(request.getDeadline());
+        }
+
+        if (request.getSkills() != null) {
+            jobSkillRepository.deleteByJobId(job.getId());
+            for (String skillName : request.getSkills()) {
+                if (StringUtils.hasText(skillName)) {
+                    final String trimmedSkill = skillName.trim();
+                    Skill skill = skillRepository.findByNameIgnoreCase(trimmedSkill)
+                            .orElseGet(() -> skillRepository.save(Skill.builder()
+                                    .name(trimmedSkill)
+                                    .slug(toSlug(trimmedSkill))
+                                    .category("Tech")
+                                    .build()));
+
+                    JobSkill jobSkill = JobSkill.builder()
+                            .job(job)
+                            .skill(skill)
+                            .isRequired(true)
+                            .minYearsExp(1)
+                            .weight(new BigDecimal("1.00"))
+                            .build();
+
+                    jobSkillRepository.save(jobSkill);
+                }
+            }
+        }
+
+        Job updatedJob = jobRepository.save(job);
+        return mapToDto(updatedJob);
+    }
+
+    @Override
+    @Transactional
+    public JobResponseDto updateJobStatus(Long id, String status, Long recruiterUserId, boolean isAdmin) {
+        Job job = jobRepository.findByIdWithCompany(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Job not found with ID: " + id));
+
+        if (!isAdmin && !job.getRecruiterId().equals(recruiterUserId)) {
+            throw new AccessDeniedException("Bạn không có quyền thay đổi trạng thái tin tuyển dụng này");
+        }
+
+        job.setStatus(status.toUpperCase());
+        Job saved = jobRepository.save(job);
+        return mapToDto(saved);
+    }
+
+    @Override
+    @Transactional
+    public void deleteJob(Long id, Long recruiterUserId, boolean isAdmin) {
+        Job job = jobRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Job not found with ID: " + id));
+
+        if (!isAdmin && !job.getRecruiterId().equals(recruiterUserId)) {
+            throw new AccessDeniedException("Bạn không có quyền xóa tin tuyển dụng này");
+        }
+
+        job.setStatus("CLOSED");
+        job.setDeletedAt(LocalDateTime.now());
+        jobRepository.save(job);
     }
 
     private Specification<Job> buildSpecification(JobFilterRequestDto filter) {
@@ -223,8 +425,15 @@ public class JobServiceImpl implements JobService {
     }
 
     private Integer calculateAiScore(Long jobId) {
-        // Deterministic pseudo-AI match rate in range 92-98%
         int hash = jobId != null ? Math.abs(jobId.hashCode()) % 7 : 0;
         return 92 + hash;
+    }
+
+    private String toSlug(String input) {
+        if (input == null) return "";
+        String nowhitespace = WHITESPACE.matcher(input.trim()).replaceAll("-");
+        String normalized = Normalizer.normalize(nowhitespace, Normalizer.Form.NFD);
+        String slug = NONLATIN.matcher(normalized).replaceAll("");
+        return slug.toLowerCase(Locale.ENGLISH);
     }
 }

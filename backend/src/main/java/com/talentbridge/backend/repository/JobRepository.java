@@ -23,6 +23,10 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
 
     long countByCompanyId(Long companyId);
 
+    List<Job> findByCompanyId(Long companyId);
+
+    List<Job> findByRecruiterId(Long recruiterId);
+
     @Query("SELECT j FROM Job j JOIN FETCH j.company WHERE j.id = :id")
     Optional<Job> findByIdWithCompany(@Param("id") Long id);
 

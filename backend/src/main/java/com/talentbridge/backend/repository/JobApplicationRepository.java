@@ -11,5 +11,11 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
 
     List<JobApplication> findByJobId(Long jobId);
 
+    List<JobApplication> findByCandidateProfileId(Long candidateProfileId);
+
+    java.util.Optional<JobApplication> findByUuid(String uuid);
+
+    java.util.Optional<JobApplication> findByJobIdAndCandidateProfileId(Long jobId, Long candidateProfileId);
+
     boolean existsByJobIdAndCandidateProfileId(Long jobId, Long candidateProfileId);
 }

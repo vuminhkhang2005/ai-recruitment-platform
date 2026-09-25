@@ -2,14 +2,24 @@ package com.talentbridge.backend.controller;
 
 import com.talentbridge.backend.common.ApiResponse;
 import com.talentbridge.backend.common.PageResponse;
+import com.talentbridge.backend.config.OpenApiConfig;
+import com.talentbridge.backend.dto.JobCreateRequestDto;
 import com.talentbridge.backend.dto.JobFilterRequestDto;
 import com.talentbridge.backend.dto.JobResponseDto;
+import com.talentbridge.backend.dto.JobStatusUpdateRequestDto;
+import com.talentbridge.backend.dto.JobUpdateRequestDto;
+import com.talentbridge.backend.security.UserPrincipal;
 import com.talentbridge.backend.service.JobService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -18,7 +28,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/jobs")
 @RequiredArgsConstructor
-@Tag(name = "Jobs Management", description = "APIs for job searching, multi-criteria filtering, and detailed job specification retrieval")
+@Tag(name = "2. Jobs Management", description = "Toàn diện CRUD việc làm, Lọc đa tiêu chí, Phân trang, Phân quyền Recruiter/Admin")
 public class JobController {
 
     private final JobService jobService;
@@ -89,5 +99,66 @@ public class JobController {
     public ResponseEntity<ApiResponse<List<JobResponseDto>>> getFeaturedJobs() {
         List<JobResponseDto> featured = jobService.getFeaturedJobs();
         return ResponseEntity.ok(ApiResponse.ok(featured));
+    }
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('RECRUITER', 'ADMIN')")
+    @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
+    @SecurityRequirement(name = OpenApiConfig.COOKIE_AUTH)
+    @Operation(summary = "Create Job Posting (Recruiter / Admin)", description = "Post a brand new job opening. Only accessible by authorized RECRUITER or ADMIN accounts.")
+    public ResponseEntity<ApiResponse<JobResponseDto>> createJob(
+            @Valid @RequestBody JobCreateRequestDto request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        JobResponseDto created = jobService.createJob(request, userPrincipal.getId());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok("Đăng tin tuyển dụng thành công", created));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('RECRUITER', 'ADMIN')")
+    @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
+    @SecurityRequirement(name = OpenApiConfig.COOKIE_AUTH)
+    @Operation(summary = "Update Job Posting (Recruiter / Admin)", description = "Modify an existing job posting. Recruiters can only modify their own posts; Admins can edit any.")
+    public ResponseEntity<ApiResponse<JobResponseDto>> updateJob(
+            @PathVariable Long id,
+            @Valid @RequestBody JobUpdateRequestDto request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        boolean isAdmin = userPrincipal.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        JobResponseDto updated = jobService.updateJob(id, request, userPrincipal.getId(), isAdmin);
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật tin tuyển dụng thành công", updated));
+    }
+
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('RECRUITER', 'ADMIN')")
+    @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
+    @SecurityRequirement(name = OpenApiConfig.COOKIE_AUTH)
+    @Operation(summary = "Change Job Status (Recruiter / Admin)", description = "Update the operational state of a job (e.g. PUBLISHED, CLOSED, DRAFT).")
+    public ResponseEntity<ApiResponse<JobResponseDto>> updateJobStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody JobStatusUpdateRequestDto request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        boolean isAdmin = userPrincipal.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        JobResponseDto updated = jobService.updateJobStatus(id, request.getStatus(), userPrincipal.getId(), isAdmin);
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái thành công", updated));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('RECRUITER', 'ADMIN')")
+    @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
+    @SecurityRequirement(name = OpenApiConfig.COOKIE_AUTH)
+    @Operation(summary = "Close / Archive Job (Recruiter / Admin)", description = "Soft delete / close a job posting.")
+    public ResponseEntity<Void> deleteJob(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        boolean isAdmin = userPrincipal.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        jobService.deleteJob(id, userPrincipal.getId(), isAdmin);
+        return ResponseEntity.noContent().build();
     }
 }
