@@ -135,12 +135,24 @@ public class JobServiceImpl implements JobService {
         Company company = companyRepository.findById(resolvedCompanyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Company not found with ID: " + resolvedCompanyId));
 
+        Long recruiterProfileId = recruiterProfileRepository.findByUserId(recruiterUserId)
+                .map(RecruiterProfile::getId)
+                .orElseGet(() -> {
+                    RecruiterProfile rp = recruiterProfileRepository.save(RecruiterProfile.builder()
+                            .userId(recruiterUserId)
+                            .companyId(resolvedCompanyId)
+                            .jobTitle("Chuyên viên tuyển dụng")
+                            .isCompanyAdmin(false)
+                            .build());
+                    return rp.getId();
+                });
+
         String slug = toSlug(request.getTitle()) + "-" + UUID.randomUUID().toString().substring(0, 8);
 
         Job job = Job.builder()
                 .uuid(UUID.randomUUID().toString())
                 .company(company)
-                .recruiterId(recruiterUserId)
+                .recruiterId(recruiterProfileId)
                 .title(request.getTitle().trim())
                 .slug(slug)
                 .description(request.getDescription())
@@ -197,7 +209,11 @@ public class JobServiceImpl implements JobService {
         Job job = jobRepository.findByIdWithCompany(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found with ID: " + id));
 
-        if (!isAdmin && !job.getRecruiterId().equals(recruiterUserId)) {
+        Long recruiterProfileId = recruiterProfileRepository.findByUserId(recruiterUserId)
+                .map(RecruiterProfile::getId)
+                .orElse(recruiterUserId);
+
+        if (!isAdmin && !job.getRecruiterId().equals(recruiterProfileId)) {
             throw new AccessDeniedException("Bạn không có quyền chỉnh sửa tin tuyển dụng này");
         }
 
@@ -279,7 +295,11 @@ public class JobServiceImpl implements JobService {
         Job job = jobRepository.findByIdWithCompany(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found with ID: " + id));
 
-        if (!isAdmin && !job.getRecruiterId().equals(recruiterUserId)) {
+        Long recruiterProfileId = recruiterProfileRepository.findByUserId(recruiterUserId)
+                .map(RecruiterProfile::getId)
+                .orElse(recruiterUserId);
+
+        if (!isAdmin && !job.getRecruiterId().equals(recruiterProfileId)) {
             throw new AccessDeniedException("Bạn không có quyền thay đổi trạng thái tin tuyển dụng này");
         }
 
@@ -294,7 +314,11 @@ public class JobServiceImpl implements JobService {
         Job job = jobRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found with ID: " + id));
 
-        if (!isAdmin && !job.getRecruiterId().equals(recruiterUserId)) {
+        Long recruiterProfileId = recruiterProfileRepository.findByUserId(recruiterUserId)
+                .map(RecruiterProfile::getId)
+                .orElse(recruiterUserId);
+
+        if (!isAdmin && !job.getRecruiterId().equals(recruiterProfileId)) {
             throw new AccessDeniedException("Bạn không có quyền xóa tin tuyển dụng này");
         }
 

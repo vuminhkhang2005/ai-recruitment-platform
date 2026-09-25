@@ -14,6 +14,7 @@ import com.talentbridge.backend.exception.ResourceNotFoundException;
 import com.talentbridge.backend.repository.CandidateProfileRepository;
 import com.talentbridge.backend.repository.JobApplicationRepository;
 import com.talentbridge.backend.repository.JobRepository;
+import com.talentbridge.backend.repository.RecruiterProfileRepository;
 import com.talentbridge.backend.repository.UserRepository;
 import com.talentbridge.backend.service.ApplicationService;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     private final JobRepository jobRepository;
     private final JobApplicationRepository jobApplicationRepository;
     private final CandidateProfileRepository candidateProfileRepository;
+    private final RecruiterProfileRepository recruiterProfileRepository;
     private final UserRepository userRepository;
 
     @Override
@@ -143,7 +145,9 @@ public class ApplicationServiceImpl implements ApplicationService {
 
         if (!isAdmin) {
             if (isRecruiter) {
-                if (!application.getJob().getRecruiterId().equals(userId)) {
+                Long recruiterProfileId = recruiterProfileRepository.findByUserId(userId)
+                        .map(com.talentbridge.backend.entity.RecruiterProfile::getId).orElse(userId);
+                if (!application.getJob().getRecruiterId().equals(recruiterProfileId)) {
                     throw new AccessDeniedException("Bạn không có quyền xem đơn ứng tuyển này");
                 }
             } else {
@@ -163,7 +167,10 @@ public class ApplicationServiceImpl implements ApplicationService {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found with ID: " + jobId));
 
-        if (!isAdmin && !job.getRecruiterId().equals(recruiterUserId)) {
+        Long recruiterProfileId = recruiterProfileRepository.findByUserId(recruiterUserId)
+                .map(com.talentbridge.backend.entity.RecruiterProfile::getId).orElse(recruiterUserId);
+
+        if (!isAdmin && !job.getRecruiterId().equals(recruiterProfileId)) {
             throw new AccessDeniedException("Bạn không có quyền quản lý danh sách ứng viên của công việc này");
         }
 
@@ -178,7 +185,10 @@ public class ApplicationServiceImpl implements ApplicationService {
         JobApplication application = jobApplicationRepository.findById(applicationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Application not found with ID: " + applicationId));
 
-        if (!isAdmin && !application.getJob().getRecruiterId().equals(recruiterUserId)) {
+        Long recruiterProfileId = recruiterProfileRepository.findByUserId(recruiterUserId)
+                .map(com.talentbridge.backend.entity.RecruiterProfile::getId).orElse(recruiterUserId);
+
+        if (!isAdmin && !application.getJob().getRecruiterId().equals(recruiterProfileId)) {
             throw new AccessDeniedException("Bạn không có quyền cập nhật trạng thái đơn ứng tuyển này");
         }
 
