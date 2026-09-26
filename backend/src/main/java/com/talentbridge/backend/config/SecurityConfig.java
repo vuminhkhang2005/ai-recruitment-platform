@@ -59,10 +59,11 @@ public class SecurityConfig {
                         // 1. Authentication & OAuth2 Endpoints
                         .requestMatchers("/api/v1/auth/**").permitAll()
 
-                        // 2. Public Read-Only Endpoints
+                        // 2. Public Read-Only & Quick Apply Endpoints
                         .requestMatchers(HttpMethod.GET, "/api/v1/jobs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/companies/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
+                        .requestMatchers("/api/v1/applications/quick-apply").permitAll()
 
                         // 3. Documentation & Swagger UI
                         .requestMatchers(
