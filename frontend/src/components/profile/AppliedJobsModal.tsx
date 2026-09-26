@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   X, 
   FileCheck2, 
@@ -23,9 +23,15 @@ export const AppliedJobsModal: React.FC<AppliedJobsModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const { appliedJobs } = useAuth();
+  const { appliedJobs, refreshApplications } = useAuth();
   const { language } = useLanguage();
   const isVi = language === 'vi';
+
+  useEffect(() => {
+    if (isOpen) {
+      refreshApplications();
+    }
+  }, [isOpen, refreshApplications]);
 
   const getStatusBadge = (status: string, textVi: string, textEn: string) => {
     if (status === 'ai_passed') {

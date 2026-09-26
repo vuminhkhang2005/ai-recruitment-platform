@@ -19,6 +19,7 @@ import {
 import type { Job } from '../../data/mockData';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
+import { createJobApi } from '../../services/api';
 import { CompanyLogo } from '../ui/CompanyLogo';
 
 interface PostJobModalProps {
@@ -206,82 +207,114 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
     setSkills(skills.filter((s) => s !== skillToRemove));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const requirementsList = requirements
-        .split('\n')
-        .map((r) => r.trim().replace(/^[-•*]\s*/, ''))
-        .filter(Boolean);
+    const requirementsList = requirements
+      .split('\n')
+      .map((r) => r.trim().replace(/^[-•*]\s*/, ''))
+      .filter(Boolean);
 
-      const benefitsList = benefits
-        .split('\n')
-        .map((b) => b.trim().replace(/^[-•*]\s*/, ''))
-        .filter(Boolean);
+    const benefitsList = benefits
+      .split('\n')
+      .map((b) => b.trim().replace(/^[-•*]\s*/, ''))
+      .filter(Boolean);
 
-      const newJob: Job = {
-        id: `job-${Date.now()}`,
+    // Parse salary numbers if possible
+    let minSal: number | undefined = undefined;
+    let maxSal: number | undefined = undefined;
+    const salaryMatch = salary.match(/(\d+)\s*[-–]\s*(\d+)/);
+    if (salaryMatch) {
+      minSal = parseInt(salaryMatch[1], 10) * 1000000;
+      maxSal = parseInt(salaryMatch[2], 10) * 1000000;
+    }
+
+    const fallbackJob: Job = {
+      id: `job-${Date.now()}`,
+      title: title.trim(),
+      company: company.trim() || (user?.company || 'TalentBridge Partner Enterprise'),
+      companyLogoId,
+      location: location.trim(),
+      locationEn: location.trim()
+        .replace('Hà Nội', 'Hanoi')
+        .replace('TP. Hồ Chí Minh', 'Ho Chi Minh City')
+        .replace('TP. HCM', 'HCMC')
+        .replace('Đà Nẵng', 'Da Nang'),
+      type,
+      level,
+      category,
+      salary: salary.trim(),
+      salaryEn: salary.trim()
+        .replace('Triệu VNĐ', 'Million VND')
+        .replace('Triệu', 'Million'),
+      aiMatchScore: 98,
+      matchReasons: [
+        'Kỹ năng công nghệ khớp 100% với yêu cầu dự án mới của nhà tuyển dụng',
+        'Kinh nghiệm thực chiến và thâm niên đáp ứng xuất sắc tiêu chuẩn tuyển mộ'
+      ],
+      matchReasonsEn: [
+        'Candidate skills match 100% with newly defined project requirements',
+        'Seniority and hands-on track record exceed the hiring benchmark'
+      ],
+      skills: skills.length > 0 ? skills : ['Technology', 'Engineering'],
+      postedTime: 'Vừa đăng',
+      postedTimeEn: 'Just now',
+      urgent: true,
+      hot: true,
+      bonus: bonus.trim() || undefined,
+      bonusEn: bonus.trim() ? bonus.trim().replace('Thưởng gia nhập', 'Sign-on Bonus').replace('Thưởng', 'Bonus') : undefined,
+      applicantsCount: 0,
+      daysLeft: 14,
+      description: description.trim() || (isVi ? 'Tham gia phát triển hệ thống công nghệ chủ chốt cùng đội ngũ kỹ sư hàng đầu.' : 'Join key engineering initiatives alongside world-class technical teams.'),
+      descriptionEn: description.trim() || 'Join key engineering initiatives alongside world-class technical teams.',
+      requirements: requirementsList.length > 0 ? requirementsList : [
+        isVi ? 'Có kinh nghiệm thực chiến với các công nghệ cốt lõi' : 'Hands-on production experience in core technologies',
+        isVi ? 'Kỹ năng giải quyết bài toán phức tạp và tư duy hệ thống' : 'Strong problem-solving mindset and system thinking'
+      ],
+      requirementsEn: requirementsList.length > 0 ? requirementsList : [
+        'Hands-on production experience in core technologies',
+        'Strong problem-solving mindset and system thinking'
+      ],
+      benefits: benefitsList.length > 0 ? benefitsList : [
+        isVi ? 'Mức lương cạnh tranh + Thưởng hiệu suất hàng quý' : 'Competitive compensation + quarterly performance bonuses',
+        isVi ? 'Chế độ bảo hiểm sức khỏe cao cấp cho nhân viên và gia đình' : 'Comprehensive premium healthcare plan for employee and family'
+      ],
+      benefitsEn: benefitsList.length > 0 ? benefitsList : [
+        'Competitive compensation + quarterly performance bonuses',
+        'Comprehensive premium healthcare plan for employee and family'
+      ]
+    };
+
+    try {
+      const backendJob = await createJobApi({
         title: title.trim(),
-        company: company.trim() || 'Tech Enterprise',
-        companyLogoId,
-        location: location.trim(),
-        locationEn: location.trim()
-          .replace('Hà Nội', 'Hanoi')
-          .replace('TP. Hồ Chí Minh', 'Ho Chi Minh City')
-          .replace('TP. HCM', 'HCMC')
-          .replace('Đà Nẵng', 'Da Nang'),
-        type,
-        level,
-        category,
-        salary: salary.trim(),
-        salaryEn: salary.trim()
-          .replace('Triệu VNĐ', 'Million VND')
-          .replace('Triệu', 'Million'),
-        aiMatchScore: 98,
-        matchReasons: [
-          'Kỹ năng công nghệ khớp 100% với yêu cầu dự án mới của nhà tuyển dụng',
-          'Kinh nghiệm thực chiến và thâm niên đáp ứng xuất sắc tiêu chuẩn tuyển mộ'
-        ],
-        matchReasonsEn: [
-          'Candidate skills match 100% with newly defined project requirements',
-          'Seniority and hands-on track record exceed the hiring benchmark'
-        ],
-        skills: skills.length > 0 ? skills : ['Technology', 'Engineering'],
-        postedTime: 'Vừa đăng',
-        postedTimeEn: 'Just now',
-        urgent: true,
-        hot: true,
-        bonus: bonus.trim() || undefined,
-        bonusEn: bonus.trim() ? bonus.trim().replace('Thưởng gia nhập', 'Sign-on Bonus').replace('Thưởng', 'Bonus') : undefined,
-        applicantsCount: 0,
-        daysLeft: 14,
         description: description.trim() || (isVi ? 'Tham gia phát triển hệ thống công nghệ chủ chốt cùng đội ngũ kỹ sư hàng đầu.' : 'Join key engineering initiatives alongside world-class technical teams.'),
-        descriptionEn: description.trim() || 'Join key engineering initiatives alongside world-class technical teams.',
-        requirements: requirementsList.length > 0 ? requirementsList : [
-          isVi ? 'Có kinh nghiệm thực chiến với các công nghệ cốt lõi' : 'Hands-on production experience in core technologies',
-          isVi ? 'Kỹ năng giải quyết bài toán phức tạp và tư duy hệ thống' : 'Strong problem-solving mindset and system thinking'
-        ],
-        requirementsEn: requirementsList.length > 0 ? requirementsList : [
-          'Hands-on production experience in core technologies',
-          'Strong problem-solving mindset and system thinking'
-        ],
-        benefits: benefitsList.length > 0 ? benefitsList : [
-          isVi ? 'Mức lương cạnh tranh + Thưởng hiệu suất hàng quý' : 'Competitive compensation + quarterly performance bonuses',
-          isVi ? 'Chế độ bảo hiểm sức khỏe cao cấp cho nhân viên và gia đình' : 'Comprehensive premium healthcare plan for employee and family'
-        ],
-        benefitsEn: benefitsList.length > 0 ? benefitsList : [
-          'Competitive compensation + quarterly performance bonuses',
-          'Comprehensive premium healthcare plan for employee and family'
-        ]
-      };
+        requirements: requirementsList.join('\n') || 'Yêu cầu kỹ năng chuyên môn phù hợp.',
+        benefits: benefitsList.join('\n') || 'Chế độ đãi ngộ cạnh tranh.',
+        jobType: type === 'Remote' ? 'REMOTE' : type === 'Hybrid' ? 'HYBRID' : 'FULL_TIME',
+        expLevel: level.toUpperCase(),
+        minSalary: minSal,
+        maxSalary: maxSal,
+        locationCity: location.trim() || 'TP. Hồ Chí Minh',
+        locationAddress: location.trim(),
+        skills: skills.length > 0 ? skills : ['Technology', 'Engineering']
+      });
 
-      onJobCreated(newJob);
+      if (backendJob) {
+        onJobCreated(backendJob);
+      } else {
+        onJobCreated(fallbackJob);
+      }
+    } catch (err) {
+      console.warn('[TalentBridge] Backend job creation fallback:', err);
+      onJobCreated(fallbackJob);
+    } finally {
       setIsSubmitting(false);
-    }, 600);
+      onClose();
+    }
   };
 
   return (

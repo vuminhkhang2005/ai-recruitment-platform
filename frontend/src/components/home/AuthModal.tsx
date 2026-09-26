@@ -22,45 +22,83 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultRo
   if (!isOpen) return null;
 
   const { t, language } = useLanguage();
-  const { login, loginDemo } = useAuth();
+  const { login, register, loginDemo } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [role, setRole] = useState<'candidate' | 'recruiter'>(defaultRole);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [success, setSuccess] = useState(false);
   const [successUser, setSuccessUser] = useState<string>('');
 
   const isVi = language === 'vi';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    login(email, role);
-    setSuccessUser(email.split('@')[0] || (role === 'candidate' ? 'Nguyễn Văn An' : 'Lê Thu Trang'));
-    setSuccess(true);
-    setTimeout(() => {
-      setSuccess(false);
-      onClose();
-    }, 1200);
+    setErrorMessage('');
+    setLoading(true);
+    try {
+      if (mode === 'login') {
+        await login(email, password, role);
+      } else {
+        await register({
+          fullName: email.split('@')[0].replace('.', ' '),
+          email,
+          password,
+          role
+        });
+      }
+      setSuccessUser(email.split('@')[0] || (role === 'candidate' ? 'Vũ Minh Khang' : 'Vu Minh Khang Recruiter'));
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        onClose();
+      }, 1000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Xác thực không thành công';
+      setErrorMessage(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDemoCandidate = () => {
-    loginDemo('candidate');
-    setSuccessUser('Nguyễn Văn An');
-    setSuccess(true);
-    setTimeout(() => {
-      setSuccess(false);
-      onClose();
-    }, 1000);
+  const handleDemoCandidate = async () => {
+    setLoading(true);
+    setErrorMessage('');
+    try {
+      await loginDemo('candidate');
+      setSuccessUser('Vũ Minh Khang');
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        onClose();
+      }, 900);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Đăng nhập demo thất bại';
+      setErrorMessage(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDemoRecruiter = () => {
-    loginDemo('recruiter');
-    setSuccessUser('Lê Thu Trang');
-    setSuccess(true);
-    setTimeout(() => {
-      setSuccess(false);
-      onClose();
-    }, 1000);
+  const handleDemoRecruiter = async () => {
+    setLoading(true);
+    setErrorMessage('');
+    try {
+      await loginDemo('recruiter');
+      setSuccessUser('Vu Minh Khang Recruiter');
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        onClose();
+      }, 900);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Đăng nhập demo thất bại';
+      setErrorMessage(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -232,6 +270,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultRo
             </div>
           </div>
 
+          {errorMessage && (
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/70 rounded-xl border border-rose-200 dark:border-rose-800 text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2 animate-fade-in">
+              <span className="text-base">⚠️</span>
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
           {success ? (
             <div className="p-3 bg-emerald-50 dark:bg-emerald-950/80 rounded-xl border border-emerald-200 dark:border-emerald-800 text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center justify-center gap-2 animate-fade-in">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -241,11 +286,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultRo
             <div className="space-y-2 pt-1">
               <button
                 type="submit"
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs font-bold shadow-soft flex items-center justify-center gap-2 cursor-pointer transition-all relative overflow-hidden group"
+                disabled={loading}
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-98 disabled:opacity-70 text-white rounded-xl text-xs font-bold shadow-soft flex items-center justify-center gap-2 cursor-pointer transition-all relative overflow-hidden group"
               >
                 <div className="shimmer-sweep" />
-                <span>{mode === 'login' ? t.authModal.btnLogin : t.authModal.btnRegister}</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                {loading ? (
+                  <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>{mode === 'login' ? t.authModal.btnLogin : t.authModal.btnRegister}</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
               </button>
             </div>
           )}

@@ -397,3 +397,244 @@ export async function submitQuickApplyToApi(payload: QuickApplyPayload): Promise
     };
   }
 }
+
+// ============================================================================
+// Authentication & Token Management
+// ============================================================================
+
+export const AUTH_TOKEN_KEY = 'talentbridge_access_token';
+
+export function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem(AUTH_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setAuthToken(token: string): void {
+  try {
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+  } catch {
+    // Ignore storage errors in restricted contexts
+  }
+}
+
+export function removeAuthToken(): void {
+  try {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function authHeaders(customHeaders: Record<string, string> = {}): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...customHeaders
+  };
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+export interface BackendUserSummary {
+  id: number;
+  uuid: string;
+  email: string;
+  fullName: string;
+  phone?: string;
+  avatarUrl?: string;
+  status: string;
+  roles: string[];
+}
+
+export interface BackendAuthResponse {
+  accessToken: string;
+  refreshToken?: string;
+  tokenType: string;
+  expiresIn?: number;
+  user: BackendUserSummary;
+}
+
+/**
+ * Log in via email & password against Spring Boot /api/v1/auth/login
+ */
+export async function loginApi(email: string, password: string): Promise<BackendUserSummary> {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ email: email.trim(), password })
+  });
+
+  const json: ApiResponse<BackendAuthResponse> = await response.json();
+  if (!response.ok || !json.success) {
+    throw new Error(json.message || `Đăng nhập không thành công (HTTP ${response.status})`);
+  }
+
+  if (json.data?.accessToken) {
+    setAuthToken(json.data.accessToken);
+  }
+  return json.data.user;
+}
+
+/**
+ * Register new candidate or recruiter account via /api/v1/auth/register
+ */
+export async function registerApi(payload: {
+  fullName: string;
+  email: string;
+  password: string;
+  role: 'ROLE_CANDIDATE' | 'ROLE_RECRUITER';
+  phone?: string;
+}): Promise<BackendUserSummary> {
+  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({
+      fullName: payload.fullName.trim(),
+      email: payload.email.trim(),
+      password: payload.password,
+      role: payload.role,
+      phone: payload.phone || '0901234567'
+    })
+  });
+
+  const json: ApiResponse<BackendAuthResponse> = await response.json();
+  if (!response.ok || !json.success) {
+    throw new Error(json.message || `Đăng ký không thành công (HTTP ${response.status})`);
+  }
+
+  if (json.data?.accessToken) {
+    setAuthToken(json.data.accessToken);
+  }
+  return json.data.user;
+}
+
+/**
+ * Logout and clean HttpOnly cookies via /api/v1/auth/logout
+ */
+export async function logoutApi(): Promise<void> {
+  try {
+    await fetch(`${API_BASE_URL}/auth/logout`, {
+      method: 'POST',
+      headers: authHeaders(),
+      credentials: 'include'
+    });
+  } catch (error) {
+    console.warn('[TalentBridge API] Logout request error:', error);
+  } finally {
+    removeAuthToken();
+  }
+}
+
+/**
+ * Get current authenticated user profile via /api/v1/auth/me
+ */
+export async function getCurrentUserApi(): Promise<BackendUserSummary | null> {
+  try {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      headers: authHeaders(),
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      if (response.status === 401 && token) {
+        removeAuthToken();
+      }
+      return null;
+    }
+
+    const json: ApiResponse<BackendUserSummary> = await response.json();
+    return json.success ? json.data : null;
+  } catch (error) {
+    console.warn('[TalentBridge API] Unable to fetch user profile:', error);
+    return null;
+  }
+}
+
+// ============================================================================
+// Job Posting & Application Management APIs
+// ============================================================================
+
+export interface CreateJobPayload {
+  title: string;
+  companyId?: number;
+  description: string;
+  requirements: string;
+  benefits?: string;
+  jobType: string;
+  expLevel: string;
+  minSalary?: number;
+  maxSalary?: number;
+  locationCity?: string;
+  locationAddress?: string;
+  skills: string[];
+}
+
+/**
+ * Create a new job posting on MySQL backend via POST /api/v1/jobs
+ */
+export async function createJobApi(payload: CreateJobPayload): Promise<Job | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/jobs`, {
+      method: 'POST',
+      headers: authHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+
+    const json: ApiResponse<BackendJobDto> = await response.json();
+    if (!response.ok || !json.success) {
+      throw new Error(json.message || `Lỗi đăng tin tuyển dụng (HTTP ${response.status})`);
+    }
+
+    return mapBackendJobToFrontend(json.data);
+  } catch (error) {
+    console.error('[TalentBridge API] createJobApi error:', error);
+    throw error;
+  }
+}
+
+export interface BackendApplicationDto {
+  id: number;
+  uuid: string;
+  jobId: number;
+  jobTitle: string;
+  companyName: string;
+  companyLogo?: string;
+  candidateProfileId?: number;
+  candidateName?: string;
+  candidateEmail?: string;
+  candidatePhone?: string;
+  coverLetter?: string;
+  currentStage: string;
+  matchScore?: number;
+  appliedAt: string;
+  updatedAt?: string;
+}
+
+/**
+ * Fetch candidate's submitted applications from GET /api/v1/applications/me
+ */
+export async function fetchMyApplicationsApi(): Promise<BackendApplicationDto[] | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/applications/me`, {
+      headers: authHeaders(),
+      credentials: 'include'
+    });
+
+    if (!response.ok) return null;
+    const json: ApiResponse<BackendApplicationDto[]> = await response.json();
+    return json.success && Array.isArray(json.data) ? json.data : null;
+  } catch (error) {
+    console.warn('[TalentBridge API] Unable to fetch user applications:', error);
+    return null;
+  }
+}
+
