@@ -184,7 +184,8 @@ public class JobServiceImpl implements JobService {
                             .orElseGet(() -> skillRepository.save(Skill.builder()
                                     .name(trimmedSkill)
                                     .slug(toSlug(trimmedSkill))
-                                    .category("Tech")
+                                    .category("OTHER")
+                                    .isActive(true)
                                     .build()));
 
                     JobSkill jobSkill = JobSkill.builder()
