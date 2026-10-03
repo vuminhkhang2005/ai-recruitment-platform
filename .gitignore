@@ -43,3 +43,4 @@ frontend/screenshots/
 test_*.cjs
 !frontend/test_e2e_user_journey.cjs
 !frontend/test_deep_interactive.cjs
+!frontend/test_deep_real_user_experience.cjs
