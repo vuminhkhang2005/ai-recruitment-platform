@@ -28,6 +28,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { updateApplicationStageApi } from '../../services/api';
 
 interface Candidate {
   id: string;
@@ -579,7 +580,15 @@ const INITIAL_CANDIDATES: Record<string, Record<string, Candidate[]>> = {
   }
 };
 
-export const EmployerSection: React.FC = () => {
+export interface EmployerSectionProps {
+  onBackToHome?: () => void;
+  onOpenPostJobModal?: () => void;
+}
+
+export const EmployerSection: React.FC<EmployerSectionProps> = ({
+  onBackToHome,
+  onOpenPostJobModal
+}) => {
   const { t, language } = useLanguage();
   const isVi = language === 'vi';
 
@@ -621,6 +630,9 @@ export const EmployerSection: React.FC = () => {
     }
 
     const nextStage = stageOrder[currentIdx + 1];
+
+    // Asynchronously synchronize stage transition with Spring Boot backend
+    updateApplicationStageApi(candidateId, nextStage).catch(() => {});
     setCandidatesState((prev) => {
       const pipelineCandidates = { ...prev[activePipeline] };
       const cand = pipelineCandidates[currentColumn].find((c) => c.id === candidateId);
@@ -692,6 +704,40 @@ export const EmployerSection: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         
+        {/* Top Action & Navigation Bar */}
+        {(onBackToHome || onOpenPostJobModal) && (
+          <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-white/90 dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700/80 shadow-soft-sm backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              {onBackToHome && (
+                <button
+                  type="button"
+                  onClick={onBackToHome}
+                  className="px-3.5 py-2 text-xs font-bold rounded-xl text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700/70 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer flex items-center gap-2 active:scale-95 shadow-soft-xs"
+                >
+                  <ArrowRight className="w-4 h-4 rotate-180" />
+                  <span>{isVi ? 'Quay lại Trang chủ' : 'Back to Home'}</span>
+                </button>
+              )}
+              <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <Kanban className="w-4 h-4 text-emerald-500" />
+                <span>{isVi ? 'Phân hệ Doanh nghiệp & Tuyển dụng ATS' : 'Recruitment & ATS Pipeline Portal'}</span>
+              </div>
+            </div>
+
+            {onOpenPostJobModal && (
+              <button
+                type="button"
+                onClick={onOpenPostJobModal}
+                className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold transition-all shadow-soft flex items-center gap-2 cursor-pointer active:scale-95"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{isVi ? 'Đăng tin tuyển dụng mới' : 'Post a New Job'}</span>
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="max-w-3xl space-y-3">

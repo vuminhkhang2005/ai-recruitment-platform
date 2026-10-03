@@ -638,3 +638,64 @@ export async function fetchMyApplicationsApi(): Promise<BackendApplicationDto[] 
   }
 }
 
+/**
+ * Fetch candidate applications for a specific job (Recruiter/Admin)
+ */
+export async function fetchApplicationsForJobApi(jobId: number | string): Promise<BackendApplicationDto[] | null> {
+  try {
+    const numericId = typeof jobId === 'string' ? parseInt(jobId.replace(/\D/g, ''), 10) || 1 : jobId;
+    const response = await fetch(`${API_BASE_URL}/applications/job/${numericId}`, {
+      headers: authHeaders(),
+      credentials: 'include'
+    });
+
+    if (!response.ok) return null;
+    const json: ApiResponse<BackendApplicationDto[]> = await response.json();
+    return json.success && Array.isArray(json.data) ? json.data : null;
+  } catch (error) {
+    console.warn(`[TalentBridge API] Unable to fetch applications for job ${jobId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Update candidate application stage (Recruiter/Admin)
+ * Supported stages: APPLIED, REVIEWING, INTERVIEW, OFFERED, REJECTED
+ */
+export async function updateApplicationStageApi(
+  applicationId: number | string,
+  stage: string,
+  rejectionReason?: string
+): Promise<boolean> {
+  try {
+    const numericId = typeof applicationId === 'string' ? parseInt(applicationId.replace(/\D/g, ''), 10) || 1 : applicationId;
+    const stageMapping: Record<string, string> = {
+      'new': 'APPLIED',
+      'screened': 'REVIEWING',
+      'interview': 'INTERVIEW',
+      'offer': 'OFFERED',
+      'applied': 'APPLIED',
+      'reviewing': 'REVIEWING',
+      'offered': 'OFFERED',
+      'rejected': 'REJECTED'
+    };
+    const mappedStage = stageMapping[stage.toLowerCase()] || stage.toUpperCase();
+
+    const response = await fetch(`${API_BASE_URL}/applications/${numericId}/status`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      credentials: 'include',
+      body: JSON.stringify({
+        currentStage: mappedStage,
+        rejectionReason: rejectionReason || ''
+      })
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.warn(`[TalentBridge API] Unable to update application ${applicationId} stage to ${stage}:`, error);
+    return false;
+  }
+}
+
+

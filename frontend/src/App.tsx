@@ -16,6 +16,7 @@ import { JobsPage } from './components/jobs/JobsPage';
 import { SavedJobsModal } from './components/profile/SavedJobsModal';
 import { AppliedJobsModal } from './components/profile/AppliedJobsModal';
 import { PostJobModal } from './components/home/PostJobModal';
+import { EmployerSection } from './components/home/EmployerSection';
 import { MOCK_JOBS, type Job } from './data/mockData';
 import { CheckCircle2, Sparkles, X, Database } from 'lucide-react';
 import { useLanguage } from './i18n/LanguageContext';
@@ -55,6 +56,8 @@ export function App() {
       } else if (hash === '#roadmap') {
         setCurrentView('career-ai');
         setCareerAiTab('roadmap');
+      } else if (hash === '#ats-pipeline' || hash === '#pipeline' || hash === '#ats') {
+        setCurrentView('ats-pipeline');
       } else if (!hash || hash === '#home') {
         setCurrentView('home');
       }
@@ -69,14 +72,15 @@ export function App() {
     };
   }, []);
 
-  const [currentView, setCurrentView] = useState<'home' | 'jobs' | 'profile' | 'career-ai'>(() => {
+  const [currentView, setCurrentView] = useState<'home' | 'jobs' | 'profile' | 'career-ai' | 'ats-pipeline'>(() => {
     try {
       if (typeof window !== 'undefined') {
         if (window.location.hash === '#profile') return 'profile';
         if (window.location.hash === '#jobs' || window.location.hash === '#search') return 'jobs';
         if (window.location.hash === '#career-ai' || window.location.hash === '#scanner' || window.location.hash === '#roadmap') return 'career-ai';
+        if (window.location.hash === '#ats-pipeline' || window.location.hash === '#pipeline' || window.location.hash === '#ats') return 'ats-pipeline';
         const saved = localStorage.getItem('app_current_view');
-        if (saved === 'profile' || saved === 'career-ai' || saved === 'jobs') return saved as any;
+        if (saved === 'profile' || saved === 'career-ai' || saved === 'jobs' || saved === 'ats-pipeline') return saved as any;
       }
     } catch (e) {
       console.error(e);
@@ -95,7 +99,7 @@ export function App() {
     return 'scanner';
   });
 
-  const handleNavigate = (view: 'home' | 'jobs' | 'profile' | 'career-ai', tab?: 'scanner' | 'roadmap') => {
+  const handleNavigate = (view: 'home' | 'jobs' | 'profile' | 'career-ai' | 'ats-pipeline', tab?: 'scanner' | 'roadmap') => {
     setCurrentView(view);
     if (tab) {
       setCareerAiTab(tab);
@@ -108,8 +112,10 @@ export function App() {
         window.location.hash = 'jobs';
       } else if (view === 'career-ai') {
         window.location.hash = tab || 'career-ai';
+      } else if (view === 'ats-pipeline') {
+        window.location.hash = 'ats-pipeline';
       } else {
-        if (window.location.hash === '#profile' || window.location.hash === '#jobs' || window.location.hash.startsWith('#career') || window.location.hash === '#scanner' || window.location.hash === '#roadmap') {
+        if (window.location.hash === '#profile' || window.location.hash === '#jobs' || window.location.hash.startsWith('#career') || window.location.hash === '#scanner' || window.location.hash === '#roadmap' || window.location.hash.startsWith('#ats')) {
           history.replaceState(null, '', window.location.pathname + window.location.search);
         }
       }
@@ -388,6 +394,11 @@ export function App() {
               }, 250);
             }}
           />
+        ) : currentView === 'ats-pipeline' ? (
+          <EmployerSection 
+            onBackToHome={() => handleNavigate('home')} 
+            onOpenPostJobModal={() => setIsPostJobModalOpen(true)} 
+          />
         ) : currentView === 'jobs' ? (
           <JobsPage 
             jobs={jobsList}
@@ -451,7 +462,12 @@ export function App() {
               onOpenRoadmap={() => handleOpenCareerAi('roadmap')}
             />
 
-            {/* 6. Social Proof & Candidate Testimonials */}
+            {/* 6. Recruiter & ATS Pipeline Live Showcase */}
+            <EmployerSection 
+              onOpenPostJobModal={() => setIsPostJobModalOpen(true)} 
+            />
+
+            {/* 7. Social Proof & Candidate Testimonials */}
             <TestimonialsSection />
           </>
         )}
