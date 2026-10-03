@@ -671,12 +671,14 @@ export async function updateApplicationStageApi(
     const numericId = typeof applicationId === 'string' ? parseInt(applicationId.replace(/\D/g, ''), 10) || 1 : applicationId;
     const stageMapping: Record<string, string> = {
       'new': 'APPLIED',
-      'screened': 'REVIEWING',
+      'screened': 'SCREENING',
+      'screening': 'SCREENING',
+      'reviewing': 'SCREENING',
       'interview': 'INTERVIEW',
       'offer': 'OFFERED',
       'applied': 'APPLIED',
-      'reviewing': 'REVIEWING',
       'offered': 'OFFERED',
+      'hired': 'HIRED',
       'rejected': 'REJECTED'
     };
     const mappedStage = stageMapping[stage.toLowerCase()] || stage.toUpperCase();

@@ -192,7 +192,11 @@ public class ApplicationServiceImpl implements ApplicationService {
             throw new AccessDeniedException("Bạn không có quyền cập nhật trạng thái đơn ứng tuyển này");
         }
 
-        application.setCurrentStage(request.getCurrentStage().toUpperCase());
+        String stage = request.getCurrentStage().toUpperCase();
+        if ("REVIEWING".equals(stage)) {
+            stage = "SCREENING";
+        }
+        application.setCurrentStage(stage);
         if (request.getRejectionReason() != null) {
             application.setRejectionReason(request.getRejectionReason());
         }

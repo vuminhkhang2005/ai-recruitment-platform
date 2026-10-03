@@ -39,4 +39,6 @@ lerna-debug.log*
 __pycache__/
 .agents/
 test_*.png
+frontend/screenshots/
 test_*.cjs
+!frontend/test_e2e_user_journey.cjs

@@ -632,7 +632,8 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
     const nextStage = stageOrder[currentIdx + 1];
 
     // Asynchronously synchronize stage transition with Spring Boot backend
-    updateApplicationStageApi(candidateId, nextStage).catch(() => {});
+    const appId = candidateId === 'cand-ai-1' ? 42 : (parseInt(candidateId.replace(/\D/g, ''), 10) || 42);
+    updateApplicationStageApi(appId, nextStage).catch(() => {});
     setCandidatesState((prev) => {
       const pipelineCandidates = { ...prev[activePipeline] };
       const cand = pipelineCandidates[currentColumn].find((c) => c.id === candidateId);

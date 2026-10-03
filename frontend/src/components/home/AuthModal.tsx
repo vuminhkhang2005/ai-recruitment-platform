@@ -238,6 +238,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultRo
             <div className="relative flex items-center">
               <Mail className="w-4 h-4 text-slate-400 absolute left-3" />
               <input
+                id="auth-email"
+                name="email"
                 type="email"
                 required
                 placeholder="name@company.com"
@@ -260,6 +262,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultRo
             <div className="relative flex items-center">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3" />
               <input
+                id="auth-password"
+                name="password"
                 type="password"
                 required
                 placeholder="••••••••"
