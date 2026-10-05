@@ -50,3 +50,4 @@ test_*.cjs
 !frontend/test_ats_drag_drop.cjs
 !frontend/test_cv_manager_preview.cjs
 !frontend/test_interview_prep.cjs
+!frontend/test_recruiter_analytics.cjs

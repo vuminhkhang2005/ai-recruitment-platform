@@ -26,7 +26,13 @@ import {
   Send,
   SlidersHorizontal,
   ChevronDown,
-  GripVertical
+  GripVertical,
+  BarChart3,
+  PieChart,
+  Activity,
+  Target,
+  Zap,
+  Download
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { updateApplicationStageApi } from '../../services/api';
@@ -594,12 +600,64 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
   const isVi = language === 'vi';
 
   const [activePipeline, setActivePipeline] = useState<string>('ai');
+  const [viewMode, setViewMode] = useState<'kanban' | 'analytics'>('kanban');
   const [candidatesState, setCandidatesState] = useState(INITIAL_CANDIDATES);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [minScoreFilter, setMinScoreFilter] = useState<number>(0);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [isRescanning, setIsRescanning] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Dynamic funnel analytics computed for current pipeline
+  const pipelineMetrics = useMemo(() => {
+    const pipeData = candidatesState[activePipeline] || candidatesState.ai;
+    const newCount = pipeData.new.length;
+    const screenedCount = pipeData.screened.length;
+    const interviewCount = pipeData.interview.length;
+    const offerCount = pipeData.offer.length;
+    const totalApplicants = newCount + screenedCount + interviewCount + offerCount;
+
+    const allCandList = [
+      ...pipeData.new,
+      ...pipeData.screened,
+      ...pipeData.interview,
+      ...pipeData.offer
+    ];
+
+    const avgScore = allCandList.length > 0 
+      ? Math.round(allCandList.reduce((acc, c) => acc + c.score, 0) / allCandList.length)
+      : 95;
+
+    const topTier = allCandList.filter(c => c.score >= 95);
+    const midTier = allCandList.filter(c => c.score >= 90 && c.score < 95);
+    const standardTier = allCandList.filter(c => c.score < 90);
+
+    const screeningConversion = totalApplicants > 0 
+      ? Math.round(((screenedCount + interviewCount + offerCount) / totalApplicants) * 100) 
+      : 72;
+    const interviewConversion = (screenedCount + interviewCount + offerCount) > 0 
+      ? Math.round(((interviewCount + offerCount) / (screenedCount + interviewCount + offerCount)) * 100) 
+      : 48;
+    const offerConversion = (interviewCount + offerCount) > 0 
+      ? Math.round((offerCount / (interviewCount + offerCount)) * 100) 
+      : 35;
+
+    return {
+      totalApplicants,
+      newCount,
+      screenedCount,
+      interviewCount,
+      offerCount,
+      avgScore,
+      topTierCount: topTier.length,
+      midTierCount: midTier.length,
+      standardTierCount: standardTier.length,
+      screeningConversion,
+      interviewConversion,
+      offerConversion,
+      timeToHireDays: 6.8
+    };
+  }, [candidatesState, activePipeline]);
 
   // Drag and Drop state
   const [draggedCandidate, setDraggedCandidate] = useState<{ id: string; sourceCol: 'new' | 'screened' | 'interview' | 'offer' } | null>(null);
@@ -869,7 +927,7 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
         {/* ⚡ Enterprise Kanban Board Container */}
         <div className="bg-white dark:bg-slate-950/90 rounded-3xl p-5 sm:p-7 border border-slate-200/90 dark:border-slate-800 shadow-soft-xl dark:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.7)] space-y-6 transition-colors duration-300">
           
-          {/* 1. Pipeline Switcher Tabs */}
+          {/* 1. Pipeline Switcher Tabs & View Mode Toggle */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
               <span className="text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0 mr-1">
@@ -879,6 +937,7 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
                 <button
                   key={pipe.id}
                   type="button"
+                  data-testid={`pipeline-btn-${pipe.id}`}
                   onClick={() => setActivePipeline(pipe.id)}
                   className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2.5 ${
                     activePipeline === pipe.id
@@ -898,23 +957,68 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
               ))}
             </div>
 
-            <div className="flex items-center gap-2 shrink-0 self-end lg:self-auto">
-              <button 
-                type="button"
-                onClick={handleRescan}
-                disabled={isRescanning}
-                className="ai-gradient-btn px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-soft cursor-pointer active:scale-95 transition-transform overflow-hidden relative text-white"
-                title={isVi ? 'Quét lại toàn bộ ứng viên theo tiêu chí JD mới' : 'Rescan all candidates against latest JD criteria'}
-              >
-                <div className="shimmer-sweep" />
-                <RefreshCw className={`w-3.5 h-3.5 ${isRescanning ? 'animate-spin' : ''}`} />
-                <span>{isRescanning ? (isVi ? 'Đang phân tích...' : 'Scanning...') : t.employer.btnRescanAll}</span>
-              </button>
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-end lg:self-auto">
+              {/* Kanban vs Analytics View Mode Switcher */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs shadow-soft-2xs">
+                <button
+                  type="button"
+                  data-testid="view-mode-kanban"
+                  onClick={() => setViewMode('kanban')}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    viewMode === 'kanban'
+                      ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-soft-2xs'
+                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                  }`}
+                >
+                  <Kanban className="w-3.5 h-3.5" />
+                  <span>{isVi ? 'Kanban ATS' : 'Kanban ATS'}</span>
+                </button>
+                <button
+                  type="button"
+                  data-testid="view-mode-analytics"
+                  onClick={() => setViewMode('analytics')}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    viewMode === 'analytics'
+                      ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-soft-2xs'
+                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span>{isVi ? 'Phễu & Báo cáo' : 'Funnel Analytics'}</span>
+                </button>
+              </div>
+
+              {viewMode === 'kanban' ? (
+                <button 
+                  type="button"
+                  onClick={handleRescan}
+                  disabled={isRescanning}
+                  className="ai-gradient-btn px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-soft cursor-pointer active:scale-95 transition-transform overflow-hidden relative text-white"
+                  title={isVi ? 'Quét lại toàn bộ ứng viên theo tiêu chí JD mới' : 'Rescan all candidates against latest JD criteria'}
+                >
+                  <div className="shimmer-sweep" />
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRescanning ? 'animate-spin' : ''}`} />
+                  <span>{isRescanning ? (isVi ? 'Đang phân tích...' : 'Scanning...') : t.employer.btnRescanAll}</span>
+                </button>
+              ) : (
+                <button 
+                  type="button"
+                  data-testid="export-analytics-btn"
+                  onClick={() => showToast(isVi ? '📊 Đã xuất báo cáo phân tích tuyển dụng định dạng Excel/PDF!' : '📊 Exported recruitment funnel analytics report!')}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-soft cursor-pointer active:scale-95 transition-all"
+                  title={isVi ? 'Tải báo cáo tuyển dụng' : 'Export report'}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>{isVi ? 'Xuất báo cáo' : 'Export'}</span>
+                </button>
+              )}
             </div>
           </div>
 
-          {/* 2. Interactive Search & Quick Filters Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 dark:bg-slate-900/70 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+          {viewMode === 'kanban' ? (
+            <>
+              {/* 2. Interactive Search & Quick Filters Bar */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 dark:bg-slate-900/70 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800">
             <div className="relative w-full sm:w-80">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-3" />
               <input
@@ -1161,6 +1265,245 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
               );
             })}
           </div>
+        </>
+      ) : (
+        /* Recruiter Live Funnel & Analytics Dashboard */
+        <div data-testid="recruiter-analytics-dashboard" className="space-y-6 animate-fade-in">
+          {/* Funnel Overview Banner */}
+          <div className="p-6 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 border border-emerald-200/80 dark:border-emerald-800/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-emerald-600 text-white shadow-soft-2xs">
+                  <Activity className="w-4 h-4" />
+                </span>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                  {isVi ? 'Phễu Tuyển Dụng & Chuyển Đổi Thời Gian Thực' : 'Real-Time Recruitment & Funnel Velocity'}
+                </h3>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                {isVi
+                  ? `Phân tích hiệu suất nguồn ứng viên cho vị trí "${PIPELINES.find(p => p.id === activePipeline)?.titleVi}".`
+                  : `Pipeline conversion efficiency and candidate quality for "${PIPELINES.find(p => p.id === activePipeline)?.titleEn}".`}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-4 shrink-0">
+              <div className="text-right">
+                <span className="text-[11px] font-bold text-slate-400 block">{isVi ? 'Tốc độ chu kỳ tuyển' : 'Avg Time-to-Hire'}</span>
+                <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">{pipelineMetrics.timeToHireDays} {isVi ? 'ngày' : 'days'}</span>
+              </div>
+              <div className="h-8 w-px bg-slate-200 dark:bg-slate-700" />
+              <div className="text-right">
+                <span className="text-[11px] font-bold text-slate-400 block">{isVi ? 'Điểm ATS Bình quân' : 'Mean ATS Score'}</span>
+                <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{pipelineMetrics.avgScore}%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 4-Stage Funnel Flow Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Stage 1: Inflow */}
+            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-soft-xs space-y-3 relative overflow-hidden">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-500 dark:text-slate-400">{isVi ? 'Giai đoạn 1' : 'Stage 1'}</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">100% Inflow</span>
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">{isVi ? 'Ứng tuyển đầu vào' : 'Total Applicants'}</h4>
+                <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{pipelineMetrics.totalApplicants}</p>
+              </div>
+              <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div className="bg-emerald-500 h-full rounded-full w-full" />
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium">
+                {isVi ? 'Hồ sơ nhận từ web portal & mạng xã hội' : 'Direct web portal & referrals'}
+              </p>
+            </div>
+
+            {/* Stage 2: AI Screened */}
+            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-soft-xs space-y-3 relative overflow-hidden">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-500 dark:text-slate-400">{isVi ? 'Giai đoạn 2' : 'Stage 2'}</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300">
+                  {pipelineMetrics.screeningConversion}% Pass
+                </span>
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">{isVi ? 'Đạt chuẩn sàng lọc AI' : 'AI Screened Qualified'}</h4>
+                <p className="text-2xl font-black text-teal-600 dark:text-teal-400 mt-1">
+                  {pipelineMetrics.screenedCount + pipelineMetrics.interviewCount + pipelineMetrics.offerCount}
+                </p>
+              </div>
+              <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div className="bg-teal-500 h-full rounded-full" style={{ width: `${pipelineMetrics.screeningConversion}%` }} />
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium">
+                {isVi ? 'Trích xuất NLP & vượt qua ngưỡng ATS' : 'NLP parsed & met benchmark'}
+              </p>
+            </div>
+
+            {/* Stage 3: Interview */}
+            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-soft-xs space-y-3 relative overflow-hidden">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-500 dark:text-slate-400">{isVi ? 'Giai đoạn 3' : 'Stage 3'}</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+                  {pipelineMetrics.interviewConversion}% Rate
+                </span>
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">{isVi ? 'Vòng Phỏng vấn kỹ thuật' : 'Tech Interview Round'}</h4>
+                <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1">
+                  {pipelineMetrics.interviewCount + pipelineMetrics.offerCount}
+                </p>
+              </div>
+              <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${pipelineMetrics.interviewConversion}%` }} />
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium">
+                {isVi ? 'Đánh giá chuyên môn cùng Tech Lead' : 'Live evaluation with Tech Lead'}
+              </p>
+            </div>
+
+            {/* Stage 4: Offer Extended */}
+            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-soft-xs space-y-3 relative overflow-hidden">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-500 dark:text-slate-400">{isVi ? 'Giai đoạn 4' : 'Stage 4'}</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300">
+                  {pipelineMetrics.offerConversion}% Yield
+                </span>
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">{isVi ? 'Chốt Offer & Ký hợp đồng' : 'Offer Extended & Signed'}</h4>
+                <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
+                  {pipelineMetrics.offerCount}
+                </p>
+              </div>
+              <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div className="bg-amber-500 h-full rounded-full" style={{ width: `${pipelineMetrics.offerConversion}%` }} />
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium">
+                {isVi ? 'Đàm phán chế độ và chuẩn bị onboard' : 'Final package signed and onboarded'}
+              </p>
+            </div>
+          </div>
+
+          {/* Lower Analytics Section: Score Distribution & AI Insights */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* 1. Candidate Quality & Match Score Distribution */}
+            <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-soft-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Target className="w-4 h-4 text-emerald-500" />
+                  <span>{isVi ? 'Phân bố Điểm Tương Thích Ứng Viên (AI Match)' : 'Candidate Quality Distribution'}</span>
+                </h4>
+                <span className="text-xs text-slate-400 font-medium">
+                  {pipelineMetrics.totalApplicants} {isVi ? 'ứng viên' : 'total'}
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      <span>{isVi ? 'Xuất sắc (Match ≥ 95%) • Tuyển thẳng / Fast-Track' : 'Top Tier (Match ≥ 95%) • Fast-Track'}</span>
+                    </span>
+                    <span className="text-emerald-600 font-black">{pipelineMetrics.topTierCount} {isVi ? 'ứng viên' : 'candidates'}</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-emerald-500 rounded-full" 
+                      style={{ width: `${pipelineMetrics.totalApplicants > 0 ? (pipelineMetrics.topTierCount / pipelineMetrics.totalApplicants) * 100 : 40}%` }} 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
+                      <span>{isVi ? 'Phù hợp cao (Match 90% - 94%) • Đạt chuẩn yêu cầu' : 'Strong Match (90% - 94%) • Meets Criteria'}</span>
+                    </span>
+                    <span className="text-teal-600 font-black">{pipelineMetrics.midTierCount} {isVi ? 'ứng viên' : 'candidates'}</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-teal-500 rounded-full" 
+                      style={{ width: `${pipelineMetrics.totalApplicants > 0 ? (pipelineMetrics.midTierCount / pipelineMetrics.totalApplicants) * 100 : 40}%` }} 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+                      <span>{isVi ? 'Tiềm năng (Match < 90%) • Cần đánh giá thêm' : 'Potential (< 90%) • Needs Review'}</span>
+                    </span>
+                    <span className="text-slate-500 font-black">{pipelineMetrics.standardTierCount} {isVi ? 'ứng viên' : 'candidates'}</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-slate-400 rounded-full" 
+                      style={{ width: `${pipelineMetrics.totalApplicants > 0 ? (pipelineMetrics.standardTierCount / pipelineMetrics.totalApplicants) * 100 : 20}%` }} 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-between">
+                <span className="font-semibold">{isVi ? 'Tỷ lệ ứng viên đạt yêu cầu tuyển thẳng:' : 'Fast-track candidate ratio:'}</span>
+                <strong className="text-emerald-600 font-black text-sm">
+                  {pipelineMetrics.totalApplicants > 0 
+                    ? Math.round((pipelineMetrics.topTierCount / pipelineMetrics.totalApplicants) * 100) 
+                    : 60}%
+                </strong>
+              </div>
+            </div>
+
+            {/* 2. AI Recruiter Insights & Recommendations */}
+            <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-soft-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-amber-500" />
+                  <span>{isVi ? 'Khuyến nghị Tối ưu Tuyển dụng từ AI' : 'AI Optimization Insights'}</span>
+                </h4>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                  Live Pulse
+                </span>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-800/50 space-y-1">
+                  <strong className="text-emerald-800 dark:text-emerald-300 font-bold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    <span>{isVi ? 'Phản hồi siêu tốc từ ứng viên' : 'Rapid Candidate Response'}</span>
+                  </strong>
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                    {isVi 
+                      ? 'Ứng viên tại vòng "Phỏng vấn kỹ thuật" có thời gian phản hồi trung bình chỉ 1.4 giờ. Tỷ lệ tham dự phỏng vấn đạt 96%.' 
+                      : 'Candidates at Tech Interview stage reply within 1.4 hours on average. Attendance rate stands at 96%.'}
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/70 dark:border-indigo-800/50 space-y-1">
+                  <strong className="text-indigo-800 dark:text-indigo-300 font-bold flex items-center gap-1.5">
+                    <TrendingUp className="w-4 h-4 text-indigo-500" />
+                    <span>{isVi ? 'Khuyến nghị chiến lược Offer' : 'Offer Acceleration Tip'}</span>
+                  </strong>
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                    {isVi
+                      ? 'Khuyến nghị gửi thư mời nhận việc trong vòng 48h sau phỏng vấn để tăng 85% tỷ lệ đồng ý chốt hợp đồng và loại bỏ rủi ro đối thủ cạnh tranh.'
+                      : 'Extend offers within 48h post-interview to boost acceptance by 85% and preempt competing offers.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
 
         </div>
 
