@@ -32,12 +32,14 @@ import {
   Activity,
   Target,
   Zap,
-  Download
+  Download,
+  Compass
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { updateApplicationStageApi } from '../../services/api';
 import { CandidateMatrixSection } from './CandidateMatrixSection';
 import { CandidateCollaborativeReviewModal } from './CandidateCollaborativeReviewModal';
+import { AiTalentSourcingSection } from './AiTalentSourcingSection';
 
 export interface Candidate {
   id: string;
@@ -602,7 +604,7 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
   const isVi = language === 'vi';
 
   const [activePipeline, setActivePipeline] = useState<string>('ai');
-  const [viewMode, setViewMode] = useState<'kanban' | 'matrix' | 'analytics'>('kanban');
+  const [viewMode, setViewMode] = useState<'kanban' | 'matrix' | 'analytics' | 'sourcing'>('kanban');
   const [candidatesState, setCandidatesState] = useState(INITIAL_CANDIDATES);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [minScoreFilter, setMinScoreFilter] = useState<number>(0);
@@ -1044,6 +1046,19 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
                   <BarChart3 className="w-3.5 h-3.5" />
                   <span>{isVi ? 'Phễu & Báo cáo' : 'Funnel Analytics'}</span>
                 </button>
+                <button
+                  type="button"
+                  data-testid="view-mode-sourcing"
+                  onClick={() => setViewMode('sourcing')}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    viewMode === 'sourcing'
+                      ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-soft-2xs'
+                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                  }`}
+                >
+                  <Compass className="w-3.5 h-3.5" />
+                  <span>{isVi ? 'Săn Talent AI' : 'AI Sourcing'}</span>
+                </button>
               </div>
 
               {viewMode === 'kanban' ? (
@@ -1067,6 +1082,16 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>{isVi ? 'Tổng hợp AI 4 Chiều' : '4D AI Synthesis'}</span>
+                </button>
+              ) : viewMode === 'sourcing' ? (
+                <button 
+                  type="button"
+                  data-testid="sourcing-rescan-btn"
+                  onClick={() => showToast(isVi ? '⚡ Đang quét thêm 500+ hồ sơ kỹ sư tiềm năng từ GitHub...' : '⚡ Sourcing 500+ active engineers from GitHub...')}
+                  className="ai-gradient-btn px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-soft cursor-pointer active:scale-95 transition-transform overflow-hidden relative text-white"
+                >
+                  <Compass className="w-3.5 h-3.5 animate-spin" />
+                  <span>{isVi ? 'Quét Nguồn Mở' : 'Scan Repos'}</span>
                 </button>
               ) : (
                 <button 
@@ -1340,6 +1365,22 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
           activePipelineId={activePipeline}
           onAdvanceToInterview={handleBulkAdvanceToInterview}
           onSelectCandidate={(cand) => setSelectedCandidate(cand)}
+          onShowToast={(msg) => showToast(msg)}
+        />
+      ) : viewMode === 'sourcing' ? (
+        <AiTalentSourcingSection
+          onImportCandidate={(newCand) => {
+            setCandidatesState(prev => {
+              const current = prev[activePipeline] || prev.ai;
+              return {
+                ...prev,
+                [activePipeline]: {
+                  ...current,
+                  new: [newCand, ...current.new]
+                }
+              };
+            });
+          }}
           onShowToast={(msg) => showToast(msg)}
         />
       ) : (
