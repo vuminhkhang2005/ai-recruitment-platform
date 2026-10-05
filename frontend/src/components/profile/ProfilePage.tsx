@@ -28,11 +28,66 @@ import {
   Cpu,
   Layers,
   Calendar,
-  Check
+  Check,
+  UploadCloud,
+  FileCheck,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { MOCK_JOBS, type Job } from '../../data/mockData';
+
+export interface CvDocument {
+  id: string;
+  name: string;
+  size: string;
+  uploadedAt: string;
+  isPrimary: boolean;
+  atsScore: number;
+  tags: string[];
+  summary: string;
+  skillsExtracted: string[];
+}
+
+const INITIAL_CVS: CvDocument[] = [
+  {
+    id: 'cv-1',
+    name: 'Vu_Minh_Khang_Senior_Fullstack_2026.pdf',
+    size: '428 KB',
+    uploadedAt: '02/10/2026',
+    isPrimary: true,
+    atsScore: 96,
+    tags: ['Fullstack', 'React & Spring Boot', 'ATS 96%'],
+    summary: 'Hồ sơ chuyên môn tối ưu cho các vị trí Senior Fullstack / Tech Lead với 4+ năm kinh nghiệm React, TypeScript, Spring Boot, Microservices và tối ưu chịu tải cao.',
+    skillsExtracted: ['React', 'TypeScript', 'Java', 'Spring Boot', 'MySQL', 'Docker', 'AWS', 'Redis', 'Kafka']
+  },
+  {
+    id: 'cv-2',
+    name: 'Vu_Minh_Khang_AI_Specialized_Resume.pdf',
+    size: '392 KB',
+    uploadedAt: '28/09/2026',
+    isPrimary: false,
+    atsScore: 98,
+    tags: ['AI & GenAI', 'Python & LLM', 'ATS 98%'],
+    summary: 'Hồ sơ chuyên biệt định hướng Kỹ sư AI / Deep Learning với các dự án RAG, Fine-tuning mô hình ngôn ngữ lớn (LLM), LangChain và Computer Vision.',
+    skillsExtracted: ['Python', 'PyTorch', 'TensorFlow', 'LLM', 'LangChain', 'RAG', 'Vector DB', 'FastAPI', 'HuggingFace']
+  },
+  {
+    id: 'cv-3',
+    name: 'Vu_Minh_Khang_Cloud_DevOps_Resume.docx',
+    size: '315 KB',
+    uploadedAt: '15/09/2026',
+    isPrimary: false,
+    atsScore: 93,
+    tags: ['DevOps', 'Kubernetes & AWS', 'ATS 93%'],
+    summary: 'Hồ sơ chuyên môn về hạ tầng đám mây Cloud DevOps, thiết lập CI/CD pipeline tự động hóa, Kubernetes cluster và quan sát hệ thống (Observability).',
+    skillsExtracted: ['Kubernetes', 'Docker', 'AWS', 'Terraform', 'CI/CD GitHub Actions', 'Prometheus', 'Grafana', 'Linux']
+  }
+];
 
 interface ProfilePageProps {
   onBackToHome: () => void;
@@ -63,6 +118,84 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
     return [...list, ...missingMocks];
   }, [allJobs]);
   const savedJobsList = jobsPool.filter(job => savedJobIds.includes(job.id));
+
+  // Multi-version CV state
+  const [cvList, setCvList] = useState<CvDocument[]>(() => {
+    try {
+      const saved = localStorage.getItem('talentbridge_user_cvs');
+      return saved ? JSON.parse(saved) : INITIAL_CVS;
+    } catch {
+      return INITIAL_CVS;
+    }
+  });
+  const [previewingCv, setPreviewingCv] = useState<CvDocument | null>(null);
+  const [previewZoom, setPreviewZoom] = useState<number>(100);
+  const [previewTab, setPreviewTab] = useState<'document' | 'parsed'>('document');
+  const [isUploadingCv, setIsUploadingCv] = useState<boolean>(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('talentbridge_user_cvs', JSON.stringify(cvList));
+    } catch {
+      // Ignore storage errors
+    }
+  }, [cvList]);
+
+  const handleSetPrimaryCv = (cvId: string) => {
+    setCvList((prev) =>
+      prev.map((c) => ({
+        ...c,
+        isPrimary: c.id === cvId
+      }))
+    );
+    const target = cvList.find((c) => c.id === cvId);
+    showToast(isVi ? `Đã đặt "${target?.name}" làm CV mặc định khi ứng tuyển nhanh!` : `Set "${target?.name}" as default 1-Click application resume!`);
+  };
+
+  const handleDeleteCv = (cvId: string) => {
+    const target = cvList.find((c) => c.id === cvId);
+    if (target?.isPrimary) {
+      showToast(isVi ? 'Không thể gỡ CV mặc định. Vui lòng chọn CV khác làm mặc định trước.' : 'Cannot delete default CV. Please designate another primary resume first.');
+      return;
+    }
+    setCvList((prev) => prev.filter((c) => c.id !== cvId));
+    showToast(isVi ? `Đã gỡ phiên bản CV "${target?.name}".` : `Removed CV version "${target?.name}".`);
+  };
+
+  const handleSimulateUploadCv = (fileObj?: File) => {
+    const fileName = fileObj ? fileObj.name : `Vu_Minh_Khang_Resume_v${cvList.length + 1}.pdf`;
+    setIsUploadingCv(true);
+    setUploadProgress(20);
+
+    const timer1 = setTimeout(() => setUploadProgress(60), 300);
+    const timer2 = setTimeout(() => setUploadProgress(95), 650);
+    const timer3 = setTimeout(() => {
+      setUploadProgress(100);
+      setIsUploadingCv(false);
+
+      const newCv: CvDocument = {
+        id: `cv-${Date.now()}`,
+        name: fileName,
+        size: `${Math.floor(Math.random() * 100 + 340)} KB`,
+        uploadedAt: new Date().toLocaleDateString('vi-VN'),
+        isPrimary: false,
+        atsScore: Math.floor(Math.random() * 5 + 94),
+        tags: ['New Version', 'ATS Checked'],
+        summary: 'Tài liệu CV mới được tải lên và phân tích tự động qua hệ thống trích xuất ATS AI TalentBridge.',
+        skillsExtracted: ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'Docker', 'System Design']
+      };
+
+      setCvList((prev) => [newCv, ...prev]);
+      showToast(isVi ? `🎉 Đã tải lên và bóc tách thành công CV "${fileName}"!` : `🎉 Successfully uploaded and parsed "${fileName}"!`);
+    }, 1000);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+    };
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -495,6 +628,146 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
                       <p className="text-sm font-bold text-slate-900 dark:text-white">Senior • Lead Fullstack</p>
                       <span className="text-[10px] text-emerald-600 font-semibold">{isVi ? '4+ năm kinh nghiệm thực chiến' : '4+ years hands-on'}</span>
                     </div>
+                  </div>
+                </div>
+
+                {/* CV Documents & Versions Management */}
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-soft-xs space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                        <FileCheck className="w-4 h-4 text-emerald-500" />
+                        <span>{isVi ? 'Quản lý phiên bản CV & Hồ sơ ATS' : 'CV Versions & ATS Documents'}</span>
+                      </h3>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        {isVi ? 'Quản lý nhiều phiên bản CV chuyên biệt cho từng vị trí và xem trước trực quan.' : 'Manage tailored resumes for specific roles and preview documents directly.'}
+                      </p>
+                    </div>
+
+                    <label className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-soft cursor-pointer transition-all self-start sm:self-auto shrink-0">
+                      <UploadCloud className="w-3.5 h-3.5" />
+                      <span>{isUploadingCv ? (isVi ? `Đang tải lên... ${uploadProgress}%` : `Uploading... ${uploadProgress}%`) : (isVi ? 'Tải lên CV mới' : 'Upload New CV')}</span>
+                      <input 
+                        type="file" 
+                        accept=".pdf,.docx,.doc" 
+                        className="hidden" 
+                        disabled={isUploadingCv}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleSimulateUploadCv(file);
+                          e.target.value = '';
+                        }} 
+                      />
+                    </label>
+                  </div>
+
+                  {/* Upload Progress Bar if active */}
+                  {isUploadingCv && (
+                    <div className="p-3.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 space-y-2 animate-fade-in">
+                      <div className="flex items-center justify-between text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                        <span className="flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                          <span>{isVi ? 'Đang bóc tách kỹ năng & chấm điểm ATS...' : 'Parsing skills & computing ATS match...'}</span>
+                        </span>
+                        <span>{uploadProgress}%</span>
+                      </div>
+                      <div className="w-full h-2 bg-emerald-200/60 dark:bg-emerald-900 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CV Cards List */}
+                  <div className="space-y-3">
+                    {cvList.map((cv) => (
+                      <div 
+                        key={cv.id}
+                        className={`p-4 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 ${
+                          cv.isPrimary 
+                            ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 ring-1 ring-emerald-500/20' 
+                            : 'bg-slate-50/70 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="space-y-1.5 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
+                              {cv.name}
+                            </span>
+                            {cv.isPrimary && (
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-600 text-white shadow-soft-2xs">
+                                {isVi ? 'Mặc định (1-Click)' : 'Primary'}
+                              </span>
+                            )}
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                              ATS: {cv.atsScore}/100
+                            </span>
+                          </div>
+
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                            {cv.summary}
+                          </p>
+
+                          <div className="flex items-center gap-3 text-[10px] text-slate-400 font-medium">
+                            <span>{cv.size}</span>
+                            <span>•</span>
+                            <span>{isVi ? `Cập nhật: ${cv.uploadedAt}` : `Updated: ${cv.uploadedAt}`}</span>
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreviewingCv(cv);
+                              setPreviewZoom(100);
+                              setPreviewTab('document');
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1 shadow-soft-2xs"
+                            title={isVi ? 'Xem trước tài liệu' : 'Preview document'}
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>{isVi ? 'Xem trước' : 'Preview'}</span>
+                          </button>
+
+                          {!cv.isPrimary ? (
+                            <button
+                              type="button"
+                              onClick={() => handleSetPrimaryCv(cv.id)}
+                              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-300 font-bold text-xs transition-colors cursor-pointer"
+                              title={isVi ? 'Đặt làm CV mặc định' : 'Set as primary'}
+                            >
+                              {isVi ? 'Chọn chính' : 'Set Primary'}
+                            </button>
+                          ) : null}
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              showToast(isVi ? `Đang tải xuống tệp ${cv.name}...` : `Downloading ${cv.name}...`);
+                            }}
+                            className="p-1.5 rounded-xl text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                            title={isVi ? 'Tải tệp' : 'Download'}
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+
+                          {!cv.isPrimary && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCv(cv.id)}
+                              className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
+                              title={isVi ? 'Xóa phiên bản này' : 'Delete'}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -1008,6 +1281,267 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
         </div>
 
       </div>
+
+      {/* Live In-Browser CV Document Previewer Modal */}
+      {previewingCv && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-md animate-fade-in overflow-y-auto">
+          <div 
+            className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-3xl w-full max-w-4xl shadow-soft-2xl border border-slate-200 dark:border-slate-800 overflow-hidden relative my-auto animate-scale-up transition-colors max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate">
+                      {previewingCv.name}
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 shrink-0">
+                      ATS: {previewingCv.atsScore}/100
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {previewingCv.size} • {isVi ? `Định dạng chuẩn ATS • Cập nhật: ${previewingCv.uploadedAt}` : `ATS Standard Format • Updated: ${previewingCv.uploadedAt}`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Header Actions */}
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Zoom Controls */}
+                <div className="hidden sm:flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5 border border-slate-200 dark:border-slate-700 text-xs font-bold">
+                  <button 
+                    type="button"
+                    onClick={() => setPreviewZoom((z) => Math.max(75, z - 10))}
+                    className="p-1.5 hover:text-emerald-600 transition-colors cursor-pointer"
+                    title="Zoom Out"
+                  >
+                    <ZoomOut className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="px-2 text-[10px]">{previewZoom}%</span>
+                  <button 
+                    type="button"
+                    onClick={() => setPreviewZoom((z) => Math.min(150, z + 10))}
+                    className="p-1.5 hover:text-emerald-600 transition-colors cursor-pointer"
+                    title="Zoom In"
+                  >
+                    <ZoomIn className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    showToast(isVi ? `Đang xuất tệp ${previewingCv.name}...` : `Exporting ${previewingCv.name}...`);
+                  }}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-soft transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{isVi ? 'Tải PDF' : 'Download'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  aria-label="Close CV preview"
+                  onClick={() => setPreviewingCv(null)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Sub-tab Switcher (Visual Sheet vs Extracted ATS Data) */}
+            <div className="flex items-center gap-2 px-6 pt-3 pb-2 border-b border-slate-100 dark:border-slate-800 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setPreviewTab('document')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                  previewTab === 'document'
+                    ? 'bg-emerald-600 text-white shadow-soft-2xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>{isVi ? 'Văn bản trực quan (A4 Sheet)' : 'Visual Document (A4)'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewTab('parsed')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                  previewTab === 'parsed'
+                    ? 'bg-emerald-600 text-white shadow-soft-2xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{isVi ? 'Bóc tách từ khóa ATS & Kỹ năng' : 'Parsed ATS Entities'}</span>
+              </button>
+            </div>
+
+            {/* Modal Body / Viewer */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100/70 dark:bg-slate-950/70 flex justify-center">
+              {previewTab === 'document' ? (
+                <div 
+                  className="w-full max-w-[760px] bg-white text-slate-900 p-8 sm:p-12 rounded-2xl shadow-soft-xl border border-slate-200 space-y-6 transition-transform duration-200 origin-top font-sans"
+                  style={{ transform: `scale(${previewZoom / 100})` }}
+                >
+                  {/* Sheet Header */}
+                  <div className="border-b border-slate-200 pb-5 space-y-2">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">
+                          {user.name}
+                        </h2>
+                        <p className="text-sm font-bold text-emerald-700 mt-0.5">
+                          {user.title}
+                        </p>
+                      </div>
+                      <div className="text-right text-[11px] text-slate-500 space-y-0.5">
+                        <p>{user.email}</p>
+                        <p>{user.phone}</p>
+                        <p>{user.location}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Summary */}
+                  <div className="space-y-1.5">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 border-b border-slate-200 pb-1">
+                      {isVi ? 'Tóm tắt Chuyên môn' : 'Professional Summary'}
+                    </h3>
+                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                      {previewingCv.summary}
+                    </p>
+                  </div>
+
+                  {/* Core Technical Competencies */}
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 border-b border-slate-200 pb-1">
+                      {isVi ? 'Kỹ năng Chuyên sâu (Core Skills)' : 'Core Technical Skills'}
+                    </h3>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {previewingCv.skillsExtracted.map((sk) => (
+                        <span key={sk} className="px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-800 text-[10px] font-bold border border-slate-200">
+                          {sk}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Work Experience */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 border-b border-slate-200 pb-1">
+                      {isVi ? 'Kinh nghiệm Làm việc Thực chiến' : 'Work Experience'}
+                    </h3>
+                    
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <strong className="text-slate-900 font-bold">Senior Fullstack Software Engineer • VNG Corporation</strong>
+                        <span className="text-slate-500 text-[11px]">2024 - {isVi ? 'Hiện tại' : 'Present'}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 leading-relaxed">
+                        Chịu trách nhiệm kiến trúc dịch vụ chịu tải cao, phát triển vi dịch vụ Spring Boot 3 và giao diện tương tác React 18 / Next.js. Tối ưu hóa truy vấn Redis cache giúp giảm latency 40%.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1 pt-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <strong className="text-slate-900 font-bold">Fullstack Software Engineer • FPT Software</strong>
+                        <span className="text-slate-500 text-[11px]">2022 - 2024</span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 leading-relaxed">
+                        Phát triển nền tảng tài chính điện tử, tích hợp cổng thanh toán và triển khai container hóa qua Docker, Kubernetes trên hạ tầng AWS ECS.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Education */}
+                  <div className="space-y-1.5 pt-1">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 border-b border-slate-200 pb-1">
+                      {isVi ? 'Học vấn & Bằng cấp' : 'Education & Credentials'}
+                    </h3>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-900">Kỹ sư Công nghệ Thông tin • HCMUTE</span>
+                      <span className="text-slate-500 text-[11px]">GPA: 3.6/4.0 • Xuất sắc</span>
+                    </div>
+                  </div>
+
+                </div>
+              ) : (
+                /* Tab 2: Parsed ATS Data */
+                <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 space-y-6">
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
+                    <div>
+                      <span className="text-xs text-emerald-800 dark:text-emerald-300 font-bold block">{isVi ? 'Điểm chuẩn hóa ATS Score' : 'ATS Benchmark Score'}</span>
+                      <strong className="text-2xl font-black text-emerald-700 dark:text-emerald-300">{previewingCv.atsScore}/100</strong>
+                    </div>
+                    <span className="px-3 py-1 bg-emerald-600 text-white rounded-full text-xs font-bold">
+                      {isVi ? 'Tương thích xuất sắc' : 'Excellent Match'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">
+                      {isVi ? 'Thực thể Kỹ năng bóc tách từ NLP' : 'NLP Extracted Skill Entities'}
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {previewingCv.skillsExtracted.map((sk) => (
+                        <span key={sk} className="px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200/80 dark:border-slate-700 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>{sk}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400">
+                    <strong className="text-slate-900 dark:text-white block font-bold">
+                      {isVi ? 'Khuyến nghị cải thiện cấu trúc ATS:' : 'ATS Recommendations:'}
+                    </strong>
+                    <p>• Phông chữ tiêu chuẩn sans-serif đạt tỷ lệ nhận diện OCR 100%.</p>
+                    <p>• Các tiêu đề phân cấp H1/H2 rõ ràng, không sử dụng bảng lồng nhau gây nhiễu ATS parser.</p>
+                    <p>• Từ khóa công nghệ bao phủ 96% tập kỹ năng yêu cầu trong cơ sở dữ liệu việc làm.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900">
+              {!previewingCv.isPrimary ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSetPrimaryCv(previewingCv.id);
+                    setPreviewingCv(null);
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-soft cursor-pointer transition-all active:scale-95"
+                >
+                  {isVi ? 'Đặt làm CV mặc định' : 'Set as Primary'}
+                </button>
+              ) : (
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{isVi ? 'Đây là CV mặc định của bạn' : 'This is your primary resume'}</span>
+                </span>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setPreviewingCv(null)}
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                {isVi ? 'Đóng' : 'Close'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
