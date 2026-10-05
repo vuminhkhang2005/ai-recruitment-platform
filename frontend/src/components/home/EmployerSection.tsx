@@ -36,8 +36,9 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { updateApplicationStageApi } from '../../services/api';
+import { CandidateMatrixSection } from './CandidateMatrixSection';
 
-interface Candidate {
+export interface Candidate {
   id: string;
   name: string;
   avatar: string;
@@ -600,7 +601,7 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
   const isVi = language === 'vi';
 
   const [activePipeline, setActivePipeline] = useState<string>('ai');
-  const [viewMode, setViewMode] = useState<'kanban' | 'analytics'>('kanban');
+  const [viewMode, setViewMode] = useState<'kanban' | 'matrix' | 'analytics'>('kanban');
   const [candidatesState, setCandidatesState] = useState(INITIAL_CANDIDATES);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [minScoreFilter, setMinScoreFilter] = useState<number>(0);
@@ -737,6 +738,48 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
 
     const nextStage = stageOrder[currentIdx + 1];
     handleMoveCandidateToStage(candidateId, currentColumn, nextStage);
+  };
+
+  // Bulk advance candidates directly to Interview stage
+  const handleBulkAdvanceToInterview = (candidateIds: string[]) => {
+    setCandidatesState((prev) => {
+      const pipelineCandidates = { ...prev[activePipeline] };
+      const candidatesToMove: Candidate[] = [];
+
+      const updatedNew = (pipelineCandidates.new || []).filter((c) => {
+        if (candidateIds.includes(c.id)) {
+          candidatesToMove.push(c);
+          return false;
+        }
+        return true;
+      });
+
+      const updatedScreened = (pipelineCandidates.screened || []).filter((c) => {
+        if (candidateIds.includes(c.id)) {
+          candidatesToMove.push(c);
+          return false;
+        }
+        return true;
+      });
+
+      const updatedInterview = [...candidatesToMove, ...(pipelineCandidates.interview || [])];
+
+      return {
+        ...prev,
+        [activePipeline]: {
+          ...pipelineCandidates,
+          new: updatedNew,
+          screened: updatedScreened,
+          interview: updatedInterview
+        }
+      };
+    });
+
+    showToast(
+      isVi 
+        ? `⚡ Đã chuyển thành công ${candidateIds.length} ứng viên sang vòng Phỏng Vấn Kỹ Thuật!` 
+        : `⚡ Successfully advanced ${candidateIds.length} candidates to Tech Interview stage!`
+    );
   };
 
   // Filter candidates per column
@@ -975,6 +1018,19 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
                 </button>
                 <button
                   type="button"
+                  data-testid="view-mode-matrix"
+                  onClick={() => setViewMode('matrix')}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    viewMode === 'matrix'
+                      ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-soft-2xs'
+                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                  }`}
+                >
+                  <Target className="w-3.5 h-3.5" />
+                  <span>{isVi ? 'Ma trận AI' : 'AI Matrix'}</span>
+                </button>
+                <button
+                  type="button"
                   data-testid="view-mode-analytics"
                   onClick={() => setViewMode('analytics')}
                   className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
@@ -999,6 +1055,16 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
                   <div className="shimmer-sweep" />
                   <RefreshCw className={`w-3.5 h-3.5 ${isRescanning ? 'animate-spin' : ''}`} />
                   <span>{isRescanning ? (isVi ? 'Đang phân tích...' : 'Scanning...') : t.employer.btnRescanAll}</span>
+                </button>
+              ) : viewMode === 'matrix' ? (
+                <button 
+                  type="button"
+                  data-testid="matrix-fast-eval-btn"
+                  onClick={() => showToast(isVi ? '⚡ AI đã tự động tổng hợp xếp hạng 4 chiều cho toàn bộ ứng viên!' : '⚡ AI synthesized 4-dimension candidate ranking!')}
+                  className="ai-gradient-btn px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-soft cursor-pointer active:scale-95 transition-transform overflow-hidden relative text-white"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{isVi ? 'Tổng hợp AI 4 Chiều' : '4D AI Synthesis'}</span>
                 </button>
               ) : (
                 <button 
@@ -1266,6 +1332,14 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
             })}
           </div>
         </>
+      ) : viewMode === 'matrix' ? (
+        <CandidateMatrixSection
+          candidates={currentPipelineData}
+          activePipelineId={activePipeline}
+          onAdvanceToInterview={handleBulkAdvanceToInterview}
+          onSelectCandidate={(cand) => setSelectedCandidate(cand)}
+          onShowToast={(msg) => showToast(msg)}
+        />
       ) : (
         /* Recruiter Live Funnel & Analytics Dashboard */
         <div data-testid="recruiter-analytics-dashboard" className="space-y-6 animate-fade-in">
