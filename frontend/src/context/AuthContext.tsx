@@ -350,13 +350,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resumeUrl?: string,
     coverLetter?: string
   ): Promise<boolean> => {
-    if (appliedJobs.some((a) => a.jobId === job.id)) {
+    if (appliedJobs.some((a) => String(a.jobId) === String(job.id))) {
       return false; // Already applied
     }
 
     const newApplication: AppliedJob = {
       id: 'app-' + Date.now(),
-      jobId: job.id,
+      jobId: String(job.id),
       jobTitle: job.title,
       company: job.company,
       appliedAt: new Date().toLocaleDateString('vi-VN'),
@@ -386,7 +386,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
-  const isJobApplied = (jobId: string) => appliedJobs.some((a) => a.jobId === jobId);
+  const isJobApplied = (jobId: string) => appliedJobs.some((a) => String(a.jobId) === String(jobId));
 
   const switchRole = () => {
     if (!user) return;

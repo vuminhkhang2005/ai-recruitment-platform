@@ -45,7 +45,7 @@ export const JobsPage: React.FC<JobsPageProps> = ({
   onSaveToggled
 }) => {
   const { t, language } = useLanguage();
-  const { user, applyJob, savedJobIds, toggleSaveJob } = useAuth();
+  const { user, applyJob, isJobApplied, savedJobIds, toggleSaveJob } = useAuth();
 
   // Search & Filter state initialized with props
   const [searchQuery, setSearchQuery] = useState(initialKeyword);
@@ -264,12 +264,15 @@ export const JobsPage: React.FC<JobsPageProps> = ({
     }, 700);
   };
 
-  const handleApplyCurrentJob = (e: React.FormEvent) => {
+  const handleApplyCurrentJob = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentSelectedJob) return;
-    applyJob({ id: currentSelectedJob.id, title: currentSelectedJob.title, company: currentSelectedJob.company });
+    await applyJob(
+      { id: currentSelectedJob.id, title: currentSelectedJob.title, company: currentSelectedJob.company },
+      undefined,
+      coverLetter
+    );
     setAppliedJobs((prev) => ({ ...prev, [currentSelectedJob.id]: true }));
-    onQuickApply?.(currentSelectedJob);
   };
 
   const scrollToApplyForm = () => {
@@ -359,7 +362,9 @@ export const JobsPage: React.FC<JobsPageProps> = ({
     return job.matchReasonsEn && job.matchReasonsEn.length > 0 ? job.matchReasonsEn : job.matchReasons;
   };
 
-  const isCurrentJobApplied = currentSelectedJob ? Boolean(appliedJobs[currentSelectedJob.id]) : false;
+  const isCurrentJobApplied = currentSelectedJob
+    ? Boolean(appliedJobs[currentSelectedJob.id]) || isJobApplied(currentSelectedJob.id)
+    : false;
   const isCurrentJobSaved = currentSelectedJob ? savedJobIds.includes(currentSelectedJob.id) : false;
 
   return (
@@ -657,7 +662,7 @@ export const JobsPage: React.FC<JobsPageProps> = ({
               {filteredAndSortedJobs.map((job) => {
                 const isSelected = currentSelectedJob?.id === job.id;
                 const isSaved = savedJobIds.includes(job.id);
-                const isApplied = Boolean(appliedJobs[job.id]);
+                const isApplied = Boolean(appliedJobs[job.id]) || isJobApplied(job.id);
 
                 return (
                   <div

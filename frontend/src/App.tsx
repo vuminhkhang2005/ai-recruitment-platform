@@ -23,7 +23,6 @@ import { useLanguage } from './i18n/LanguageContext';
 import { useAuth } from './context/AuthContext';
 import { 
   fetchJobsFromApi, 
-  submitQuickApplyToApi, 
   checkBackendHealth 
 } from './services/api';
 
@@ -290,26 +289,20 @@ export function App() {
   };
 
   const handleQuickApply = async (job: Job) => {
-    applyJob({ id: job.id, title: job.title, company: job.company });
+    const success = await applyJob({ id: job.id, title: job.title, company: job.company });
 
-    const result = await submitQuickApplyToApi({
-      jobId: job.id,
-      candidateProfileId: 1,
-      fullName: 'Vũ Minh Khang',
-      email: '23110238@student.hcmute.edu.vn',
-      phone: '0901234567',
-      resumeUrl: 'https://s3.ap-southeast-1.amazonaws.com/talentbridge/cvs/resume_vuminhkhang.pdf',
-      coverLetter: `Ứng tuyển nhanh vào vị trí ${job.title} tại ${job.company}`
-    });
-
-    if (result.success) {
+    if (success) {
       showToast(
         language === 'vi'
-          ? `🎉 ${result.message || `Ứng tuyển thành công vào vị trí ${job.title} tại ${job.company}!`}`
+          ? `🎉 Ứng tuyển thành công vào vị trí ${job.title} tại ${job.company}!`
           : `🎉 Quick application submitted for ${job.title} at ${job.company}!`
       );
     } else {
-      showToast(`⚠️ ${result.message}`);
+      showToast(
+        language === 'vi'
+          ? `ℹ️ Bạn đã nộp hồ sơ ứng tuyển vị trí này rồi.`
+          : `ℹ️ You have already applied for this position.`
+      );
     }
   };
 
@@ -378,6 +371,8 @@ export function App() {
         {currentView === 'profile' ? (
           <ProfilePage 
             onBackToHome={() => handleNavigate('home')}
+            onRequestLogin={() => setIsAuthModalOpen(true)}
+            allJobs={jobsList}
             onSelectJob={(jobId) => {
               const target = jobsList.find(j => j.id === jobId);
               if (target) setSelectedJob(target);
@@ -503,6 +498,7 @@ export function App() {
         onClose={() => setIsSavedJobsModalOpen(false)}
         onSelectJob={(job) => setSelectedJob(job)}
         onQuickApply={handleQuickApply}
+        allJobs={jobsList}
       />
 
       <AppliedJobsModal
