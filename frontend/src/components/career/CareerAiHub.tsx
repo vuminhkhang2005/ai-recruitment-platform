@@ -9,14 +9,16 @@ import {
   ShieldCheck,
   ChevronRight,
   Zap,
-  Target
+  Target,
+  Calculator
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { AiCvScannerDemo } from '../home/AiCvScannerDemo';
 import { CareerRoadmapPreview } from '../home/CareerRoadmapPreview';
+import { SalaryCalculatorSection } from './SalaryCalculatorSection';
 
 interface CareerAiHubProps {
-  initialTab?: 'scanner' | 'roadmap';
+  initialTab?: 'scanner' | 'roadmap' | 'salary';
   onBackToHome: () => void;
   onFindMatchingJobs?: () => void;
 }
@@ -28,7 +30,7 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
 }) => {
   const { language } = useLanguage();
   const isVi = language === 'vi';
-  const [activeTab, setActiveTab] = useState<'scanner' | 'roadmap'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'scanner' | 'roadmap' | 'salary'>(initialTab);
 
   useEffect(() => {
     if (initialTab) {
@@ -62,7 +64,9 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
               <span className="text-emerald-600 dark:text-emerald-400 font-bold">
                 {activeTab === 'scanner' 
                   ? (isVi ? 'Quét CV chuẩn ATS' : 'ATS CV Scanner') 
-                  : (isVi ? 'Lộ trình Kỹ năng' : 'Skill Roadmap')}
+                  : activeTab === 'roadmap'
+                  ? (isVi ? 'Lộ trình Kỹ năng' : 'Skill Roadmap')
+                  : (isVi ? 'Định Giá Lương Tech' : 'Tech Salary Estimator')}
               </span>
             </div>
           </div>
@@ -124,11 +128,12 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
 
         {/* Unified Segmented Tab Controller */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-1.5 border border-slate-200/90 dark:border-slate-800 shadow-soft-sm">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             
             {/* Tab 1: AI CV Scanner */}
             <button
               type="button"
+              data-testid="tab-cv-scanner"
               onClick={() => setActiveTab('scanner')}
               className={`p-4 rounded-xl flex items-center gap-3.5 transition-all text-left cursor-pointer ${
                 activeTab === 'scanner'
@@ -153,7 +158,7 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
                   )}
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
-                  {isVi ? 'Bóc tách từ khóa, chấm điểm độ khớp JD và chuẩn hóa định dạng' : 'Audit keywords, score match rates and optimize document hierarchy'}
+                  {isVi ? 'Bóc tách từ khóa, chấm điểm độ khớp JD' : 'Audit keywords and score JD match rates'}
                 </p>
               </div>
             </button>
@@ -161,6 +166,7 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
             {/* Tab 2: Skill Gap Roadmap */}
             <button
               type="button"
+              data-testid="tab-career-roadmap"
               onClick={() => setActiveTab('roadmap')}
               className={`p-4 rounded-xl flex items-center gap-3.5 transition-all text-left cursor-pointer ${
                 activeTab === 'roadmap'
@@ -178,14 +184,47 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-black tracking-tight">
-                    {isVi ? 'Bản Đồ Lộ Trình Kỹ Năng' : 'Skill Gap & Career Roadmap'}
+                    {isVi ? 'Bản Đồ Lộ Trình Kỹ Năng' : 'Skill Gap & Roadmap'}
                   </span>
                   {activeTab === 'roadmap' && (
                     <span className="w-2 h-2 rounded-full bg-teal-500" />
                   )}
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
-                  {isVi ? 'Xác định khoảng cách năng lực, dự báo thu nhập và mốc học tập' : 'Identify competency gaps, salary projection and learning tracks'}
+                  {isVi ? 'Xác định khoảng cách năng lực & mốc học tập' : 'Identify competency gaps & learning tracks'}
+                </p>
+              </div>
+            </button>
+
+            {/* Tab 3: Tech Salary Estimator & Compensation Benchmark */}
+            <button
+              type="button"
+              data-testid="tab-salary-calculator"
+              onClick={() => setActiveTab('salary')}
+              className={`p-4 rounded-xl flex items-center gap-3.5 transition-all text-left cursor-pointer ${
+                activeTab === 'salary'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700/70 text-slate-900 dark:text-white shadow-soft-xs'
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-transparent text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform ${
+                activeTab === 'salary'
+                  ? 'bg-emerald-600 text-white shadow-soft-xs scale-105'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+              }`}>
+                <Calculator className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-black tracking-tight">
+                    {isVi ? 'Định Giá Lương Tech' : 'Tech Salary Estimator'}
+                  </span>
+                  {activeTab === 'salary' && (
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
+                  {isVi ? 'Bộ tính Gross / Net & xếp hạng thị trường' : 'Gross / Net calculator & market percentile'}
                 </p>
               </div>
             </button>
@@ -199,9 +238,13 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
             <div className="animate-fade-in">
               <AiCvScannerDemo onFindMatchingJobs={onFindMatchingJobs} />
             </div>
-          ) : (
+          ) : activeTab === 'roadmap' ? (
             <div className="animate-fade-in">
               <CareerRoadmapPreview />
+            </div>
+          ) : (
+            <div className="animate-fade-in">
+              <SalaryCalculatorSection onFindMatchingJobs={onFindMatchingJobs} />
             </div>
           )}
         </div>

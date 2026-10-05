@@ -27,13 +27,13 @@ import { useAuth } from '../../context/AuthContext';
 
 interface NavbarProps {
   currentView?: 'home' | 'jobs' | 'profile' | 'career-ai' | 'ats-pipeline';
-  careerAiTab?: 'scanner' | 'roadmap';
-  onNavigate?: (view: 'home' | 'jobs' | 'profile' | 'career-ai' | 'ats-pipeline', tab?: 'scanner' | 'roadmap') => void;
+  careerAiTab?: 'scanner' | 'roadmap' | 'salary';
+  onNavigate?: (view: 'home' | 'jobs' | 'profile' | 'career-ai' | 'ats-pipeline', tab?: 'scanner' | 'roadmap' | 'salary') => void;
   currentRole?: 'candidate' | 'recruiter';
   onRoleChange?: (role: 'candidate' | 'recruiter') => void;
   onOpenAuthModal?: () => void;
   onOpenCvScanner?: () => void;
-  onOpenCareerAi?: (tab: 'scanner' | 'roadmap') => void;
+  onOpenCareerAi?: (tab: 'scanner' | 'roadmap' | 'salary') => void;
   onOpenPostJobModal?: () => void;
   onThemeToggled?: (newTheme: 'light' | 'dark') => void;
   onOpenProfileModal?: () => void;
@@ -108,7 +108,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
-  const handleCareerAiClick = (tab: 'scanner' | 'roadmap') => {
+  const handleCareerAiClick = (tab: 'scanner' | 'roadmap' | 'salary') => {
     setActiveSection(null);
     if (onOpenCareerAi) {
       onOpenCareerAi(tab);
@@ -686,6 +686,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               <span>{language === 'vi' ? 'Lộ trình' : 'Roadmap'}</span>
+            </button>
+            <button 
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                handleCareerAiClick('salary');
+              }}
+              className={`w-full text-left px-3 py-2 text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer transition-colors ${
+                currentView === 'career-ai' && careerAiTab === 'salary'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/40'
+                  : 'text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              <span>{language === 'vi' ? 'Định giá lương' : 'Salary Estimator'}</span>
             </button>
             <button 
               type="button"

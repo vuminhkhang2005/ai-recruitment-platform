@@ -53,3 +53,4 @@ test_*.cjs
 !frontend/test_recruiter_analytics.cjs
 !frontend/test_job_comparison.cjs
 !frontend/test_career_roadmap_generator.cjs
+!frontend/test_salary_estimator.cjs

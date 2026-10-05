@@ -4,7 +4,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 
 interface FooterProps {
   onOpenPostJobModal?: () => void;
-  onOpenCareerAi?: (tab: 'scanner' | 'roadmap') => void;
+  onOpenCareerAi?: (tab: 'scanner' | 'roadmap' | 'salary') => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({ onOpenPostJobModal, onOpenCareerAi }) => {
@@ -22,7 +22,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenPostJobModal, onOpenCareer
   };
 
   return (
-    <footer className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 pt-16 pb-12 border-t border-slate-200 dark:border-slate-850 transition-colors duration-300">
+    <footer className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 pt-16 pb-12 border-t border-slate-200 dark:border-slate-855 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Main Footer Grid */}
@@ -81,7 +81,16 @@ export const Footer: React.FC<FooterProps> = ({ onOpenPostJobModal, onOpenCareer
                   {language === 'vi' ? 'Bản đồ lộ trình kỹ năng' : 'Skill Gap Roadmap'}
                 </button>
               </li>
-              <li><a href="#jobs" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">{language === 'vi' ? 'Tính điểm AI Matching' : 'Calculate Match Score'}</a></li>
+              <li>
+                <button 
+                  type="button" 
+                  data-testid="footer-salary-link"
+                  onClick={() => onOpenCareerAi?.('salary')} 
+                  className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors text-left cursor-pointer"
+                >
+                  {language === 'vi' ? 'Định giá lương & Thù lao Tech' : 'Tech Salary Estimator'}
+                </button>
+              </li>
               <li>
                 <button 
                   type="button" 

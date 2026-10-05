@@ -55,6 +55,9 @@ export function App() {
       } else if (hash === '#roadmap') {
         setCurrentView('career-ai');
         setCareerAiTab('roadmap');
+      } else if (hash === '#salary' || hash === '#salary-estimator' || hash === '#calculator') {
+        setCurrentView('career-ai');
+        setCareerAiTab('salary');
       } else if (hash === '#ats-pipeline' || hash === '#pipeline' || hash === '#ats') {
         setCurrentView('ats-pipeline');
       } else if (!hash || hash === '#home') {
@@ -76,7 +79,7 @@ export function App() {
       if (typeof window !== 'undefined') {
         if (window.location.hash === '#profile') return 'profile';
         if (window.location.hash === '#jobs' || window.location.hash === '#search') return 'jobs';
-        if (window.location.hash === '#career-ai' || window.location.hash === '#scanner' || window.location.hash === '#roadmap') return 'career-ai';
+        if (window.location.hash === '#career-ai' || window.location.hash === '#scanner' || window.location.hash === '#roadmap' || window.location.hash === '#salary' || window.location.hash === '#salary-estimator' || window.location.hash === '#calculator') return 'career-ai';
         if (window.location.hash === '#ats-pipeline' || window.location.hash === '#pipeline' || window.location.hash === '#ats') return 'ats-pipeline';
         const saved = localStorage.getItem('app_current_view');
         if (saved === 'profile' || saved === 'career-ai' || saved === 'jobs' || saved === 'ats-pipeline') return saved as any;
@@ -87,10 +90,11 @@ export function App() {
     return 'home';
   });
 
-  const [careerAiTab, setCareerAiTab] = useState<'scanner' | 'roadmap'>(() => {
+  const [careerAiTab, setCareerAiTab] = useState<'scanner' | 'roadmap' | 'salary'>(() => {
     try {
       if (typeof window !== 'undefined') {
         if (window.location.hash === '#roadmap') return 'roadmap';
+        if (window.location.hash === '#salary' || window.location.hash === '#salary-estimator' || window.location.hash === '#calculator') return 'salary';
       }
     } catch (e) {
       console.error(e);
@@ -98,7 +102,7 @@ export function App() {
     return 'scanner';
   });
 
-  const handleNavigate = (view: 'home' | 'jobs' | 'profile' | 'career-ai' | 'ats-pipeline', tab?: 'scanner' | 'roadmap') => {
+  const handleNavigate = (view: 'home' | 'jobs' | 'profile' | 'career-ai' | 'ats-pipeline', tab?: 'scanner' | 'roadmap' | 'salary') => {
     setCurrentView(view);
     if (tab) {
       setCareerAiTab(tab);
@@ -114,7 +118,7 @@ export function App() {
       } else if (view === 'ats-pipeline') {
         window.location.hash = 'ats-pipeline';
       } else {
-        if (window.location.hash === '#profile' || window.location.hash === '#jobs' || window.location.hash.startsWith('#career') || window.location.hash === '#scanner' || window.location.hash === '#roadmap' || window.location.hash.startsWith('#ats')) {
+        if (window.location.hash === '#profile' || window.location.hash === '#jobs' || window.location.hash.startsWith('#career') || window.location.hash === '#scanner' || window.location.hash === '#roadmap' || window.location.hash === '#salary' || window.location.hash.startsWith('#ats')) {
           history.replaceState(null, '', window.location.pathname + window.location.search);
         }
       }
@@ -126,7 +130,7 @@ export function App() {
     document.body.scrollTop = 0;
   };
 
-  const handleOpenCareerAi = (tab: 'scanner' | 'roadmap' = 'scanner') => {
+  const handleOpenCareerAi = (tab: 'scanner' | 'roadmap' | 'salary' = 'scanner') => {
     handleNavigate('career-ai', tab);
   };
 
