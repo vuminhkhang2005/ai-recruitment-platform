@@ -8,7 +8,16 @@ import {
   ArrowRight, 
   Layers,
   ChevronRight,
-  GraduationCap
+  GraduationCap,
+  Target,
+  Zap,
+  Calendar,
+  Download,
+  X,
+  Award,
+  Check,
+  Loader2,
+  DollarSign
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { MOCK_CAREER_ROADMAPS } from '../../data/mockData';
@@ -18,6 +27,142 @@ export const CareerRoadmapPreview: React.FC = () => {
   const isEn = language === 'en';
   const [selectedRoadmapIdx, setSelectedRoadmapIdx] = useState(0);
   const currentRoadmap = MOCK_CAREER_ROADMAPS[selectedRoadmapIdx] || MOCK_CAREER_ROADMAPS[0];
+
+  // Custom AI Roadmap Generator modal states
+  const [isGeneratorModalOpen, setIsGeneratorModalOpen] = useState(false);
+  const [targetCareerLevel, setTargetCareerLevel] = useState<'senior_fullstack' | 'ai_engineer' | 'tech_lead' | 'devops_cloud'>('senior_fullstack');
+  const [weeklyHours, setWeeklyHours] = useState<number>(8);
+  const [isSynthesizingPlan, setIsSynthesizingPlan] = useState<boolean>(false);
+  const [generatedCustomPlan, setGeneratedCustomPlan] = useState<any | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleGenerateCustomPlan = () => {
+    setIsSynthesizingPlan(true);
+    setGeneratedCustomPlan(null);
+
+    setTimeout(() => {
+      setIsSynthesizingPlan(false);
+      const isVi = language === 'vi';
+      const plans = {
+        senior_fullstack: {
+          roleTitle: isVi ? 'Senior Fullstack Software Architect' : 'Senior Fullstack Software Architect',
+          timelineWeeks: Math.round(120 / weeklyHours),
+          currentIncome: '30 - 40 Triệu/tháng ($1,300 - $1,700)',
+          projectedIncome: '65 - 85 Triệu/tháng ($2,800 - $3,600)',
+          growthPercent: '+115%',
+          phases: [
+            {
+              phase: 'Giai đoạn 1 (Tuần 1 - 4)',
+              phaseEn: 'Phase 1 (Weeks 1 - 4)',
+              focus: isVi ? 'Củng cố Core Frontend & Tối ưu hiệu năng React 19' : 'Core Frontend & React 19 Optimization',
+              topics: ['React 19 Server Components', 'Fiber Reconciliation & Profiling', 'Web Vitals & Bundle Splitting']
+            },
+            {
+              phase: 'Giai đoạn 2 (Tuần 5 - 9)',
+              phaseEn: 'Phase 2 (Weeks 5 - 9)',
+              focus: isVi ? 'Kiến trúc Microservices chịu tải cao (Golang/Spring Boot & Kafka)' : 'High-Throughput Microservices (Go/Spring & Kafka)',
+              topics: ['Event-Driven Architecture', 'Distributed Caching với Redis Cluster', 'Database Sharding & Query Optimization']
+            },
+            {
+              phase: 'Giai đoạn 3 (Tuần 10 - 14)',
+              phaseEn: 'Phase 3 (Weeks 10 - 14)',
+              focus: isVi ? 'System Design, CI/CD Cloud & Luyện phỏng vấn cấp Lead' : 'System Design, Cloud DevOps & Lead Interview Prep',
+              topics: ['High Availability 99.99%', 'Docker & Kubernetes Orchestration', 'STAR Interview Leadership Simulator']
+            }
+          ]
+        },
+        ai_engineer: {
+          roleTitle: isVi ? 'Senior AI / Generative AI Engineer' : 'Senior Generative AI Engineer',
+          timelineWeeks: Math.round(140 / weeklyHours),
+          currentIncome: '32 - 42 Triệu/tháng ($1,400 - $1,800)',
+          projectedIncome: '75 - 95 Triệu/tháng ($3,200 - $4,100)',
+          growthPercent: '+135%',
+          phases: [
+            {
+              phase: 'Giai đoạn 1 (Tuần 1 - 4)',
+              phaseEn: 'Phase 1 (Weeks 1 - 4)',
+              focus: isVi ? 'Nền tảng Deep Learning & PyTorch nâng cao' : 'Deep Learning Fundamentals & Advanced PyTorch',
+              topics: ['Transformer Architecture from Scratch', 'Tensor Optimizations', 'FastAPI Microservices for AI Serving']
+            },
+            {
+              phase: 'Giai đoạn 2 (Tuần 5 - 10)',
+              phaseEn: 'Phase 2 (Weeks 5 - 10)',
+              focus: isVi ? 'RAG Nâng cao, Vector Databases & Fine-tuning LLMs' : 'Advanced RAG, Vector DBs & LLM Fine-Tuning',
+              topics: ['Hybrid Vector Search (Qdrant/Milvus)', 'LoRA / QLoRA Fine-tuning', 'LangChain & LlamaIndex Production Pipelines']
+            },
+            {
+              phase: 'Giai đoạn 3 (Tuần 11 - 16)',
+              phaseEn: 'Phase 3 (Weeks 11 - 16)',
+              focus: isVi ? 'Tối ưu suy luận Inference (vLLM/TensorRT) & AI Agentic Workflows' : 'Inference Optimization (vLLM) & Agentic Workflows',
+              topics: ['vLLM & PagedAttention Deployment', 'Multi-Agent Orchestration', 'Cost & Latency Benchmarking']
+            }
+          ]
+        },
+        tech_lead: {
+          roleTitle: isVi ? 'Engineering Manager / Technical Lead' : 'Technical Lead / Engineering Manager',
+          timelineWeeks: Math.round(110 / weeklyHours),
+          currentIncome: '45 - 55 Triệu/tháng ($1,900 - $2,300)',
+          projectedIncome: '80 - 110 Triệu/tháng ($3,400 - $4,700)',
+          growthPercent: '+85%',
+          phases: [
+            {
+              phase: 'Giai đoạn 1 (Tuần 1 - 4)',
+              phaseEn: 'Phase 1 (Weeks 1 - 4)',
+              focus: isVi ? 'Chiến lược Kiến trúc Công nghệ & Quản trị Nợ Kỹ Thuật' : 'Tech Architecture Strategy & Technical Debt Governance',
+              topics: ['RFC/ADR Architectural Decision Records', 'Team Code Review Culture', 'Engineering Metrics (DORA)']
+            },
+            {
+              phase: 'Giai đoạn 2 (Tuần 5 - 9)',
+              phaseEn: 'Phase 2 (Weeks 5 - 9)',
+              focus: isVi ? 'Kỹ năng Quản trị Đội ngũ, 1-on-1s & Mentorship' : 'People Management, 1-on-1s & Engineering Mentorship',
+              topics: ['Conflict Resolution & Alignment', 'OKR Alignment with Business KPIs', 'Hiring & Technical Interview Standards']
+            },
+            {
+              phase: 'Giai đoạn 3 (Tuần 10 - 13)',
+              phaseEn: 'Phase 3 (Weeks 10 - 13)',
+              focus: isVi ? 'Lãnh đạo Chuyển đổi Số & Thuyết trình Ban Giám Đốc' : 'Digital Transformation & Executive Stakeholder Pitching',
+              topics: ['Executive Communication', 'Cost Budgeting & Cloud Governance', 'Cross-functional Roadmap Delivery']
+            }
+          ]
+        },
+        devops_cloud: {
+          roleTitle: isVi ? 'Staff Cloud DevOps / Platform Engineer' : 'Staff Cloud Platform & DevOps Engineer',
+          timelineWeeks: Math.round(130 / weeklyHours),
+          currentIncome: '35 - 45 Triệu/tháng ($1,500 - $1,900)',
+          projectedIncome: '70 - 90 Triệu/tháng ($3,000 - $3,850)',
+          growthPercent: '+105%',
+          phases: [
+            {
+              phase: 'Giai đoạn 1 (Tuần 1 - 4)',
+              phaseEn: 'Phase 1 (Weeks 1 - 4)',
+              focus: isVi ? 'Hạ tầng Đám mây dạng Mã nguồn (Terraform & AWS)' : 'Infrastructure as Code (Terraform & AWS/GCP)',
+              topics: ['Modular Terraform Architecture', 'Multi-Account AWS Strategy', 'Zero-Trust IAM Policies']
+            },
+            {
+              phase: 'Giai đoạn 2 (Tuần 5 - 9)',
+              phaseEn: 'Phase 2 (Weeks 5 - 9)',
+              focus: isVi ? 'Chuyên sâu Kubernetes, Helm & GitOps (ArgoCD)' : 'Advanced Kubernetes, Helm & GitOps (ArgoCD)',
+              topics: ['Multi-Cluster K8s Management', 'Canary & Blue/Green Deployments', 'Custom Resource Definitions (CRDs)']
+            },
+            {
+              phase: 'Giai đoạn 3 (Tuần 10 - 15)',
+              phaseEn: 'Phase 3 (Weeks 10 - 15)',
+              focus: isVi ? 'Quan sát Hệ thống Toàn diện (Observability & Chaos Eng)' : 'Full-Stack Observability & Chaos Engineering',
+              topics: ['Prometheus, Grafana & OpenTelemetry', 'Chaos Mesh & Resiliency Testing', 'FinOps Cloud Cost Optimization']
+            }
+          ]
+        }
+      };
+
+      setGeneratedCustomPlan(plans[targetCareerLevel]);
+      showToast(isVi ? '🎉 Đã xây dựng thành công lộ trình thăng tiến cá nhân hóa từ AI!' : '🎉 AI personalized career roadmap synthesized successfully!');
+    }, 600);
+  };
 
   const tracks = [
     { title: t.roadmap.track1Title, duration: t.roadmap.track1Duration, match: '95%' },
@@ -179,6 +324,13 @@ export const CareerRoadmapPreview: React.FC = () => {
             </p>
             <button
               type="button"
+              data-testid="open-roadmap-generator-btn"
+              onClick={() => {
+                setIsGeneratorModalOpen(true);
+                if (!generatedCustomPlan) {
+                  handleGenerateCustomPlan();
+                }
+              }}
               className="ai-gradient-btn px-6 py-3 rounded-xl text-xs font-bold shadow-soft flex items-center gap-2 cursor-pointer shrink-0 overflow-hidden relative active:scale-95 group"
             >
               <div className="shimmer-sweep" />
@@ -190,6 +342,249 @@ export const CareerRoadmapPreview: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-slate-900/90 text-white text-xs font-bold shadow-soft-xl border border-slate-700/80 backdrop-blur-md animate-fade-in flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-emerald-400" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Custom AI Career Roadmap & Skill Gap Planner Modal */}
+      {isGeneratorModalOpen && (
+        <div 
+          data-testid="roadmap-generator-modal"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/70 backdrop-blur-md animate-fade-in"
+        >
+          <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-soft-2xl overflow-hidden flex flex-col max-h-[92vh]">
+            
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/70">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-soft-xs">
+                  <Target className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>{language === 'vi' ? 'Thiết Kế Lộ Trình Thăng Tiến AI (Gemini 2.0)' : 'AI Personalized Career Roadmap Planner'}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                      Personalized
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    {language === 'vi' 
+                      ? 'Lập kế hoạch từng giai đoạn học tập, bù đắp lỗ hổng kỹ năng và lộ trình nhảy vọt thu nhập.' 
+                      : 'Stage-by-stage learning trajectory to bridge competency gaps and maximize market compensation.'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                data-testid="close-roadmap-modal-btn"
+                onClick={() => setIsGeneratorModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                title={language === 'vi' ? 'Đóng' : 'Close'}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              
+              {/* Parameters Selector Bar */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2">
+                    {language === 'vi' ? '1. Chọn Mục tiêu Thăng tiến & Vai trò Hướng tới:' : '1. Select Target Career Horizon & Destination Role:'}
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: 'senior_fullstack', labelVi: '💻 Senior Fullstack', labelEn: '💻 Senior Fullstack' },
+                      { id: 'ai_engineer', labelVi: '🤖 Generative AI Eng', labelEn: '🤖 Generative AI Eng' },
+                      { id: 'tech_lead', labelVi: '👑 Technical Lead', labelEn: '👑 Technical Lead' },
+                      { id: 'devops_cloud', labelVi: '☁️ Cloud Platform Lead', labelEn: '☁️ Cloud Platform Lead' }
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                          setTargetCareerLevel(opt.id as any);
+                        }}
+                        className={`p-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer text-center ${
+                          targetCareerLevel === opt.id
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-soft-xs'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-300'
+                        }`}
+                      >
+                        {language === 'vi' ? opt.labelVi : opt.labelEn}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                      {language === 'vi' ? '2. Thời gian đầu tư mỗi tuần:' : '2. Weekly Dedicated Time:'}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {[6, 8, 12, 16].map((hrs) => (
+                        <button
+                          key={hrs}
+                          type="button"
+                          onClick={() => setWeeklyHours(hrs)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            weeklyHours === hrs
+                              ? 'bg-slate-900 dark:bg-emerald-600 text-white'
+                              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                          }`}
+                        >
+                          {hrs}h/{language === 'vi' ? 'tuần' : 'wk'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    data-testid="generate-roadmap-btn"
+                    disabled={isSynthesizingPlan}
+                    onClick={handleGenerateCustomPlan}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-soft flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 disabled:opacity-60"
+                  >
+                    {isSynthesizingPlan ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>{language === 'vi' ? 'Đang tổng hợp...' : 'Synthesizing...'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>{language === 'vi' ? 'Tái tạo lộ trình AI' : 'Generate AI Plan'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Generated Plan Content */}
+              {generatedCustomPlan && (
+                <div data-testid="generated-roadmap-plan" className="space-y-5 animate-fade-in">
+                  
+                  {/* Trajectory Header Card */}
+                  <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-indigo-500/10 border border-emerald-200/80 dark:border-emerald-800/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white">
+                          Target Destination
+                        </span>
+                        <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-300">
+                          {generatedCustomPlan.growthPercent} {language === 'vi' ? 'Tăng trưởng thu nhập' : 'Income Upside'}
+                        </span>
+                      </div>
+                      <h4 className="text-lg font-black text-slate-900 dark:text-white">
+                        {generatedCustomPlan.roleTitle}
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {language === 'vi' 
+                          ? `Thời gian hoàn thành ước tính: ${generatedCustomPlan.timelineWeeks} tuần (${weeklyHours}h/tuần).` 
+                          : `Estimated completion timeline: ${generatedCustomPlan.timelineWeeks} weeks (${weeklyHours}h/wk).`}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-4 bg-white/90 dark:bg-slate-800/90 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-soft-xs shrink-0">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 block">{language === 'vi' ? 'Hiện tại' : 'Current'}</span>
+                        <strong className="text-xs text-slate-600 dark:text-slate-300 font-bold">{generatedCustomPlan.currentIncome}</strong>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-emerald-500" />
+                      <div>
+                        <span className="text-[10px] font-bold text-emerald-600 block">{language === 'vi' ? 'Mục tiêu sau khóa' : 'Projected'}</span>
+                        <strong className="text-xs text-emerald-600 dark:text-emerald-400 font-black">{generatedCustomPlan.projectedIncome}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3 Step Trajectory Cards */}
+                  <div className="space-y-3">
+                    <h5 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>{language === 'vi' ? '3 Giai đoạn Bứt phá Năng lực & Dự án Thực chiến' : '3 Execution Phases & Milestone Projects'}</span>
+                    </h5>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {generatedCustomPlan.phases.map((ph: any, i: number) => (
+                        <div 
+                          key={i} 
+                          className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-soft-xs space-y-2.5 flex flex-col justify-between"
+                        >
+                          <div className="space-y-1.5">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 inline-block">
+                              {language === 'vi' ? ph.phase : ph.phaseEn}
+                            </span>
+                            <h6 className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
+                              {ph.focus}
+                            </h6>
+                          </div>
+
+                          <div className="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
+                            {ph.topics.map((t: string, j: number) => (
+                              <div key={j} className="flex items-start gap-1">
+                                <span className="text-emerald-500 font-bold">•</span>
+                                <span>{t}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  data-testid="save-custom-roadmap-btn"
+                  onClick={() => showToast(language === 'vi' ? '💾 Đã lưu lộ trình thăng tiến vào mục Hồ sơ cá nhân!' : '💾 Saved career roadmap to your profile!')}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-soft cursor-pointer transition-all flex items-center gap-1.5"
+                >
+                  <Award className="w-3.5 h-3.5" />
+                  <span>{language === 'vi' ? 'Lưu vào Hồ sơ' : 'Save to Profile'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  data-testid="export-roadmap-pdf-btn"
+                  onClick={() => showToast(language === 'vi' ? '📄 Đã tải xuống file kế hoạch lộ trình (PDF)!' : '📄 Downloaded career roadmap plan (PDF)!')}
+                  className="px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>{language === 'vi' ? 'Xuất PDF' : 'Export PDF'}</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsGeneratorModalOpen(false)}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                {language === 'vi' ? 'Đóng' : 'Close'}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </section>
   );
 };
