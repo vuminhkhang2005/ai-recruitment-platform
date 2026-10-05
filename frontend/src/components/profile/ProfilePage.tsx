@@ -50,6 +50,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { MOCK_JOBS, type Job } from '../../data/mockData';
 import { AiJobRadarSection } from './AiJobRadarSection';
+import { SkillAssessmentSection } from './SkillAssessmentSection';
 
 export interface InterviewQuestion {
   id: string;
@@ -1188,6 +1189,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
                     ))}
                   </div>
                 </div>
+
+                {/* Interactive AI Skill Assessment & Certification Section */}
+                <SkillAssessmentSection
+                  onBadgeEarned={(badgeTitle, score) => {
+                    updateProfile({ atsScore: Math.max(user.atsScore || 90, score) });
+                  }}
+                  onShowToast={showToast}
+                />
 
               </div>
             )}
