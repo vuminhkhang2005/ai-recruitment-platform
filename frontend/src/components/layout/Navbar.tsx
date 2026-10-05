@@ -27,13 +27,13 @@ import { useAuth } from '../../context/AuthContext';
 
 interface NavbarProps {
   currentView?: 'home' | 'jobs' | 'profile' | 'career-ai' | 'ats-pipeline';
-  careerAiTab?: 'scanner' | 'roadmap' | 'salary' | 'negotiation';
-  onNavigate?: (view: 'home' | 'jobs' | 'profile' | 'career-ai' | 'ats-pipeline', tab?: 'scanner' | 'roadmap' | 'salary' | 'negotiation') => void;
+  careerAiTab?: 'scanner' | 'roadmap' | 'salary' | 'negotiation' | 'coding';
+  onNavigate?: (view: 'home' | 'jobs' | 'profile' | 'career-ai' | 'ats-pipeline', tab?: 'scanner' | 'roadmap' | 'salary' | 'negotiation' | 'coding') => void;
   currentRole?: 'candidate' | 'recruiter';
   onRoleChange?: (role: 'candidate' | 'recruiter') => void;
   onOpenAuthModal?: () => void;
   onOpenCvScanner?: () => void;
-  onOpenCareerAi?: (tab: 'scanner' | 'roadmap' | 'salary' | 'negotiation') => void;
+  onOpenCareerAi?: (tab: 'scanner' | 'roadmap' | 'salary' | 'negotiation' | 'coding') => void;
   onOpenPostJobModal?: () => void;
   onThemeToggled?: (newTheme: 'light' | 'dark') => void;
   onOpenProfileModal?: () => void;
@@ -108,7 +108,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
-  const handleCareerAiClick = (tab: 'scanner' | 'roadmap' | 'salary') => {
+  const handleCareerAiClick = (tab: 'scanner' | 'roadmap' | 'salary' | 'negotiation' | 'coding') => {
     setActiveSection(null);
     if (onOpenCareerAi) {
       onOpenCareerAi(tab);

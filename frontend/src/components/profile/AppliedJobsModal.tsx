@@ -6,12 +6,14 @@ import {
   CheckCircle2, 
   Calendar, 
   Sparkles, 
-  Search
+  Search,
+  Code2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { CompanyLogo } from '../ui/CompanyLogo';
 import { InterviewSchedulerModal, type InterviewScheduleData } from '../interview/InterviewSchedulerModal';
+import { TechAssessmentSandboxModal } from '../career/TechAssessmentSandboxModal';
 
 interface AppliedJobsModalProps {
   isOpen: boolean;
@@ -28,6 +30,7 @@ export const AppliedJobsModal: React.FC<AppliedJobsModalProps> = ({
   const { language } = useLanguage();
   const isVi = language === 'vi';
   const [schedulingData, setSchedulingData] = useState<InterviewScheduleData | null>(null);
+  const [codingAssessmentData, setCodingAssessmentData] = useState<{ jobTitle: string; company: string } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -160,6 +163,16 @@ export const AppliedJobsModal: React.FC<AppliedJobsModalProps> = ({
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
+                      data-testid={`btn-code-assessment-${app.id}`}
+                      onClick={() => setCodingAssessmentData({ jobTitle: app.jobTitle, company: app.company })}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/60 flex items-center gap-1 cursor-pointer transition-all"
+                    >
+                      <Code2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                      <span>{isVi ? 'Test Thuật toán' : 'Code Test'}</span>
+                    </button>
+
+                    <button
+                      type="button"
                       data-testid={`btn-sync-calendar-${app.id}`}
                       onClick={() => setSchedulingData({ jobTitle: app.jobTitle, company: app.company })}
                       className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/60 flex items-center gap-1 cursor-pointer transition-all"
@@ -194,6 +207,13 @@ export const AppliedJobsModal: React.FC<AppliedJobsModalProps> = ({
         isOpen={!!schedulingData}
         onClose={() => setSchedulingData(null)}
         data={schedulingData}
+      />
+
+      <TechAssessmentSandboxModal
+        isOpen={!!codingAssessmentData}
+        onClose={() => setCodingAssessmentData(null)}
+        jobTitle={codingAssessmentData?.jobTitle}
+        company={codingAssessmentData?.company}
       />
     </div>
   );
