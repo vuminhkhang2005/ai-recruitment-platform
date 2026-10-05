@@ -134,6 +134,7 @@ public class JobServiceImpl implements JobService {
         Company company = companyRepository.findById(resolvedCompanyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Company not found with ID: " + resolvedCompanyId));
         Long recruiterProfileId = recruiter.getId();
+        validateSalaryAndDeadline(request.getMinSalary(), request.getMaxSalary(), request.getDeadline());
 
         String slug = toSlug(request.getTitle()) + "-" + UUID.randomUUID().toString().substring(0, 8);
 
@@ -243,11 +244,12 @@ public class JobServiceImpl implements JobService {
             job.setLocationAddress(request.getLocationAddress());
         }
         if (StringUtils.hasText(request.getStatus())) {
-            job.setStatus(request.getStatus().toUpperCase());
+            job.setStatus(normalizeStatus(request.getStatus()));
         }
         if (request.getDeadline() != null) {
             job.setDeadline(request.getDeadline());
         }
+        validateSalaryAndDeadline(job.getMinSalary(), job.getMaxSalary(), request.getDeadline());
 
         if (request.getSkills() != null) {
             jobSkillRepository.deleteByJobId(job.getId());
@@ -293,9 +295,35 @@ public class JobServiceImpl implements JobService {
             throw new AccessDeniedException("Bạn không có quyền thay đổi trạng thái tin tuyển dụng này");
         }
 
-        job.setStatus(status.toUpperCase());
+        String next = normalizeStatus(status);
+        if ("PUBLISHED".equals(next) && job.getDeadline() != null && job.getDeadline().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("Tin đã quá hạn nộp hồ sơ. Hãy gia hạn hạn nộp trước khi mở lại.");
+        }
+        job.setStatus(next);
         Job saved = jobRepository.save(job);
         return mapToDto(saved);
+    }
+
+    private static final java.util.Set<String> JOB_STATUSES = java.util.Set.of("PUBLISHED", "PAUSED", "CLOSED");
+
+    private String normalizeStatus(String status) {
+        String s = status == null ? "" : status.trim().toUpperCase();
+        if (!JOB_STATUSES.contains(s)) {
+            throw new BadRequestException("Trạng thái tin không hợp lệ: " + status);
+        }
+        return s;
+    }
+
+    private void validateSalaryAndDeadline(BigDecimal min, BigDecimal max, LocalDateTime deadline) {
+        if (min != null && min.signum() < 0 || max != null && max.signum() < 0) {
+            throw new BadRequestException("Mức lương không hợp lệ.");
+        }
+        if (min != null && max != null && min.compareTo(max) > 0) {
+            throw new BadRequestException("Lương tối thiểu không được lớn hơn lương tối đa.");
+        }
+        if (deadline != null && deadline.isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("Hạn nộp hồ sơ phải ở tương lai.");
+        }
     }
 
     @Override

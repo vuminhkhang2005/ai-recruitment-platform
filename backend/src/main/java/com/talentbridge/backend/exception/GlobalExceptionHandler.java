@@ -1,6 +1,7 @@
 package com.talentbridge.backend.exception;
 
 import com.talentbridge.backend.common.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -100,8 +102,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception ex) {
+        // Log details server-side; never expose SQL or internals to the client.
+        log.error("Unhandled exception", ex);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("Internal Server Error: " + ex.getMessage()));
+                .body(ApiResponse.error("Đã có lỗi xảy ra phía máy chủ. Vui lòng thử lại sau."));
     }
 }

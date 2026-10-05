@@ -14,6 +14,9 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { MyApplicationsPage } from './pages/MyApplicationsPage';
 import { SavedJobsPage } from './pages/SavedJobsPage';
+import { EmployerDashboard } from './pages/employer/EmployerDashboard';
+import { JobFormPage } from './pages/employer/JobFormPage';
+import { ApplicantsPage } from './pages/employer/ApplicantsPage';
 import { RequireRole } from './routes/RequireRole';
 
 function ScrollToTop() {
@@ -70,6 +73,38 @@ export function App() {
           element={
             <RequireRole role="candidate">
               <SavedJobsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="employer"
+          element={
+            <RequireRole role="recruiter">
+              <EmployerDashboard />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="employer/jobs/new"
+          element={
+            <RequireRole role="recruiter">
+              <JobFormPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="employer/jobs/:id/edit"
+          element={
+            <RequireRole role="recruiter">
+              <JobFormPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="employer/applicants"
+          element={
+            <RequireRole role="recruiter">
+              <ApplicantsPage />
             </RequireRole>
           }
         />
