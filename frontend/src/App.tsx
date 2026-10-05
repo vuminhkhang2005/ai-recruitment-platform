@@ -11,6 +11,10 @@ import { LoginPage, RegisterPage } from './pages/AuthPages';
 import { EmployersPage } from './pages/EmployersPage';
 import { ToolsPage } from './pages/ToolsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { MyApplicationsPage } from './pages/MyApplicationsPage';
+import { SavedJobsPage } from './pages/SavedJobsPage';
+import { RequireRole } from './routes/RequireRole';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -45,6 +49,30 @@ export function App() {
         <Route path="employers" element={<EmployersPage />} />
         <Route path="tools" element={<ToolsPage />} />
         <Route path="tools/:tool" element={<ToolsPage />} />
+        <Route
+          path="profile"
+          element={
+            <RequireRole>
+              <ProfilePage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="applications"
+          element={
+            <RequireRole role="candidate">
+              <MyApplicationsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="saved-jobs"
+          element={
+            <RequireRole role="candidate">
+              <SavedJobsPage />
+            </RequireRole>
+          }
+        />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
