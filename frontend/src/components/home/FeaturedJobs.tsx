@@ -137,7 +137,7 @@ export const FeaturedJobs: React.FC<FeaturedJobsProps> = ({
           </div>
 
           {/* Quick Segmented Filter Tabs */}
-          <div className="p-1 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700/80 flex items-center gap-1 overflow-x-auto shadow-soft-xs self-start lg:self-end">
+          <div className="max-w-full p-1 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700/80 flex items-center gap-1 overflow-x-auto shadow-soft-xs self-start lg:self-end">
             {filterTabs.map((tab) => {
               const isActive = activeTab === tab.key;
               return (
