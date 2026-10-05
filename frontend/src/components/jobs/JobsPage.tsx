@@ -24,12 +24,14 @@ import {
   DollarSign,
   Laptop,
   ShieldCheck,
-  Zap
+  Zap,
+  Wand2
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { CompanyLogo } from '../ui/CompanyLogo';
 import { HotSticker, UrgentSticker, BonusSticker, WorkModeSticker, AiMatchBadge, ApplicantCounter } from '../ui/Stickers';
+import { CoverLetterStudioModal } from './CoverLetterStudioModal';
 
 interface JobsPageProps {
   jobs: Job[];
@@ -80,6 +82,7 @@ export const JobsPage: React.FC<JobsPageProps> = ({
   const [comparingJobIds, setComparingJobIds] = useState<string[]>([]);
   const [isComparisonModalOpen, setIsComparisonModalOpen] = useState(false);
   const [compareToast, setCompareToast] = useState<string | null>(null);
+  const [studioTargetJob, setStudioTargetJob] = useState<Job | null>(null);
 
   const showCompareToast = (msg: string) => {
     setCompareToast(msg);
@@ -705,6 +708,7 @@ export const JobsPage: React.FC<JobsPageProps> = ({
                 return (
                   <div
                     key={job.id}
+                    data-testid={`job-card-${job.id}`}
                     onClick={() => handleSelectJobCard(job)}
                     className={`group relative rounded-2xl p-3.5 sm:p-4 transition-all duration-200 cursor-pointer flex flex-col justify-between ${
                       isSelected
@@ -1247,15 +1251,27 @@ export const JobsPage: React.FC<JobsPageProps> = ({
                             </p>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={handleGenerateCoverLetter}
-                            disabled={generatingLetter}
-                            className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-bold flex items-center gap-1.5 cursor-pointer transition-colors px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/60"
-                          >
-                            <Sparkles className="w-3.5 h-3.5" />
-                            <span>{generatingLetter ? t.jobModal.btnGenerating : t.jobModal.btnGenerateLetter}</span>
-                          </button>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <button
+                              type="button"
+                              data-testid="open-cover-letter-studio-btn"
+                              onClick={() => setStudioTargetJob(currentSelectedJob)}
+                              className="text-xs text-teal-700 dark:text-teal-300 hover:text-teal-800 dark:hover:text-teal-200 font-bold flex items-center gap-1.5 cursor-pointer transition-colors px-2.5 py-1 rounded-xl bg-teal-50 dark:bg-teal-950/70 border border-teal-200 dark:border-teal-800 shadow-soft-xs"
+                            >
+                              <Wand2 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                              <span>{language === 'vi' ? 'Studio Thư AI' : 'Cover Letter Studio'}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={handleGenerateCoverLetter}
+                              disabled={generatingLetter}
+                              className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-bold flex items-center gap-1.5 cursor-pointer transition-colors px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/60"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                              <span>{generatingLetter ? t.jobModal.btnGenerating : t.jobModal.btnGenerateLetter}</span>
+                            </button>
+                          </div>
                         </div>
 
                         {/* Resume preview */}
@@ -1545,6 +1561,17 @@ export const JobsPage: React.FC<JobsPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* AI Cover Letter Studio Modal */}
+      <CoverLetterStudioModal
+        job={studioTargetJob}
+        isOpen={!!studioTargetJob}
+        onClose={() => setStudioTargetJob(null)}
+        onApplicationSubmitted={(job) => {
+          setAppliedJobs((prev) => ({ ...prev, [job.id]: true }));
+          onQuickApply(job);
+        }}
+      />
     </div>
   );
 };

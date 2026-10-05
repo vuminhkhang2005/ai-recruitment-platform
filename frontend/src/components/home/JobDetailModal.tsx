@@ -26,12 +26,14 @@ import {
   ChevronRight,
   TrendingUp,
   Flame,
-  ArrowRight
+  ArrowRight,
+  Wand2
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { CompanyLogo } from '../ui/CompanyLogo';
 import { HotSticker, UrgentSticker, BonusSticker, WorkModeSticker, AiMatchBadge } from '../ui/Stickers';
+import { CoverLetterStudioModal } from '../jobs/CoverLetterStudioModal';
 
 interface JobDetailModalProps {
   job: Job | null;
@@ -48,6 +50,7 @@ export const JobDetailModal: React.FC<JobDetailModalProps> = ({ job, onClose }) 
   const [applied, setApplied] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
   const [generatingLetter, setGeneratingLetter] = useState(false);
+  const [isStudioOpen, setIsStudioOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
   const isSaved = savedJobIds.includes(job.id);
@@ -677,15 +680,27 @@ export const JobDetailModal: React.FC<JobDetailModalProps> = ({ job, onClose }) 
                     </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleGenerateCoverLetter}
-                    disabled={generatingLetter}
-                    className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-bold flex items-center gap-1.5 cursor-pointer transition-colors active:scale-95 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/60 self-start sm:self-auto"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>{generatingLetter ? t.jobModal.btnGenerating : t.jobModal.btnGenerateLetter}</span>
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      data-testid="job-detail-open-studio-btn"
+                      onClick={() => setIsStudioOpen(true)}
+                      className="text-xs text-teal-700 dark:text-teal-300 hover:text-teal-800 dark:hover:text-teal-200 font-bold flex items-center gap-1.5 cursor-pointer transition-colors active:scale-95 px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950/70 border border-teal-200 dark:border-teal-800 shadow-soft-xs"
+                    >
+                      <Wand2 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                      <span>{language === 'vi' ? 'AI Cover Letter Studio' : 'AI Cover Letter Studio'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleGenerateCoverLetter}
+                      disabled={generatingLetter}
+                      className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-bold flex items-center gap-1.5 cursor-pointer transition-colors active:scale-95 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/60"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>{generatingLetter ? t.jobModal.btnGenerating : t.jobModal.btnGenerateLetter}</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Attached Resume Box */}
@@ -745,6 +760,17 @@ export const JobDetailModal: React.FC<JobDetailModalProps> = ({ job, onClose }) 
         </div>
 
       </div>
+
+      {/* AI Cover Letter Studio Sub-Modal */}
+      <CoverLetterStudioModal
+        job={job}
+        isOpen={isStudioOpen}
+        onClose={() => setIsStudioOpen(false)}
+        onApplicationSubmitted={() => {
+          setApplied(true);
+          setIsStudioOpen(false);
+        }}
+      />
     </div>
   );
 };
