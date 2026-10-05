@@ -63,3 +63,4 @@ test_*.cjs
 !frontend/test_interview_scheduler.cjs
 !frontend/test_job_description_studio.cjs
 !frontend/test_tech_assessment_sandbox.cjs
+!frontend/test_candidate_collaborative_review.cjs

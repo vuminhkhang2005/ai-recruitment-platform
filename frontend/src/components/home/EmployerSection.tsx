@@ -37,6 +37,7 @@ import {
 import { useLanguage } from '../../i18n/LanguageContext';
 import { updateApplicationStageApi } from '../../services/api';
 import { CandidateMatrixSection } from './CandidateMatrixSection';
+import { CandidateCollaborativeReviewModal } from './CandidateCollaborativeReviewModal';
 
 export interface Candidate {
   id: string;
@@ -606,6 +607,7 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [minScoreFilter, setMinScoreFilter] = useState<number>(0);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [reviewingCandidateFromDossier, setReviewingCandidateFromDossier] = useState<Candidate | null>(null);
   const [isRescanning, setIsRescanning] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -1739,6 +1741,16 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
+                  data-testid="btn-dossier-hiring-scorecard"
+                  onClick={() => setReviewingCandidateFromDossier(selectedCandidate)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5 shadow-soft cursor-pointer transition-all hover:bg-indigo-100 dark:hover:bg-indigo-900/60"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>{isVi ? 'Hội đồng đánh giá' : 'Committee Scorecard'}</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => {
                     showToast(isVi ? `Đã gửi lời mời phỏng vấn Google Meet tới ${selectedCandidate.name}!` : `Sent Google Meet interview invitation to ${selectedCandidate.name}!`);
                     setSelectedCandidate(null);
@@ -1766,6 +1778,22 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
           </div>
         </div>
       )}
+
+      {/* Candidate Collaborative Review & Committee Synthesis Modal */}
+      <CandidateCollaborativeReviewModal
+        isOpen={!!reviewingCandidateFromDossier}
+        onClose={() => setReviewingCandidateFromDossier(null)}
+        candidate={reviewingCandidateFromDossier}
+        onAdvanceToOffer={(id) => {
+          const pipeData = candidatesState[activePipeline] || candidatesState.ai;
+          let fromCol: 'new' | 'screened' | 'interview' | 'offer' = 'interview';
+          (['new', 'screened', 'interview', 'offer'] as const).forEach(col => {
+            if (pipeData[col]?.some(c => c.id === id)) fromCol = col;
+          });
+          handleMoveCandidateToStage(id, fromCol, 'offer');
+        }}
+        onShowToast={showToast}
+      />
 
     </section>
   );

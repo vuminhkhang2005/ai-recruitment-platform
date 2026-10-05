@@ -10,6 +10,7 @@ import {
   Square, 
   ChevronRight, 
   User, 
+  Users,
   SlidersHorizontal,
   Mail,
   Calendar,
@@ -24,6 +25,7 @@ import {
   HeartHandshake
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { CandidateCollaborativeReviewModal } from './CandidateCollaborativeReviewModal';
 
 interface CandidateMatrixSectionProps {
   candidates: Record<string, Candidate[]>;
@@ -51,6 +53,7 @@ export const CandidateMatrixSection: React.FC<CandidateMatrixSectionProps> = ({
   const [isSendingInvites, setIsSendingInvites] = useState(false);
   const [interviewDate, setInterviewDate] = useState('2026-10-10');
   const [interviewFormat, setInterviewFormat] = useState<'google_meet' | 'office'>('google_meet');
+  const [reviewingCandidate, setReviewingCandidate] = useState<Candidate | null>(null);
 
   // Flatten all candidates with their current stage
   const allCandidatesWithStage = useMemo(() => {
@@ -494,15 +497,28 @@ export const CandidateMatrixSection: React.FC<CandidateMatrixSectionProps> = ({
 
                       {/* Action */}
                       <td className="p-3.5 sm:p-4 text-center">
-                        <button
-                          type="button"
-                          data-testid={`btn-view-dossier-${cand.id}`}
-                          onClick={() => onSelectCandidate(cand)}
-                          className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 hover:text-emerald-600 dark:hover:text-emerald-400 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1 mx-auto"
-                        >
-                          <span>{isVi ? 'Hồ sơ' : 'Dossier'}</span>
-                          <ChevronRight className="w-3 h-3" />
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            data-testid={`btn-view-dossier-${cand.id}`}
+                            onClick={() => onSelectCandidate(cand)}
+                            className="px-2 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 hover:text-emerald-600 dark:hover:text-emerald-400 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                          >
+                            <span>{isVi ? 'Hồ sơ' : 'Dossier'}</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </button>
+
+                          <button
+                            type="button"
+                            data-testid={`btn-candidate-scorecard-${cand.id}`}
+                            onClick={() => setReviewingCandidate(cand)}
+                            className="px-2 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                            title={isVi ? 'Đánh giá nội bộ & Hội đồng tuyển dụng' : 'Hiring Committee Scorecard'}
+                          >
+                            <Users className="w-3 h-3 text-indigo-500" />
+                            <span>{isVi ? 'Đánh giá' : 'Review'}</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -634,6 +650,17 @@ export const CandidateMatrixSection: React.FC<CandidateMatrixSectionProps> = ({
           </div>
         </div>
       )}
+
+      {/* 5. Candidate Collaborative Review Dossier Modal */}
+      <CandidateCollaborativeReviewModal
+        isOpen={!!reviewingCandidate}
+        onClose={() => setReviewingCandidate(null)}
+        candidate={reviewingCandidate}
+        onAdvanceToOffer={(id) => {
+          onAdvanceToInterview([id]);
+        }}
+        onShowToast={onShowToast}
+      />
 
     </div>
   );
