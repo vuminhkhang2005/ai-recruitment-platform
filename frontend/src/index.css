@@ -6,94 +6,33 @@
 
 @layer base {
   html {
-    scroll-behavior: smooth;
     font-family: 'Be Vietnam Pro', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: #0F172A;
-    background-color: #FFFFFF;
+    background-color: #F8FAFC;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    cursor: default;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
 
-  html.dark {
-    color: #F8FAFC;
-    background-color: #020617;
-    color-scheme: dark;
-  }
-
-  body {
-    transition: background-color 0.25s ease, color 0.25s ease;
-    cursor: default;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-  }
-
-  /* Prevent I-beam text-selection cursor on UI elements where users cannot type */
-  p, span, h1, h2, h3, h4, h5, h6, label, div, section, article, header, footer, nav, aside, ul, ol, li, table, tr, td, th, svg, img {
-    cursor: inherit;
-  }
-
-  /* Explicitly enforce pointer cursor on all clickable elements */
-  button, 
-  a, 
-  [role="button"], 
-  select, 
+  button,
+  [role="button"],
+  select,
   summary,
-  input[type="button"], 
-  input[type="submit"], 
-  input[type="reset"], 
-  input[type="checkbox"], 
-  input[type="radio"], 
-  input[type="file"],
   label[for],
-  .cursor-pointer {
-    cursor: pointer !important;
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="file"] {
+    cursor: pointer;
   }
 
-  /* Strictly enable text cursor, typing caret, and text selection ONLY in real input fields */
-  input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-  textarea,
-  [contenteditable="true"] {
-    cursor: text !important;
-    -webkit-user-select: text !important;
-    -moz-user-select: text !important;
-    -ms-user-select: text !important;
-    user-select: text !important;
-  }
-
-  /* Selectable content for reading/copying text if specifically desired */
-  .selectable-text,
-  .job-description-content,
-  pre,
-  code {
-    -webkit-user-select: text;
-    -moz-user-select: text;
-    -ms-user-select: text;
-    user-select: text;
-    cursor: text;
-  }
-
-  /* Clean focus states: remove unwanted click outlines while preserving keyboard accessibility */
   :focus:not(:focus-visible) {
     outline: none;
   }
 
   ::selection {
-    background-color: #BAE6FD;
-    color: #0369A1;
-  }
-
-  .dark ::selection {
-    background-color: #065F46;
-    color: #6EE7B7;
+    background-color: #FECACA;
+    color: #7F1D1D;
   }
 }
 

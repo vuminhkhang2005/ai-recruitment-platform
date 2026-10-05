@@ -48,3 +48,18 @@ JOIN (
     GROUP BY a2.id
 ) s ON s.id = a.id
 SET a.match_score = s.score;
+
+-- 4. Company logos: the Clearbit logo API has been shut down, so the seeded URLs are broken images.
+--    Point the companies we ship logos for to /public/logos, clear the rest (UI falls back to initials).
+UPDATE companies SET logo_url = '/logos/fpt.svg'      WHERE logo_url LIKE '%clearbit.com/fpt-software.com%';
+UPDATE companies SET logo_url = '/logos/vng.svg'      WHERE logo_url LIKE '%clearbit.com/vng.com.vn%';
+UPDATE companies SET logo_url = '/logos/viettel.svg'  WHERE logo_url LIKE '%clearbit.com/viettel.com.vn%';
+UPDATE companies SET logo_url = '/logos/onemount.svg' WHERE logo_url LIKE '%clearbit.com/onemount.com%';
+UPDATE companies SET logo_url = '/logos/momo.png'     WHERE logo_url LIKE '%clearbit.com/momo.vn%';
+UPDATE companies SET logo_url = NULL                  WHERE logo_url LIKE '%logo.clearbit.com%';
+
+-- 5. Normalise city spelling so the city filter finds every job.
+UPDATE jobs SET location_city = 'TP. Hồ Chí Minh' WHERE location_city IN ('TP Ho Chi Minh', 'Ho Chi Minh', 'HCM', 'TP HCM');
+
+-- 6. applications_count must reflect real applications, not seeded numbers.
+UPDATE jobs j SET applications_count = (SELECT COUNT(*) FROM job_applications a WHERE a.job_id = j.id);

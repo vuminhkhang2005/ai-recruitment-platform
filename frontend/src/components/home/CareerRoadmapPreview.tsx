@@ -20,13 +20,13 @@ import {
   DollarSign
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { MOCK_CAREER_ROADMAPS } from '../../data/mockData';
+import { CAREER_ROADMAPS } from '../../data/careerRoadmaps';
 
 export const CareerRoadmapPreview: React.FC = () => {
   const { t, language } = useLanguage();
   const isEn = language === 'en';
   const [selectedRoadmapIdx, setSelectedRoadmapIdx] = useState(0);
-  const currentRoadmap = MOCK_CAREER_ROADMAPS[selectedRoadmapIdx] || MOCK_CAREER_ROADMAPS[0];
+  const currentRoadmap = CAREER_ROADMAPS[selectedRoadmapIdx] || CAREER_ROADMAPS[0];
 
   // Custom AI Roadmap Generator modal states
   const [isGeneratorModalOpen, setIsGeneratorModalOpen] = useState(false);

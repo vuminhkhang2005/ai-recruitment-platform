@@ -22,6 +22,8 @@ import com.talentbridge.backend.service.JobService;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -324,7 +326,7 @@ public class JobServiceImpl implements JobService {
             predicates.add(cb.isNull(root.get("deletedAt")));
             predicates.add(cb.or(cb.isNull(root.get("deadline")), cb.greaterThan(root.get("deadline"), LocalDateTime.now())));
 
-            // Keyword search in title or description or company name
+            // Keyword search in title, description, company name or skill names
             if (filter.getKeyword() != null && !filter.getKeyword().trim().isEmpty()) {
                 String searchPattern = "%" + filter.getKeyword().trim().toLowerCase() + "%";
                 Join<Job, Company> companyJoin = root.join("company", JoinType.LEFT);
@@ -333,7 +335,14 @@ public class JobServiceImpl implements JobService {
                 Predicate descMatch = cb.like(cb.lower(root.get("description")), searchPattern);
                 Predicate companyMatch = cb.like(cb.lower(companyJoin.get("name")), searchPattern);
 
-                predicates.add(cb.or(titleMatch, descMatch, companyMatch));
+                Subquery<Long> skillQuery = query.subquery(Long.class);
+                Root<JobSkill> jobSkill = skillQuery.from(JobSkill.class);
+                skillQuery.select(jobSkill.get("id")).where(
+                        cb.equal(jobSkill.get("job"), root),
+                        cb.like(cb.lower(jobSkill.get("skill").get("name")), searchPattern));
+                Predicate skillMatch = cb.exists(skillQuery);
+
+                predicates.add(cb.or(titleMatch, descMatch, companyMatch, skillMatch));
             }
 
             // City location filter
