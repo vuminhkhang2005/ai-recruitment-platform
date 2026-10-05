@@ -32,24 +32,19 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { MOCK_JOBS } from '../../data/mockData';
+import { MOCK_JOBS, type Job } from '../../data/mockData';
 
 interface ProfilePageProps {
   onBackToHome: () => void;
   onSelectJob?: (jobId: string) => void;
+  onRequestLogin?: () => void;
+  allJobs?: Job[];
 }
 
-export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome }) => {
-  const { user, loginDemo, logout, switchRole, savedJobIds, toggleSaveJob, appliedJobs, applyJob, updateProfile } = useAuth();
+export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onRequestLogin, allJobs }) => {
+  const { user, logout, switchRole, savedJobIds, toggleSaveJob, appliedJobs, applyJob, updateProfile } = useAuth();
   const { language } = useLanguage();
   const isVi = language === 'vi';
-
-  // If user is guest, automatically initialize with demo candidate so they immediately see a rich profile
-  React.useEffect(() => {
-    if (!user) {
-      loginDemo('candidate');
-    }
-  }, [user, loginDemo]);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'experience' | 'skills' | 'applications' | 'saved' | 'settings'>('overview');
   
@@ -61,13 +56,54 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome }) => {
   const [jobSeekingStatus, setJobSeekingStatus] = useState<'active' | 'open' | 'closed'>('active');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Merge live DB jobs with mock jobs pool so any bookmarked job is always resolvable
+  const jobsPool = React.useMemo(() => {
+    const list = allJobs && allJobs.length > 0 ? allJobs : [];
+    const missingMocks = MOCK_JOBS.filter((mj) => !list.some((aj) => aj.id === mj.id));
+    return [...list, ...missingMocks];
+  }, [allJobs]);
+  const savedJobsList = jobsPool.filter(job => savedJobIds.includes(job.id));
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  // Guests must sign in explicitly — never auto-login into a real account
   if (!user) {
-    return null;
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-4 py-16 bg-slate-50 dark:bg-slate-950 transition-colors">
+        <div className="max-w-md w-full text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-soft-xl space-y-4">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center">
+            <ShieldCheck className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <h2 className="text-xl font-black text-slate-900 dark:text-white">
+            {isVi ? 'Vui lòng đăng nhập' : 'Please sign in'}
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {isVi
+              ? 'Bạn cần đăng nhập để xem và quản lý hồ sơ cá nhân, việc đã lưu và lịch sử ứng tuyển.'
+              : 'Sign in to view and manage your profile, saved jobs and application history.'}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2.5 justify-center pt-2">
+            <button
+              type="button"
+              onClick={onRequestLogin}
+              className="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-soft cursor-pointer transition-all active:scale-95"
+            >
+              {isVi ? 'Đăng nhập' : 'Sign in'}
+            </button>
+            <button
+              type="button"
+              onClick={onBackToHome}
+              className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-all"
+            >
+              {isVi ? 'Về trang chủ' : 'Back to home'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const handleSaveBio = () => {
@@ -103,9 +139,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome }) => {
     navigator.clipboard?.writeText?.(window.location.href);
     showToast(isVi ? 'Đã sao chép liên kết hồ sơ của bạn vào bộ nhớ tạm!' : 'Profile link copied to clipboard!');
   };
-
-  // Get saved jobs list from mock data
-  const savedJobsList = MOCK_JOBS.filter(job => savedJobIds.includes(job.id));
 
   return (
     <div className="min-h-screen bg-slate-50/80 dark:bg-slate-950 text-slate-900 dark:text-slate-100 py-6 sm:py-10 transition-colors duration-300">

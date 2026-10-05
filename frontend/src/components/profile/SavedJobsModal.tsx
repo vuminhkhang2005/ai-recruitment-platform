@@ -17,13 +17,15 @@ interface SavedJobsModalProps {
   onClose: () => void;
   onSelectJob: (job: Job) => void;
   onQuickApply: (job: Job) => void;
+  allJobs?: Job[];
 }
 
 export const SavedJobsModal: React.FC<SavedJobsModalProps> = ({
   isOpen,
   onClose,
   onSelectJob,
-  onQuickApply
+  onQuickApply,
+  allJobs
 }) => {
   if (!isOpen) return null;
 
@@ -31,7 +33,12 @@ export const SavedJobsModal: React.FC<SavedJobsModalProps> = ({
   const { language } = useLanguage();
   const isVi = language === 'vi';
 
-  const bookmarkedJobs = MOCK_JOBS.filter((job) => savedJobIds.includes(job.id));
+  const jobsPool = React.useMemo(() => {
+    const list = allJobs && allJobs.length > 0 ? allJobs : [];
+    const missingMocks = MOCK_JOBS.filter((mj) => !list.some((aj) => aj.id === mj.id));
+    return [...list, ...missingMocks];
+  }, [allJobs]);
+  const bookmarkedJobs = jobsPool.filter((job) => savedJobIds.includes(job.id));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
