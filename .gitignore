@@ -51,3 +51,4 @@ test_*.cjs
 !frontend/test_cv_manager_preview.cjs
 !frontend/test_interview_prep.cjs
 !frontend/test_recruiter_analytics.cjs
+!frontend/test_job_comparison.cjs
