@@ -58,3 +58,4 @@ test_*.cjs
 !frontend/test_ai_job_radar.cjs
 !frontend/test_smart_quick_apply.cjs
 !frontend/test_candidate_matrix.cjs
+!frontend/test_offer_negotiation.cjs

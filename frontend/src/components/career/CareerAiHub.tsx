@@ -10,15 +10,17 @@ import {
   ChevronRight,
   Zap,
   Target,
-  Calculator
+  Calculator,
+  Scale
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { AiCvScannerDemo } from '../home/AiCvScannerDemo';
 import { CareerRoadmapPreview } from '../home/CareerRoadmapPreview';
 import { SalaryCalculatorSection } from './SalaryCalculatorSection';
+import { OfferNegotiationStudio } from './OfferNegotiationStudio';
 
 interface CareerAiHubProps {
-  initialTab?: 'scanner' | 'roadmap' | 'salary';
+  initialTab?: 'scanner' | 'roadmap' | 'salary' | 'negotiation';
   onBackToHome: () => void;
   onFindMatchingJobs?: () => void;
 }
@@ -30,7 +32,7 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
 }) => {
   const { language } = useLanguage();
   const isVi = language === 'vi';
-  const [activeTab, setActiveTab] = useState<'scanner' | 'roadmap' | 'salary'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'scanner' | 'roadmap' | 'salary' | 'negotiation'>(initialTab);
 
   useEffect(() => {
     if (initialTab) {
@@ -66,7 +68,9 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
                   ? (isVi ? 'Quét CV chuẩn ATS' : 'ATS CV Scanner') 
                   : activeTab === 'roadmap'
                   ? (isVi ? 'Lộ trình Kỹ năng' : 'Skill Roadmap')
-                  : (isVi ? 'Định Giá Lương Tech' : 'Tech Salary Estimator')}
+                  : activeTab === 'salary'
+                  ? (isVi ? 'Định Giá Lương Tech' : 'Tech Salary Estimator')
+                  : (isVi ? 'Đàm Phán Lương & Offer' : 'Offer & Negotiation')}
               </span>
             </div>
           </div>
@@ -128,7 +132,7 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
 
         {/* Unified Segmented Tab Controller */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-1.5 border border-slate-200/90 dark:border-slate-800 shadow-soft-sm">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
             
             {/* Tab 1: AI CV Scanner */}
             <button
@@ -229,6 +233,39 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
               </div>
             </button>
 
+            {/* Tab 4: AI Offer Negotiation & Package Evaluator */}
+            <button
+              type="button"
+              data-testid="tab-offer-negotiation"
+              onClick={() => setActiveTab('negotiation')}
+              className={`p-4 rounded-xl flex items-center gap-3.5 transition-all text-left cursor-pointer ${
+                activeTab === 'negotiation'
+                  ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-300 dark:border-indigo-700/70 text-slate-900 dark:text-white shadow-soft-xs'
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-transparent text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform ${
+                activeTab === 'negotiation'
+                  ? 'bg-indigo-600 text-white shadow-soft-xs scale-105'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+              }`}>
+                <Scale className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-black tracking-tight">
+                    {isVi ? 'So Sánh & Đàm Phán Offer' : 'Offer & Negotiation'}
+                  </span>
+                  {activeTab === 'negotiation' && (
+                    <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
+                  {isVi ? 'Tính Total Comp (TC) & sinh kịch bản' : 'Total Comp (TC) & counter-offer scripts'}
+                </p>
+              </div>
+            </button>
+
           </div>
         </div>
 
@@ -242,9 +279,13 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
             <div className="animate-fade-in">
               <CareerRoadmapPreview />
             </div>
-          ) : (
+          ) : activeTab === 'salary' ? (
             <div className="animate-fade-in">
               <SalaryCalculatorSection onFindMatchingJobs={onFindMatchingJobs} />
+            </div>
+          ) : (
+            <div className="animate-fade-in">
+              <OfferNegotiationStudio onFindMatchingJobs={onFindMatchingJobs} />
             </div>
           )}
         </div>

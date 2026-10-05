@@ -4,7 +4,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 
 interface FooterProps {
   onOpenPostJobModal?: () => void;
-  onOpenCareerAi?: (tab: 'scanner' | 'roadmap' | 'salary') => void;
+  onOpenCareerAi?: (tab: 'scanner' | 'roadmap' | 'salary' | 'negotiation') => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({ onOpenPostJobModal, onOpenCareerAi }) => {
