@@ -51,6 +51,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { MOCK_JOBS, type Job } from '../../data/mockData';
 import { AiJobRadarSection } from './AiJobRadarSection';
 import { SkillAssessmentSection } from './SkillAssessmentSection';
+import { AiVoiceInterviewModal } from '../interview/AiVoiceInterviewModal';
 
 export interface InterviewQuestion {
   id: string;
@@ -225,6 +226,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [isEvaluatingAnswer, setIsEvaluatingAnswer] = useState<boolean>(false);
   const [evaluationResult, setEvaluationResult] = useState<InterviewEvaluation | null>(null);
+  const [isVoiceInterviewActive, setIsVoiceInterviewActive] = useState<boolean>(false);
 
   const handleOpenInterviewPrep = (app: { id: string; jobTitle: string; company: string }) => {
     const qList = generateMockQuestionsForRole(app.jobTitle, app.company, isVi);
@@ -1770,15 +1772,27 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
                 </div>
               </div>
 
-              <button
-                type="button"
-                data-testid="interview-close-btn"
-                onClick={() => setInterviewPrepApp(null)}
-                className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
-                title={isVi ? 'Đóng' : 'Close'}
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  data-testid="btn-launch-voice-interview"
+                  onClick={() => setIsVoiceInterviewActive(true)}
+                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-soft transition-all cursor-pointer"
+                >
+                  <Radio className="w-3.5 h-3.5" />
+                  <span>{isVi ? '🎙️ Phỏng Vấn Giọng Nói (Voice AI)' : '🎙️ Voice AI Simulator'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  data-testid="interview-close-btn"
+                  onClick={() => setInterviewPrepApp(null)}
+                  className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                  title={isVi ? 'Đóng' : 'Close'}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Question Selector Tabs */}
@@ -2053,6 +2067,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
           </div>
         </div>
       )}
+
+      {/* AI Voice & Audio Real-Time Mock Interview Modal */}
+      <AiVoiceInterviewModal
+        isOpen={isVoiceInterviewActive}
+        onClose={() => setIsVoiceInterviewActive(false)}
+        jobTitle={interviewPrepApp?.jobTitle}
+        company={interviewPrepApp?.company}
+      />
 
     </div>
   );

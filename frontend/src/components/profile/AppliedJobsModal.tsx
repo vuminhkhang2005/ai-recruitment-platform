@@ -7,13 +7,16 @@ import {
   Calendar, 
   Sparkles, 
   Search,
-  Code2
+  Code2,
+  Radio,
+  Mic
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { CompanyLogo } from '../ui/CompanyLogo';
 import { InterviewSchedulerModal, type InterviewScheduleData } from '../interview/InterviewSchedulerModal';
 import { TechAssessmentSandboxModal } from '../career/TechAssessmentSandboxModal';
+import { AiVoiceInterviewModal } from '../interview/AiVoiceInterviewModal';
 
 interface AppliedJobsModalProps {
   isOpen: boolean;
@@ -31,6 +34,7 @@ export const AppliedJobsModal: React.FC<AppliedJobsModalProps> = ({
   const isVi = language === 'vi';
   const [schedulingData, setSchedulingData] = useState<InterviewScheduleData | null>(null);
   const [codingAssessmentData, setCodingAssessmentData] = useState<{ jobTitle: string; company: string } | null>(null);
+  const [voiceInterviewData, setVoiceInterviewData] = useState<{ jobTitle: string; company: string } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -173,6 +177,16 @@ export const AppliedJobsModal: React.FC<AppliedJobsModalProps> = ({
 
                     <button
                       type="button"
+                      data-testid={`btn-voice-interview-${app.id}`}
+                      onClick={() => setVoiceInterviewData({ jobTitle: app.jobTitle, company: app.company })}
+                      className="px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 font-bold hover:bg-teal-100 dark:hover:bg-teal-900/60 flex items-center gap-1 cursor-pointer transition-all"
+                    >
+                      <Radio className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+                      <span>{isVi ? 'Phỏng vấn Voice' : 'Voice Interview'}</span>
+                    </button>
+
+                    <button
+                      type="button"
                       data-testid={`btn-sync-calendar-${app.id}`}
                       onClick={() => setSchedulingData({ jobTitle: app.jobTitle, company: app.company })}
                       className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/60 flex items-center gap-1 cursor-pointer transition-all"
@@ -214,6 +228,13 @@ export const AppliedJobsModal: React.FC<AppliedJobsModalProps> = ({
         onClose={() => setCodingAssessmentData(null)}
         jobTitle={codingAssessmentData?.jobTitle}
         company={codingAssessmentData?.company}
+      />
+
+      <AiVoiceInterviewModal
+        isOpen={!!voiceInterviewData}
+        onClose={() => setVoiceInterviewData(null)}
+        jobTitle={voiceInterviewData?.jobTitle}
+        company={voiceInterviewData?.company}
       />
     </div>
   );
