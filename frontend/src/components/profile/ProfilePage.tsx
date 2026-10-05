@@ -43,11 +43,13 @@ import {
   Loader2,
   ThumbsUp,
   TrendingUp,
-  RefreshCw
+  RefreshCw,
+  Radio
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { MOCK_JOBS, type Job } from '../../data/mockData';
+import { AiJobRadarSection } from './AiJobRadarSection';
 
 export interface InterviewQuestion {
   id: string;
@@ -182,7 +184,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
   const { language } = useLanguage();
   const isVi = language === 'vi';
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'experience' | 'skills' | 'applications' | 'saved' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'experience' | 'skills' | 'applications' | 'saved' | 'radar' | 'settings'>('overview');
   
   // Local edit states
   const [isEditingBio, setIsEditingBio] = useState(false);
@@ -663,6 +665,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
             { id: 'overview', labelVi: 'Tổng quan', labelEn: 'Overview', icon: FileText },
             { id: 'experience', labelVi: 'Kinh nghiệm & Học vấn', labelEn: 'Experience & Edu', icon: Briefcase },
             { id: 'skills', labelVi: 'Kỹ năng & AI Đánh giá', labelEn: 'Skills & AI Radar', icon: Cpu },
+            { id: 'radar', labelVi: 'Radar Việc Làm AI', labelEn: 'AI Job Radar', icon: Radio },
             { id: 'applications', labelVi: `Đã ứng tuyển (${appliedJobs.length})`, labelEn: `Applications (${appliedJobs.length})`, icon: UserCheck },
             { id: 'saved', labelVi: `Việc đã lưu (${savedJobsList.length})`, labelEn: `Saved Jobs (${savedJobsList.length})`, icon: Bookmark },
             { id: 'settings', labelVi: 'Cài đặt tài khoản', labelEn: 'Account Settings', icon: Settings },
@@ -673,6 +676,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
               <button
                 key={tab.id}
                 type="button"
+                data-testid={`tab-profile-${tab.id}`}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
                   isActive
@@ -1329,6 +1333,23 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* TAB: AI JOB RADAR */}
+            {activeTab === 'radar' && (
+              <div className="space-y-6 animate-fade-in">
+                <AiJobRadarSection
+                  jobs={jobsPool}
+                  onQuickApply={(job) => {
+                    applyJob({ id: job.id, title: job.title, company: job.company });
+                    showToast(
+                      isVi
+                        ? `🎉 Ứng tuyển thành công qua Radar AI vào vị trí ${job.title} tại ${job.company}!`
+                        : `🎉 Quick application submitted via AI Radar for ${job.title} at ${job.company}!`
+                    );
+                  }}
+                />
               </div>
             )}
 

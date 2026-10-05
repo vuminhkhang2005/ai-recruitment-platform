@@ -55,3 +55,4 @@ test_*.cjs
 !frontend/test_career_roadmap_generator.cjs
 !frontend/test_salary_estimator.cjs
 !frontend/test_cover_letter_studio.cjs
+!frontend/test_ai_job_radar.cjs
