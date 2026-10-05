@@ -35,11 +35,42 @@ import {
   ZoomOut,
   Maximize2,
   AlertCircle,
-  X
+  X,
+  MessageSquare,
+  HelpCircle,
+  Lightbulb,
+  PlayCircle,
+  Loader2,
+  ThumbsUp,
+  TrendingUp,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { MOCK_JOBS, type Job } from '../../data/mockData';
+
+export interface InterviewQuestion {
+  id: string;
+  category: 'Technical' | 'System Architecture' | 'Behavioral (STAR)' | 'Culture Fit';
+  categoryLabelVi: string;
+  categoryLabelEn: string;
+  question: string;
+  hint: string;
+  sampleAnswer: string;
+}
+
+export interface InterviewEvaluation {
+  score: number;
+  starBreakdown: {
+    situation: number;
+    task: number;
+    action: number;
+    result: number;
+  };
+  strengths: string[];
+  improvements: string[];
+  recommendation: string;
+}
 
 export interface CvDocument {
   id: string;
@@ -89,6 +120,56 @@ const INITIAL_CVS: CvDocument[] = [
   }
 ];
 
+const generateMockQuestionsForRole = (roleTitle: string, company: string, isVi: boolean): InterviewQuestion[] => {
+  return [
+    {
+      id: 'q1',
+      category: 'Technical',
+      categoryLabelVi: 'Kỹ thuật chuyên sâu & Hiệu năng',
+      categoryLabelEn: 'Technical & Performance Optimization',
+      question: isVi 
+        ? `Với vai trò ${roleTitle} tại ${company}, bạn sẽ tối ưu hóa kiến trúc ứng dụng như thế nào khi gặp tình huống tải cao (High Concurrency > 10,000 req/s), đồng thời kiểm soát độ trễ P99 dưới 150ms?`
+        : `As a ${roleTitle} at ${company}, how would you architect and optimize your application under heavy load (>10,000 req/s) while keeping P99 latency below 150ms?`,
+      hint: isVi 
+        ? 'Tập trung vào: Multi-level Caching (Redis/In-memory), Connection Pooling, Asynchronous Processing (Message Queue), Database Indexing & Query Sharding.'
+        : 'Focus on: Multi-level caching (Redis/In-memory), Connection Pooling, Asynchronous processing (Message queues), and DB Indexing & Partitioning.',
+      sampleAnswer: isVi
+        ? `[Tình huống - S]: Tại hệ thống microservice xử lý thanh toán và đơn hàng với lưu lượng 15,000 req/s.\n[Nhiệm vụ - T]: Cần giảm P99 latency từ 850ms xuống dưới 150ms và loại bỏ hiện tượng tắc nghẽn DB pool.\n[Hành động - A]: Tôi áp dụng chiến lược Caching 2 lớp: L1 In-Memory (Caffeine) với TTL ngắn cho hot data, L2 Redis Cluster hỗ trợ phân tải. Thiết lập Asynchronous worker qua Apache Kafka để xử lý ghi nhận phụ, và bổ sung Composite Indexes trên các bảng giao dịch lớn.\n[Kết quả - R]: P99 latency giảm còn 112ms, throughput tăng gấp 3.2 lần, CPU utilization trên database giảm 42%.`
+        : `[Situation]: In a high-traffic microservices cluster serving 15,000 req/s during peak campaigns.\n[Task]: Needed to reduce P99 response latency from 850ms to sub-150ms and eliminate database connection pool starvation.\n[Action]: Implemented 2-tier caching with L1 in-memory Caffeine cache and L2 Redis cluster with Redis pipeline. Offloaded heavy analytical logging to Kafka consumers asynchronously, and optimized database indexing strategy.\n[Result]: P99 latency dropped to 112ms, throughput scaled 3.2x, and DB CPU load dropped by 42%.`
+    },
+    {
+      id: 'q2',
+      category: 'System Architecture',
+      categoryLabelVi: 'Kiến trúc phân tán & Phục hồi lỗi',
+      categoryLabelEn: 'Distributed Architecture & Fault Tolerance',
+      question: isVi
+        ? `Trong hệ thống của ${company}, nếu một third-party service hoặc downstream microservice phản hồi chậm hoặc sập hoàn toàn, bạn thiết kế cơ chế phòng vệ nào để ngăn chặn Cascade Failure?`
+        : `In ${company}'s ecosystem, if a downstream dependency or third-party service times out or crashes, what fault-tolerance patterns do you implement to prevent cascade failure?`,
+      hint: isVi
+        ? 'Đề cập đến Circuit Breaker (Resilience4j / Istio), Fallback Graceful Degradation, Rate Limiting & Backpressure, Retry with Exponential Backoff + Jitter.'
+        : 'Discuss Circuit Breaker patterns, Fallback graceful degradation, Rate Limiting & Backpressure, and Exponential Backoff with Jitter.',
+      sampleAnswer: isVi
+        ? `[Tình huống - S]: Cổng thanh toán bên thứ ba gặp sự cố gián đoạn chập chờn, khiến các thread pool của gateway bị cạn kiệt.\n[Nhiệm vụ - T]: Bảo vệ tính khả dụng 99.99% của core application và tránh crash toàn bộ hệ thống.\n[Hành động - A]: Tôi tích hợp Circuit Breaker với ngưỡng lỗi 30% để ngắt mạch nhanh (fast-fail), kích hoạt Fallback Cache phục vụ dữ liệu đã đọc, đồng thời áp dụng Exponential Backoff with Jitter và Dead Letter Queue (DLQ) cho các tác vụ cần retry.\n[Kết quả - R]: Hệ thống duy trì uptime 99.98% xuyên suốt thời gian đối tác gặp sự cố, không xảy ra cascade failure.`
+        : `[Situation]: A third-party credit verification partner experienced severe intermittent degradation, exhausting gateway worker pools.\n[Task]: Prevent cascade system-wide outages and ensure 99.99% critical API uptime.\n[Action]: Configured Circuit Breakers with a 30% failure rate threshold for fast-failing, activated read-only cached fallbacks, and enqueued async transactions with exponential backoff and Dead Letter Queue (DLQ).\n[Result]: Maintained 99.98% platform uptime throughout the incident with zero cascading failures.`
+    },
+    {
+      id: 'q3',
+      category: 'Behavioral (STAR)',
+      categoryLabelVi: 'Hành vi STAR & Kỹ năng làm việc nhóm',
+      categoryLabelEn: 'Behavioral STAR & Collaboration',
+      question: isVi
+        ? `Hãy kể về một lần bạn và Tech Lead hoặc Product Owner có sự bất đồng quan điểm lớn về kiến trúc kỹ thuật hoặc ưu tiên trả nợ công nghệ (Technical Debt). Bạn đã giải quyết thế nào để đạt được tiếng nói chung?`
+        : `Describe a situation where you had a strong technical disagreement with a Tech Lead or Product Owner regarding technical debt vs feature deadlines. How did you resolve it?`,
+      hint: isVi
+        ? 'Áp dụng mô hình STAR: Trình bày khách quan bằng số liệu, rủi ro cụ thể, đề xuất giải pháp dung hòa (Phase-by-phase rollout) thay vì phản đối suông.'
+        : 'Use the STAR format: Back arguments with data, highlight business risks, propose balanced trade-offs rather than blunt opposition.',
+      sampleAnswer: isVi
+        ? `[Tình huống - S]: Đội ngũ cần ra mắt tính năng đặt đơn mới trong 2 tuần, nhưng codebase module thanh toán đang có nợ kỹ thuật lớn gây rủi ro thất thoát dữ liệu.\n[Nhiệm vụ - T]: Tôi cần thuyết phục Product Owner chấp nhận dành 3 ngày để refactor module mà không làm vỡ release milestone quan trọng.\n[Hành động - A]: Tôi chuẩn bị báo cáo phân tích rủi ro định lượng, chứng minh rằng nợ kỹ thuật này đã gây ra 5 hotfixes trong tháng trước. Tôi đề xuất giải pháp chia nhỏ (Strangler Pattern): refactor 60% phần core song song viết unit test tự động, phần UI vẫn giữ tiến độ.\n[Kết quả - R]: PO đồng thuận; bản release mới ra mắt đúng hạn với 0 lỗi phát sinh và giảm 80% thời gian bảo trì ở các sprint sau.`
+        : `[Situation]: Product demanded a new checkout feature within 2 weeks, but the legacy order module carried severe technical debt risking transaction drops.\n[Task]: I needed to persuade the Product Owner to allocate 3 days for refactoring without compromising release delivery.\n[Action]: I compiled empirical defect metrics showing 5 critical hotfixes in the previous month. I proposed a phased Strangler Pattern: refactor core transactional paths alongside automated tests while keeping the frontend delivery cadence.\n[Result]: The PO agreed; we delivered on schedule with zero production bugs and reduced ongoing sprint maintenance overhead by 80%.`
+    }
+  ];
+};
+
 interface ProfilePageProps {
   onBackToHome: () => void;
   onSelectJob?: (jobId: string) => void;
@@ -133,6 +214,82 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
   const [previewTab, setPreviewTab] = useState<'document' | 'parsed'>('document');
   const [isUploadingCv, setIsUploadingCv] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+
+  // AI Mock Interview Simulator states
+  const [interviewPrepApp, setInterviewPrepApp] = useState<{ id: string; jobTitle: string; company: string } | null>(null);
+  const [interviewQuestions, setInterviewQuestions] = useState<InterviewQuestion[]>([]);
+  const [activeQuestionIdx, setActiveQuestionIdx] = useState<number>(0);
+  const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
+  const [isEvaluatingAnswer, setIsEvaluatingAnswer] = useState<boolean>(false);
+  const [evaluationResult, setEvaluationResult] = useState<InterviewEvaluation | null>(null);
+
+  const handleOpenInterviewPrep = (app: { id: string; jobTitle: string; company: string }) => {
+    const qList = generateMockQuestionsForRole(app.jobTitle, app.company, isVi);
+    setInterviewPrepApp(app);
+    setInterviewQuestions(qList);
+    setActiveQuestionIdx(0);
+    setEvaluationResult(null);
+  };
+
+  const handleInsertSampleAnswer = () => {
+    const currentQ = interviewQuestions[activeQuestionIdx];
+    if (!currentQ) return;
+    setUserAnswers((prev) => ({
+      ...prev,
+      [currentQ.id]: currentQ.sampleAnswer
+    }));
+    showToast(isVi ? 'Đã điền câu trả lời mẫu chuẩn STAR từ AI!' : 'Loaded sample STAR model answer!');
+  };
+
+  const handleEvaluateAnswer = () => {
+    const currentQ = interviewQuestions[activeQuestionIdx];
+    const currentAns = userAnswers[currentQ?.id || ''] || '';
+    if (!currentAns.trim()) {
+      showToast(isVi ? 'Vui lòng nhập hoặc dán câu trả lời trước khi đánh giá!' : 'Please enter an answer before evaluating!');
+      return;
+    }
+
+    setIsEvaluatingAnswer(true);
+    setEvaluationResult(null);
+
+    setTimeout(() => {
+      setIsEvaluatingAnswer(false);
+      const isLongEnough = currentAns.length > 80;
+      const baseScore = isLongEnough ? Math.floor(Math.random() * 6 + 92) : Math.floor(Math.random() * 8 + 78);
+      
+      const evalData: InterviewEvaluation = {
+        score: baseScore,
+        starBreakdown: {
+          situation: Math.min(100, baseScore + (isLongEnough ? 3 : -5)),
+          task: Math.min(100, baseScore + (isLongEnough ? 2 : 2)),
+          action: Math.min(100, baseScore + (isLongEnough ? 4 : -2)),
+          result: Math.min(100, baseScore + (isLongEnough ? 1 : -4))
+        },
+        strengths: isVi ? [
+          'Trình bày cấu trúc mạch lạc, nêu rõ bối cảnh kỹ thuật và quy mô lưu lượng.',
+          'Các giải pháp đưa ra mang tính ứng dụng thực chiến cao, có số liệu minh chứng.',
+          'Thể hiện tư duy phòng vệ hệ thống (Defensive Architecture) và kỹ năng giao tiếp chuyên nghiệp.'
+        ] : [
+          'Structured response clearly highlighting technical context and throughput scale.',
+          'Pragmatic solutions supported by concrete metrics and architectural patterns.',
+          'Exhibits solid defensive system thinking and professional team communication.'
+        ],
+        improvements: isVi ? [
+          'Có thể bổ sung thêm giải pháp giám sát (Prometheus/Grafana Alerts) để cảnh báo sớm.',
+          'Chi tiết hơn về chi phí tài nguyên (Cost Optimization) khi mở rộng phân tán.'
+        ] : [
+          'Consider detailing monitoring alarms (e.g. Prometheus/Grafana) for early breach detection.',
+          'Elaborate further on cloud infrastructure cost implications when scaling horizontally.'
+        ],
+        recommendation: isVi
+          ? '🌟 Đạt tiêu chuẩn phỏng vấn Senior/Lead. Câu trả lời thể hiện năng lực chuyên sâu và độ tin cậy kỹ thuật cao.'
+          : '🌟 Passed Senior/Lead interview benchmark. Exhibits deep competency and reliable technical leadership.'
+      };
+
+      setEvaluationResult(evalData);
+      showToast(isVi ? 'Đã hoàn tất đánh giá AI với mô hình STAR!' : 'AI Evaluation completed with STAR rubric!');
+    }, 600);
+  };
 
   React.useEffect(() => {
     try {
@@ -1070,8 +1227,19 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
                             </p>
                           </div>
 
-                          <div className="flex items-center gap-2.5">
-                            <span className={`px-3 py-1 rounded-xl text-xs font-bold border ${
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            <button
+                              type="button"
+                              data-testid="open-interview-prep-btn"
+                              onClick={() => handleOpenInterviewPrep({ id: app.id, jobTitle: app.jobTitle, company: app.company })}
+                              className="px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-soft-xs"
+                              title={isVi ? 'Mở phòng luyện phỏng vấn AI cho vị trí này' : 'Practice AI interview for this role'}
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
+                              <span>{isVi ? 'Luyện phỏng vấn AI' : 'AI Interview Prep'}</span>
+                            </button>
+
+                            <span className={`px-3 py-1.5 rounded-xl text-xs font-bold border ${
                               app.status === 'ai_passed'
                                 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                                 : 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
@@ -1539,6 +1707,319 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
                 {isVi ? 'Đóng' : 'Close'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Mock Interview Prep Simulator Modal */}
+      {interviewPrepApp && (
+        <div 
+          data-testid="interview-prep-modal"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in"
+        >
+          <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-soft-2xl overflow-hidden flex flex-col max-h-[92vh]">
+            
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/70">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-soft-xs">
+                  <Sparkles className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                      {isVi ? 'Phòng Luyện Phỏng Vấn AI (Gemini 2.0)' : 'AI Mock Interview Simulator'}
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      STAR Rubric
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    {interviewPrepApp.jobTitle} • {interviewPrepApp.company}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                data-testid="interview-close-btn"
+                onClick={() => setInterviewPrepApp(null)}
+                className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                title={isVi ? 'Đóng' : 'Close'}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Question Selector Tabs */}
+            <div className="px-6 pt-3 pb-2 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-2 overflow-x-auto">
+              {interviewQuestions.map((q, idx) => (
+                <button
+                  key={q.id}
+                  type="button"
+                  data-testid="interview-question-tab"
+                  onClick={() => {
+                    setActiveQuestionIdx(idx);
+                    setEvaluationResult(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                    activeQuestionIdx === idx
+                      ? 'bg-emerald-600 text-white shadow-soft-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <span>{isVi ? `Câu hỏi ${idx + 1}` : `Question ${idx + 1}`}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
+                    activeQuestionIdx === idx
+                      ? 'bg-emerald-700/60 text-emerald-100'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                  }`}>
+                    {q.category}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+              {interviewQuestions[activeQuestionIdx] && (
+                <>
+                  {/* Active Question Box */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>{isVi ? interviewQuestions[activeQuestionIdx].categoryLabelVi : interviewQuestions[activeQuestionIdx].categoryLabelEn}</span>
+                      </span>
+                      <span className="text-[11px] text-slate-400 font-medium">
+                        {isVi ? 'Độ khó: Nâng cao (Senior/Lead)' : 'Difficulty: Advanced (Senior/Lead)'}
+                      </span>
+                    </div>
+
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-relaxed">
+                      {interviewQuestions[activeQuestionIdx].question}
+                    </h4>
+
+                    {/* Hint / Guidance */}
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-900/60 text-amber-800 dark:text-amber-200 text-xs">
+                      <HelpCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
+                      <p className="leading-relaxed font-medium">
+                        <strong>{isVi ? 'Gợi ý cấu trúc trả lời:' : 'Structure Hint:'}</strong> {interviewQuestions[activeQuestionIdx].hint}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Candidate Answer Box */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <Edit3 className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{isVi ? 'Câu trả lời của bạn (Mô hình STAR: Situation - Task - Action - Result)' : 'Your Response (STAR Model: Situation - Task - Action - Result)'}</span>
+                      </label>
+
+                      <button
+                        type="button"
+                        data-testid="interview-sample-answer-btn"
+                        onClick={handleInsertSampleAnswer}
+                        className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 flex items-center gap-1 cursor-pointer transition-colors"
+                        title={isVi ? 'Điền câu trả lời mẫu chuẩn STAR từ chuyên gia' : 'Load expert sample answer'}
+                      >
+                        <Lightbulb className="w-3.5 h-3.5" />
+                        <span>{isVi ? 'Dán câu trả lời mẫu STAR' : 'Fill Sample Answer'}</span>
+                      </button>
+                    </div>
+
+                    <textarea
+                      rows={5}
+                      data-testid="interview-answer-input"
+                      value={userAnswers[interviewQuestions[activeQuestionIdx].id] || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setUserAnswers((prev) => ({
+                          ...prev,
+                          [interviewQuestions[activeQuestionIdx].id]: val
+                        }));
+                      }}
+                      placeholder={isVi 
+                        ? 'Nhập câu trả lời của bạn theo mô hình STAR: [Tình huống] -> [Nhiệm vụ] -> [Hành động giải quyết] -> [Kết quả định lượng]...' 
+                        : 'Enter your answer following STAR: [Situation] -> [Task] -> [Action] -> [Quantified Result]...'}
+                      className="w-full p-3.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-medium leading-relaxed resize-y"
+                    />
+                  </div>
+
+                  {/* Action Evaluate Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                    <div className="text-[11px] text-slate-400">
+                      {isVi 
+                        ? 'Hệ thống AI sẽ chấm điểm dựa trên tiêu chí STAR, kiến trúc kỹ thuật và tư duy giải quyết vấn đề.' 
+                        : 'AI will benchmark against STAR criteria, technical depth, and problem-solving methodology.'}
+                    </div>
+
+                    <button
+                      type="button"
+                      data-testid="interview-evaluate-btn"
+                      disabled={isEvaluatingAnswer}
+                      onClick={handleEvaluateAnswer}
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-soft flex items-center gap-2 cursor-pointer transition-all active:scale-95 disabled:opacity-60"
+                    >
+                      {isEvaluatingAnswer ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>{isVi ? 'Đang chấm điểm STAR...' : 'Evaluating with AI...'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4" />
+                          <span>{isVi ? 'Chấm điểm bằng AI' : 'Evaluate with AI'}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Evaluation Result Display */}
+                  {evaluationResult && (
+                    <div 
+                      data-testid="interview-evaluation-result"
+                      className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50/50 to-teal-50/40 dark:from-emerald-950/30 dark:to-teal-950/20 border border-emerald-200 dark:border-emerald-800/80 space-y-4 animate-fade-in"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-emerald-200/60 dark:border-emerald-800/60">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black text-lg shadow-soft-xs">
+                            {evaluationResult.score}
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                              {isVi ? 'Điểm đánh giá STAR Tổng thể' : 'Overall STAR Benchmark'}
+                            </span>
+                            <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold">
+                              {evaluationResult.recommendation}
+                            </p>
+                          </div>
+                        </div>
+
+                        <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 self-start sm:self-center">
+                          {isVi ? 'Đạt chuẩn tuyển dụng' : 'Meets Hiring Standard'}
+                        </span>
+                      </div>
+
+                      {/* STAR 4 Pillars Progress Bars */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                          <div className="flex justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            <span>S - Situation</span>
+                            <span className="text-emerald-600">{evaluationResult.starBreakdown.situation}%</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${evaluationResult.starBreakdown.situation}%` }} />
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                          <div className="flex justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            <span>T - Task</span>
+                            <span className="text-teal-600">{evaluationResult.starBreakdown.task}%</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-teal-500 rounded-full" style={{ width: `${evaluationResult.starBreakdown.task}%` }} />
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                          <div className="flex justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            <span>A - Action</span>
+                            <span className="text-indigo-600">{evaluationResult.starBreakdown.action}%</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${evaluationResult.starBreakdown.action}%` }} />
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                          <div className="flex justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            <span>R - Result</span>
+                            <span className="text-amber-600">{evaluationResult.starBreakdown.result}%</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-amber-500 rounded-full" style={{ width: `${evaluationResult.starBreakdown.result}%` }} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Strengths & Improvements */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-1">
+                        <div className="space-y-2">
+                          <strong className="text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1.5">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            <span>{isVi ? 'Điểm mạnh nổi bật:' : 'Key Strengths:'}</span>
+                          </strong>
+                          <ul className="space-y-1 text-slate-700 dark:text-slate-300 font-medium">
+                            {evaluationResult.strengths.map((str, i) => (
+                              <li key={i} className="flex items-start gap-1.5">
+                                <span className="text-emerald-500">•</span>
+                                <span>{str}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div className="space-y-2">
+                          <strong className="text-amber-700 dark:text-amber-300 font-bold flex items-center gap-1.5">
+                            <Lightbulb className="w-4 h-4 text-amber-500" />
+                            <span>{isVi ? 'Gợi ý nâng cao để đạt điểm tuyệt đối:' : 'Suggestions for Perfection:'}</span>
+                          </strong>
+                          <ul className="space-y-1 text-slate-700 dark:text-slate-300 font-medium">
+                            {evaluationResult.improvements.map((imp, i) => (
+                              <li key={i} className="flex items-start gap-1.5">
+                                <span className="text-amber-500">•</span>
+                                <span>{imp}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={activeQuestionIdx === 0}
+                  onClick={() => {
+                    setActiveQuestionIdx((prev) => Math.max(0, prev - 1));
+                    setEvaluationResult(null);
+                  }}
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 cursor-pointer transition-all"
+                >
+                  {isVi ? '← Câu trước' : '← Previous'}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={activeQuestionIdx === interviewQuestions.length - 1}
+                  onClick={() => {
+                    setActiveQuestionIdx((prev) => Math.min(interviewQuestions.length - 1, prev + 1));
+                    setEvaluationResult(null);
+                  }}
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 cursor-pointer transition-all"
+                >
+                  {isVi ? 'Câu tiếp theo →' : 'Next →'}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setInterviewPrepApp(null)}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                {isVi ? 'Đóng phòng phỏng vấn' : 'Close Room'}
+              </button>
+            </div>
+
           </div>
         </div>
       )}
