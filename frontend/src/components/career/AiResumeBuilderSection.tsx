@@ -51,19 +51,19 @@ export interface TargetRoleProfile {
 const TARGET_ROLES: TargetRoleProfile[] = [
   {
     id: 'ai-ml',
-    title: '🤖 Senior AI/ML Systems Engineer',
+    title: 'Senior AI/ML Systems Engineer',
     requiredKeywords: ['PyTorch', 'CUDA C++', 'vLLM', 'Distributed Training', 'TensorRT-LLM', 'Model Quantization'],
     recommendedSkills: ['Python', 'PyTorch', 'CUDA', 'Docker', 'Kubernetes', 'Hugging Face', 'MLOps', 'FastAPI']
   },
   {
     id: 'fullstack',
-    title: '💻 Lead Fullstack & Cloud Architect',
+    title: 'Lead Fullstack & Cloud Architect',
     requiredKeywords: ['React 19', 'TypeScript', 'GraphQL', 'Micro-frontends', 'Distributed Caching', 'PostgreSQL Partitioning'],
     recommendedSkills: ['React', 'TypeScript', 'Node.js', 'Go', 'Redis', 'Docker', 'Tailwind CSS', 'Next.js']
   },
   {
     id: 'devops',
-    title: '☁️ Principal DevOps & SRE Lead',
+    title: 'Principal DevOps & SRE Lead',
     requiredKeywords: ['Kubernetes', 'Terraform', 'Prometheus & Grafana', 'Zero-Trust Security', 'Istio Service Mesh', 'CI/CD GitOps'],
     recommendedSkills: ['Kubernetes', 'Terraform', 'AWS/GCP', 'Linux', 'Helm', 'ArgoCD', 'Bash/Python', 'Docker']
   }
@@ -377,16 +377,16 @@ ${educations.map(edu => `${edu.degree} - ${edu.school} (${edu.year})\n${edu.deta
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-xs font-black">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
-              <span>{isVi ? 'AI ATS RESUME BUILDER & KEYWORD INJECTOR' : 'AI ATS RESUME STUDIO'}</span>
+              <FileText className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{isVi ? 'TRÌNH TẠO CV & TỐI ƯU TỪ KHÓA' : 'ATS RESUME STUDIO'}</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              {isVi ? 'Trình Soạn CV Chuẩn ATS & Chèn Từ Khóa Thông Minh' : 'ATS Resume Builder & AI Keyword Injector'}
+              {isVi ? 'Trình Soạn CV Chuẩn & Tối Ưu Từ Khóa Tuyển Dụng' : 'ATS-Optimized Resume Builder'}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {isVi
-                ? 'Tự động kiểm định mật độ từ khóa theo JD mục tiêu, chèn đạn câu định lượng Google XYZ và xuất bản PDF không lỗi phân tích.'
-                : 'Live audit against target JD keywords, inject quantifiable Google XYZ bullets, and generate parser-friendly resumes.'}
+                ? 'Kiểm tra mật độ từ khóa theo vị trí tuyển dụng, gợi ý các câu kinh nghiệm theo chuẩn định lượng và xuất bản in/PDF.'
+                : 'Live audit against target keywords, suggest quantifiable bullets, and generate clean printable resumes.'}
             </p>
           </div>
 

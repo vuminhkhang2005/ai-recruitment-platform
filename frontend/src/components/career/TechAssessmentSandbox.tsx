@@ -735,7 +735,7 @@ export const TechAssessmentSandbox: React.FC<TechAssessmentSandboxProps> = ({
               >
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-indigo-500" />
-                  <span>{isVi ? 'Gợi ý tư duy từ Trợ lý AI (Gemini 2.0)' : 'AI Strategic Solution Hints'}</span>
+                  <span>{isVi ? 'Gợi ý giải thuật & Cấu trúc dữ liệu' : 'Solution & Algorithm Hints'}</span>
                 </div>
                 <ChevronRight className={`w-4 h-4 transition-transform ${revealedHints ? 'rotate-90' : ''}`} />
               </button>
@@ -854,7 +854,7 @@ export const TechAssessmentSandbox: React.FC<TechAssessmentSandboxProps> = ({
                 className="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white font-bold text-xs flex items-center gap-2 shadow-soft transition-all cursor-pointer disabled:opacity-50"
               >
                 <Sparkles className={`w-3.5 h-3.5 ${isAiEvaluating ? 'animate-spin' : ''}`} />
-                <span>{isAiEvaluating ? (isVi ? 'Đang phân tích...' : 'Analyzing Code...') : (isVi ? 'Chấm Điểm & Tối Ưu Bằng AI' : 'AI Code Review (Gemini)')}</span>
+                <span>{isAiEvaluating ? (isVi ? 'Đang phân tích...' : 'Analyzing Code...') : (isVi ? 'Phân Tích Thuật Toán & Big-O' : 'Code & Complexity Analysis')}</span>
               </button>
             </div>
 
@@ -903,7 +903,7 @@ export const TechAssessmentSandbox: React.FC<TechAssessmentSandboxProps> = ({
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>{isVi ? 'Phân Tích AI & Độ Phức Tạp' : 'AI Complexity Analysis'}</span>
+                <span>{isVi ? 'Phân Tích Độ Phức Tạp & Big-O' : 'Complexity & Big-O Analysis'}</span>
                 {aiAnalysis && (
                   <span className="w-2 h-2 rounded-full bg-indigo-500" />
                 )}
@@ -957,7 +957,7 @@ export const TechAssessmentSandbox: React.FC<TechAssessmentSandboxProps> = ({
                 {!aiAnalysis ? (
                   <div className="p-6 text-center text-slate-400 space-y-2">
                     <Sparkles className="w-8 h-8 mx-auto text-indigo-400" />
-                    <p>{isVi ? 'Nhấn "Chấm Điểm & Tối Ưu Bằng AI" để Gemini 2.0 phân tích Big-O và tiêu chuẩn Clean Code.' : 'Click "AI Code Review" to analyze Big-O asymptotic limits and code maintainability.'}</p>
+                    <p>{isVi ? 'Nhấn "Phân Tích Thuật Toán & Big-O" để xem đánh giá độ phức tạp thời gian/không gian và đề xuất tối ưu.' : 'Click "Code & Complexity Analysis" to view asymptotic time/space bounds and optimization suggestions.'}</p>
                   </div>
                 ) : (
                   <div className="space-y-4">

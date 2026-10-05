@@ -1,733 +1,495 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  Calculator, 
-  DollarSign, 
-  TrendingUp, 
-  Sparkles, 
-  Check, 
-  Copy, 
-  CheckCircle2, 
-  ArrowRight, 
-  MapPin, 
-  Globe, 
-  Award, 
-  Zap, 
-  ChevronRight,
-  Briefcase,
-  HelpCircle,
-  Building,
-  BarChart3
-} from 'lucide-react';
-import { useLanguage } from '../../i18n/LanguageContext';
+import React, { useMemo, useState } from 'react';
+import { Calculator, ArrowRight, HelpCircle, Building2, User, CheckCircle2 } from 'lucide-react';
+import { btnPrimary, inputCls } from '../ui/primitives';
 
-interface TechRole {
-  id: string;
-  titleVi: string;
-  titleEn: string;
-  baseJunior: number;   // 0-1 yr
-  baseMid: number;      // 2-4 yr
-  baseSenior: number;   // 5-7 yr
-  baseLead: number;     // 8-10 yr
-  basePrincipal: number;// 11+ yr
-}
-
-const ROLES: TechRole[] = [
-  {
-    id: 'ai-engineer',
-    titleVi: 'AI / Machine Learning Engineer',
-    titleEn: 'AI / Machine Learning Engineer',
-    baseJunior: 22000000,
-    baseMid: 40000000,
-    baseSenior: 65000000,
-    baseLead: 90000000,
-    basePrincipal: 125000000,
-  },
-  {
-    id: 'fullstack-sr',
-    titleVi: 'Senior Fullstack Engineer (React / Node / Java)',
-    titleEn: 'Senior Fullstack Engineer (React / Node / Java)',
-    baseJunior: 18000000,
-    baseMid: 32000000,
-    baseSenior: 55000000,
-    baseLead: 78000000,
-    basePrincipal: 105000000,
-  },
-  {
-    id: 'devops-cloud',
-    titleVi: 'Cloud DevOps / Platform Architect',
-    titleEn: 'Cloud DevOps / Platform Architect',
-    baseJunior: 20000000,
-    baseMid: 36000000,
-    baseSenior: 60000000,
-    baseLead: 85000000,
-    basePrincipal: 115000000,
-  },
-  {
-    id: 'golang-lead',
-    titleVi: 'Golang / High-Concurrency Backend Lead',
-    titleEn: 'Golang / High-Concurrency Backend Lead',
-    baseJunior: 20000000,
-    baseMid: 38000000,
-    baseSenior: 62000000,
-    baseLead: 88000000,
-    basePrincipal: 120000000,
-  },
-  {
-    id: 'frontend-react',
-    titleVi: 'Frontend Specialist (React / Next.js / TypeScript)',
-    titleEn: 'Frontend Specialist (React / Next.js / TypeScript)',
-    baseJunior: 16000000,
-    baseMid: 28000000,
-    baseSenior: 48000000,
-    baseLead: 68000000,
-    basePrincipal: 90000000,
-  },
-  {
-    id: 'mobile-engineer',
-    titleVi: 'Mobile Engineer (Flutter / React Native / iOS / Android)',
-    titleEn: 'Mobile Engineer (Flutter / React Native / iOS / Android)',
-    baseJunior: 17000000,
-    baseMid: 30000000,
-    baseSenior: 50000000,
-    baseLead: 72000000,
-    basePrincipal: 95000000,
-  },
-  {
-    id: 'data-engineer',
-    titleVi: 'Data Engineer / Big Data Specialist',
-    titleEn: 'Data Engineer / Big Data Specialist',
-    baseJunior: 19000000,
-    baseMid: 35000000,
-    baseSenior: 58000000,
-    baseLead: 82000000,
-    basePrincipal: 110000000,
-  }
-];
-
-interface SkillBooster {
-  id: string;
-  name: string;
-  bonusPercent: number;
-  category: string;
-}
-
-const SKILL_BOOSTERS: SkillBooster[] = [
-  { id: 'pytorch-rag', name: 'PyTorch / LLM Fine-tuning & RAG', bonusPercent: 18, category: 'AI' },
-  { id: 'k8s-terraform', name: 'Kubernetes & Terraform Multi-cloud', bonusPercent: 15, category: 'DevOps' },
-  { id: 'golang-micro', name: 'Golang Microservices & gRPC', bonusPercent: 14, category: 'Backend' },
-  { id: 'aws-solutions', name: 'AWS / GCP Solutions Architect', bonusPercent: 16, category: 'Cloud' },
-  { id: 'sys-design', name: 'Distributed Systems & System Design', bonusPercent: 15, category: 'Architecture' },
-  { id: 'graphql-ws', name: 'GraphQL & Realtime WebSocket Engine', bonusPercent: 10, category: 'Fullstack' }
-];
-
-interface SalaryCalculatorSectionProps {
+export interface SalaryCalculatorSectionProps {
   onFindMatchingJobs?: () => void;
 }
 
-export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = ({
-  onFindMatchingJobs
-}) => {
-  const { language } = useLanguage();
-  const isVi = language === 'vi';
+// Mức lương cơ sở từ 01/07/2024 (Nghị định 73/2024/NĐ-CP): 2.340.000 đ
+const LUONG_CO_SO = 2_340_000;
+// Trần đóng BHXH & BHYT = 20 lần lương cơ sở = 46.800.000 đ
+const TRAN_BHXH_BHYT = 20 * LUONG_CO_SO;
 
-  // Calculator inputs
-  const [selectedRoleId, setSelectedRoleId] = useState<string>('ai-engineer');
-  const [yearsOfExp, setYearsOfExp] = useState<number>(4);
-  const [location, setLocation] = useState<'hcm' | 'hanoi' | 'danang' | 'remote'>('hcm');
-  const [englishLevel, setEnglishLevel] = useState<'basic' | 'working' | 'fluent'>('working');
-  const [selectedBoosters, setSelectedBoosters] = useState<string[]>(['pytorch-rag']);
-  const [viewMode, setViewMode] = useState<'gross' | 'net'>('gross');
-  const [copied, setCopied] = useState<boolean>(false);
+// Mức lương tối thiểu vùng từ 01/07/2024 (Nghị định 74/2024/NĐ-CP)
+const VUNG_CONFIG = [
+  { id: 1, name: 'Vùng I (Hà Nội, TP.HCM, Hải Phòng...)', minWage: 4_960_000 },
+  { id: 2, name: 'Vùng II (Đà Nẵng, Cần Thơ, Nha Trang...)', minWage: 4_410_000 },
+  { id: 3, name: 'Vùng III (Các tỉnh/thành còn lại)', minWage: 3_860_000 },
+  { id: 4, name: 'Vùng IV (Địa bàn khó khăn)', minWage: 3_450_000 },
+];
 
-  // Active role
-  const currentRole = useMemo(() => {
-    return ROLES.find(r => r.id === selectedRoleId) || ROLES[0];
-  }, [selectedRoleId]);
+// Giảm trừ gia cảnh
+const GIAM_TRU_BAN_THAN = 11_000_000;
+const GIAM_TRU_PHU_THUOC = 4_400_000;
 
-  // Experience level label
-  const expLevelInfo = useMemo(() => {
-    if (yearsOfExp <= 1) return { level: 'Junior', badge: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' };
-    if (yearsOfExp <= 4) return { level: 'Middle / Mid-Senior', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' };
-    if (yearsOfExp <= 7) return { level: 'Senior Specialist', badge: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300' };
-    if (yearsOfExp <= 10) return { level: 'Team Lead / Staff Engineer', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300' };
-    return { level: 'Principal / Tech Director', badge: 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300' };
-  }, [yearsOfExp]);
+interface TaxBracketDetail {
+  bracket: number;
+  range: string;
+  rate: number;
+  taxableAmount: number;
+  taxAmount: number;
+}
 
-  // Base salary calculation by interpolating years of experience
-  const baseSalary = useMemo(() => {
-    if (yearsOfExp <= 1) {
-      return currentRole.baseJunior + yearsOfExp * (currentRole.baseMid - currentRole.baseJunior) * 0.4;
-    } else if (yearsOfExp <= 4) {
-      const progress = (yearsOfExp - 1) / 3;
-      return currentRole.baseJunior + (currentRole.baseMid - currentRole.baseJunior) + progress * (currentRole.baseSenior - currentRole.baseMid) * 0.7;
-    } else if (yearsOfExp <= 7) {
-      const progress = (yearsOfExp - 4) / 3;
-      return currentRole.baseSenior + progress * (currentRole.baseLead - currentRole.baseSenior);
-    } else if (yearsOfExp <= 10) {
-      const progress = (yearsOfExp - 7) / 3;
-      return currentRole.baseLead + progress * (currentRole.basePrincipal - currentRole.baseLead);
+function calculateProgressiveTax(taxableIncome: number): { totalTax: number; brackets: TaxBracketDetail[] } {
+  if (taxableIncome <= 0) {
+    return {
+      totalTax: 0,
+      brackets: [
+        { bracket: 1, range: 'Đến 5 triệu', rate: 5, taxableAmount: 0, taxAmount: 0 },
+        { bracket: 2, range: 'Trên 5 - 10 triệu', rate: 10, taxableAmount: 0, taxAmount: 0 },
+        { bracket: 3, range: 'Trên 10 - 18 triệu', rate: 15, taxableAmount: 0, taxAmount: 0 },
+        { bracket: 4, range: 'Trên 18 - 32 triệu', rate: 20, taxableAmount: 0, taxAmount: 0 },
+        { bracket: 5, range: 'Trên 32 - 52 triệu', rate: 25, taxableAmount: 0, taxAmount: 0 },
+        { bracket: 6, range: 'Trên 52 - 80 triệu', rate: 30, taxableAmount: 0, taxAmount: 0 },
+        { bracket: 7, range: 'Trên 80 triệu', rate: 35, taxableAmount: 0, taxAmount: 0 },
+      ],
+    };
+  }
+
+  const BRACKETS = [
+    { bracket: 1, range: 'Đến 5 triệu', rate: 0.05, max: 5_000_000 },
+    { bracket: 2, range: 'Trên 5 - 10 triệu', rate: 0.10, max: 10_000_000 },
+    { bracket: 3, range: 'Trên 10 - 18 triệu', rate: 0.15, max: 18_000_000 },
+    { bracket: 4, range: 'Trên 18 - 32 triệu', rate: 0.20, max: 32_000_000 },
+    { bracket: 5, range: 'Trên 32 - 52 triệu', rate: 0.25, max: 52_000_000 },
+    { bracket: 6, range: 'Trên 52 - 80 triệu', rate: 0.30, max: 80_000_000 },
+    { bracket: 7, range: 'Trên 80 triệu', rate: 0.35, max: Infinity },
+  ];
+
+  let remaining = taxableIncome;
+  let prevLimit = 0;
+  let totalTax = 0;
+  const result: TaxBracketDetail[] = [];
+
+  for (const b of BRACKETS) {
+    const bracketSpan = b.max - prevLimit;
+    const taxableInBracket = Math.min(Math.max(0, remaining), bracketSpan);
+    const taxInBracket = taxableInBracket * b.rate;
+    totalTax += taxInBracket;
+
+    result.push({
+      bracket: b.bracket,
+      range: b.range,
+      rate: b.rate * 100,
+      taxableAmount: taxableInBracket,
+      taxAmount: taxInBracket,
+    });
+
+    remaining -= taxableInBracket;
+    prevLimit = b.max;
+  }
+
+  return { totalTax: Math.round(totalTax), brackets: result };
+}
+
+/** Quy đổi Net sang Thu nhập tính thuế theo TT 111/2013/TT-BTC */
+function netToTaxableIncome(netAfterDeductions: number): number {
+  if (netAfterDeductions <= 0) return 0;
+  const q = netAfterDeductions;
+  if (q <= 4_750_000) return q / 0.95;
+  if (q <= 9_250_000) return (q - 250_000) / 0.9;
+  if (q <= 16_050_000) return (q - 750_000) / 0.85;
+  if (q <= 27_250_000) return (q - 1_650_000) / 0.8;
+  if (q <= 42_250_000) return (q - 3_250_000) / 0.75;
+  if (q <= 61_850_000) return (q - 5_850_000) / 0.7;
+  return (q - 9_850_000) / 0.65;
+}
+
+export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = ({ onFindMatchingJobs }) => {
+  const [mode, setMode] = useState<'gross-to-net' | 'net-to-gross'>('gross-to-net');
+  const [salaryInput, setSalaryInput] = useState<string>('30000000');
+  const [regionId, setRegionId] = useState<number>(1);
+  const [dependents, setDependents] = useState<number>(0);
+  const [insuranceType, setInsuranceType] = useState<'official' | 'custom'>('official');
+  const [customInsurance, setCustomInsurance] = useState<string>('5000000');
+
+  const selectedRegion = VUNG_CONFIG.find((v) => v.id === regionId) ?? VUNG_CONFIG[0];
+  const tranBhtn = 20 * selectedRegion.minWage;
+
+  const rawNumber = Number(salaryInput.replace(/\D/g, '')) || 0;
+  const rawCustomIns = Number(customInsurance.replace(/\D/g, '')) || 0;
+
+  // Tính toán Gross ⇄ Net
+  const result = useMemo(() => {
+    let gross = 0;
+    let net = 0;
+    const totalDeduction = GIAM_TRU_BAN_THAN + dependents * GIAM_TRU_PHU_THUOC;
+
+    if (mode === 'gross-to-net') {
+      gross = rawNumber;
+      const insBase = insuranceType === 'custom' ? rawCustomIns : gross;
+      const bhxh = Math.min(insBase, TRAN_BHXH_BHYT) * 0.08;
+      const bhyt = Math.min(insBase, TRAN_BHXH_BHYT) * 0.015;
+      const bhtn = Math.min(insBase, tranBhtn) * 0.01;
+      const totalInsurance = Math.round(bhxh + bhyt + bhtn);
+      const incomeBeforeTax = Math.max(0, gross - totalInsurance);
+      const taxableIncome = Math.max(0, incomeBeforeTax - totalDeduction);
+      const { totalTax, brackets } = calculateProgressiveTax(taxableIncome);
+      net = Math.max(0, gross - totalInsurance - totalTax);
+
+      // Chi phí NSDLĐ đóng
+      const erBhxh = Math.min(insBase, TRAN_BHXH_BHYT) * 0.17;
+      const erBhtnld = Math.min(insBase, TRAN_BHXH_BHYT) * 0.005;
+      const erBhyt = Math.min(insBase, TRAN_BHXH_BHYT) * 0.03;
+      const erBhtn = Math.min(insBase, tranBhtn) * 0.01;
+      const employerInsurance = Math.round(erBhxh + erBhtnld + erBhyt + erBhtn);
+      const employerTotalCost = gross + employerInsurance;
+
+      return {
+        gross,
+        net,
+        bhxh: Math.round(bhxh),
+        bhyt: Math.round(bhyt),
+        bhtn: Math.round(bhtn),
+        totalInsurance,
+        incomeBeforeTax,
+        totalDeduction,
+        taxableIncome,
+        totalTax,
+        brackets,
+        employerInsurance,
+        employerTotalCost,
+      };
     } else {
-      const extraYears = Math.min(yearsOfExp - 10, 5);
-      return currentRole.basePrincipal + extraYears * 4000000;
-    }
-  }, [currentRole, yearsOfExp]);
+      // Net to Gross
+      net = rawNumber;
+      const netAfterDeductions = Math.max(0, net - totalDeduction);
+      const taxableIncome = Math.round(netToTaxableIncome(netAfterDeductions));
+      const { totalTax, brackets } = calculateProgressiveTax(taxableIncome);
+      const incomeBeforeTax = net + totalTax;
 
-  // Location Factor
-  const locationFactor = useMemo(() => {
-    switch (location) {
-      case 'hcm': return 1.0;
-      case 'hanoi': return 0.95;
-      case 'danang': return 0.82;
-      case 'remote': return 1.45; // Global remote USD contract
-      default: return 1.0;
-    }
-  }, [location]);
+      if (insuranceType === 'custom') {
+        const insBase = rawCustomIns;
+        const bhxh = Math.min(insBase, TRAN_BHXH_BHYT) * 0.08;
+        const bhyt = Math.min(insBase, TRAN_BHXH_BHYT) * 0.015;
+        const bhtn = Math.min(insBase, tranBhtn) * 0.01;
+        const totalInsurance = Math.round(bhxh + bhyt + bhtn);
+        gross = incomeBeforeTax + totalInsurance;
 
-  // English bonus
-  const englishBonus = useMemo(() => {
-    switch (englishLevel) {
-      case 'basic': return 0;
-      case 'working': return 0.15;
-      case 'fluent': return 0.30;
-      default: return 0;
-    }
-  }, [englishLevel]);
+        const erBhxh = Math.min(insBase, TRAN_BHXH_BHYT) * 0.17;
+        const erBhtnld = Math.min(insBase, TRAN_BHXH_BHYT) * 0.005;
+        const erBhyt = Math.min(insBase, TRAN_BHXH_BHYT) * 0.03;
+        const erBhtn = Math.min(insBase, tranBhtn) * 0.01;
+        const employerInsurance = Math.round(erBhxh + erBhtnld + erBhyt + erBhtn);
 
-  // Booster bonus
-  const boosterBonus = useMemo(() => {
-    return selectedBoosters.reduce((acc, id) => {
-      const item = SKILL_BOOSTERS.find(b => b.id === id);
-      return acc + (item ? item.bonusPercent / 100 : 0);
-    }, 0);
-  }, [selectedBoosters]);
+        return {
+          gross,
+          net,
+          bhxh: Math.round(bhxh),
+          bhyt: Math.round(bhyt),
+          bhtn: Math.round(bhtn),
+          totalInsurance,
+          incomeBeforeTax,
+          totalDeduction,
+          taxableIncome,
+          totalTax,
+          brackets,
+          employerInsurance,
+          employerTotalCost: gross + employerInsurance,
+        };
+      } else {
+        // Đóng BH trên lương chính thức:
+        // Giải Gross: Gross - Insurance(Gross) = incomeBeforeTax
+        let calculatedGross = 0;
+        const t1 = TRAN_BHXH_BHYT * 0.895; // 41.886.000
+        const t2 = 0.99 * tranBhtn - TRAN_BHXH_BHYT * 0.095;
 
-  // Final Monthly Gross in VND
-  const monthlyGrossVND = useMemo(() => {
-    const raw = baseSalary * locationFactor * (1 + englishBonus + boosterBonus);
-    return Math.round(raw / 500000) * 500000; // Round to nearest 500k
-  }, [baseSalary, locationFactor, englishBonus, boosterBonus]);
+        if (incomeBeforeTax <= t1) {
+          calculatedGross = incomeBeforeTax / 0.895;
+        } else if (incomeBeforeTax <= t2) {
+          calculatedGross = (incomeBeforeTax + TRAN_BHXH_BHYT * 0.095) / 0.99;
+        } else {
+          const capTotal = TRAN_BHXH_BHYT * 0.095 + tranBhtn * 0.01;
+          calculatedGross = incomeBeforeTax + capTotal;
+        }
+        gross = Math.round(calculatedGross);
 
-  // Final Monthly Net in VND (estimated PIT & mandatory insurance in Vietnam)
-  const monthlyNetVND = useMemo(() => {
-    if (location === 'remote') {
-      // Contractual tax ~7% or flat
-      return Math.round((monthlyGrossVND * 0.9) / 500000) * 500000;
-    }
+        const bhxh = Math.min(gross, TRAN_BHXH_BHYT) * 0.08;
+        const bhyt = Math.min(gross, TRAN_BHXH_BHYT) * 0.015;
+        const bhtn = Math.min(gross, tranBhtn) * 0.01;
+        const totalInsurance = Math.round(bhxh + bhyt + bhtn);
 
-    // Standard Vietnamese mandatory insurance:
-    // BHXH: 8%, BHYT: 1.5%, BHTN: 1% (Capped at 20x base salary ~36M for BHXH/BHYT, 20x regional minimum ~93.6M for BHTN)
-    const insuranceCap = 36000000;
-    const insuranceBase = Math.min(monthlyGrossVND, insuranceCap);
-    const insuranceDeduction = insuranceBase * 0.105;
+        const erBhxh = Math.min(gross, TRAN_BHXH_BHYT) * 0.17;
+        const erBhtnld = Math.min(gross, TRAN_BHXH_BHYT) * 0.005;
+        const erBhyt = Math.min(gross, TRAN_BHXH_BHYT) * 0.03;
+        const erBhtn = Math.min(gross, tranBhtn) * 0.01;
+        const employerInsurance = Math.round(erBhxh + erBhtnld + erBhyt + erBhtn);
 
-    // Income after insurance
-    const incomeAfterInsurance = monthlyGrossVND - insuranceDeduction;
-
-    // Personal deduction: 11,000,000 VND
-    const taxableIncome = Math.max(0, incomeAfterInsurance - 11000000);
-
-    // Progressive tax brackets
-    let tax = 0;
-    if (taxableIncome <= 5000000) {
-      tax = taxableIncome * 0.05;
-    } else if (taxableIncome <= 10000000) {
-      tax = 250000 + (taxableIncome - 5000000) * 0.1;
-    } else if (taxableIncome <= 18000000) {
-      tax = 750000 + (taxableIncome - 10000000) * 0.15;
-    } else if (taxableIncome <= 32000000) {
-      tax = 1950000 + (taxableIncome - 18000000) * 0.2;
-    } else if (taxableIncome <= 52000000) {
-      tax = 4750000 + (taxableIncome - 32000000) * 0.25;
-    } else if (taxableIncome <= 80000000) {
-      tax = 9750000 + (taxableIncome - 52000000) * 0.3;
-    } else {
-      tax = 18150000 + (taxableIncome - 80000000) * 0.35;
-    }
-
-    const net = monthlyGrossVND - insuranceDeduction - tax;
-    return Math.round(net / 500000) * 500000;
-  }, [monthlyGrossVND, location]);
-
-  // Display salary based on mode
-  const displaySalaryVND = viewMode === 'gross' ? monthlyGrossVND : monthlyNetVND;
-  const displaySalaryUSD = Math.round(displaySalaryVND / 25500);
-
-  // Annual Package (including 13th month & estimated performance bonus ~1.5 months)
-  const annualPackageVND = Math.round(monthlyGrossVND * 14.5 / 1000000) * 1000000;
-  const annualPackageUSD = Math.round(annualPackageVND / 25500);
-
-  // Market Percentile ranking in VN tech industry
-  const marketPercentile = useMemo(() => {
-    if (monthlyGrossVND >= 95000000) return 4;
-    if (monthlyGrossVND >= 75000000) return 8;
-    if (monthlyGrossVND >= 55000000) return 15;
-    if (monthlyGrossVND >= 40000000) return 28;
-    if (monthlyGrossVND >= 25000000) return 48;
-    return 70;
-  }, [monthlyGrossVND]);
-
-  const toggleBooster = (id: string) => {
-    setSelectedBoosters(prev => 
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
-  };
-
-  const handleCopySummary = () => {
-    const summary = `📊 BẢNG ƯỚC TÍNH THU NHẬP TECH 2026 - TALENTBRIDGE AI:
-- Vị trí: ${isVi ? currentRole.titleVi : currentRole.titleEn}
-- Kinh nghiệm: ${yearsOfExp} năm (${expLevelInfo.level})
-- Địa điểm: ${location.toUpperCase()}
-- Tiếng Anh: ${englishLevel.toUpperCase()}
-- Mức lương hàng tháng (${viewMode.toUpperCase()}): ${displaySalaryVND.toLocaleString('vi-VN')} đ (~$${displaySalaryUSD.toLocaleString()} USD)
-- Tổng gói thu nhập năm (TC): ${annualPackageVND.toLocaleString('vi-VN')} đ (~$${annualPackageUSD.toLocaleString()} USD)
-- Xếp hạng thị trường: Top ${marketPercentile}% Lập trình viên Việt Nam`;
-
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(summary).catch((err) => {
-          console.warn('Clipboard write error handled:', err);
-        });
+        return {
+          gross,
+          net,
+          bhxh: Math.round(bhxh),
+          bhyt: Math.round(bhyt),
+          bhtn: Math.round(bhtn),
+          totalInsurance,
+          incomeBeforeTax,
+          totalDeduction,
+          taxableIncome,
+          totalTax,
+          brackets,
+          employerInsurance,
+          employerTotalCost: gross + employerInsurance,
+        };
       }
-    } catch (err) {
-      console.warn('Clipboard access not supported:', err);
     }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-  };
+  }, [mode, rawNumber, rawCustomIns, dependents, regionId, insuranceType, tranBhtn]);
 
   return (
-    <div className="space-y-8" data-testid="salary-calculator-container">
-      {/* Top Header Card */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200/90 dark:border-slate-800 shadow-soft-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-xs font-bold text-emerald-700 dark:text-emerald-300">
-              <Calculator className="w-3.5 h-3.5 text-emerald-500" />
-              <span>{isVi ? 'BỘ TÍNH LƯƠNG & ĐỊNH GIÁ THỊ TRƯỜNG TECH 2026' : 'TECH COMPENSATION BENCHMARK 2026'}</span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              {isVi ? 'Định Giá Năng Lực & Ước Tính Thu Nhập Công Nghệ' : 'Value Your Tech Skills & Predict Compensation'}
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              {isVi
-                ? 'Mô hình AI tổng hợp từ hơn 2,400+ dữ liệu thỏa thuận lương thực tế tại Việt Nam & khu vực Đông Nam Á, phản ánh chính xác giá trị thị trường theo kỹ năng và kinh nghiệm.'
-                : 'AI engine trained on 2,400+ verified salary offers across Vietnam and Southeast Asia, reflecting accurate market value based on tech stack and seniority.'}
-            </p>
+    <div className="space-y-6">
+      {/* Mode switcher */}
+      <div className="bg-white border border-slate-200 rounded-lg p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
+          <div className="flex items-center gap-2">
+            <Calculator className="w-5 h-5 text-red-600" />
+            <h2 className="font-bold text-slate-900 text-lg">Bảng quy đổi Lương Gross ⇄ Net</h2>
           </div>
-
-          {/* Quick Gross/Net Switcher */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0">
-            <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
-              <button
-                type="button"
-                data-testid="btn-mode-gross"
-                onClick={() => setViewMode('gross')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  viewMode === 'gross'
-                    ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-soft-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                {isVi ? 'Lương Gross (Trước thuế)' : 'Gross Salary'}
-              </button>
-              <button
-                type="button"
-                data-testid="btn-mode-net"
-                onClick={() => setViewMode('net')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  viewMode === 'net'
-                    ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-soft-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                {isVi ? 'Lương Net (Thực nhận)' : 'Net Take-Home'}
-              </button>
-            </div>
-
+          <div className="inline-flex p-1 rounded-lg bg-slate-100 border border-slate-200">
             <button
-              type="button"
-              data-testid="btn-copy-salary-summary"
-              onClick={handleCopySummary}
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
+              onClick={() => setMode('gross-to-net')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                mode === 'gross-to-net' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
             >
-              {copied ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-500" />
-                  <span className="text-emerald-600 dark:text-emerald-400">{isVi ? 'Đã sao chép!' : 'Copied!'}</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{isVi ? 'Sao chép tóm tắt' : 'Copy Summary'}</span>
-                </>
-              )}
+              GROSS → NET
+            </button>
+            <button
+              onClick={() => setMode('net-to-gross')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                mode === 'net-to-gross' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              NET → GROSS
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Main Grid: Left Controls vs Right Output Results */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Left Column: Interactive Param Controls (7 Cols) */}
-        <div className="lg:col-span-7 space-y-6">
-          
-          {/* 1. Target Role Selector */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/90 dark:border-slate-800 shadow-soft-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-emerald-500" />
-                <span>{isVi ? '1. Vị trí & Chuyên môn công nghệ' : '1. Target Tech Role'}</span>
-              </label>
-              <span className="text-xs font-semibold text-slate-400">
-                {ROLES.length} {isVi ? 'vị trí tiêu chuẩn' : 'standard roles'}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {ROLES.map((role) => {
-                const isSelected = selectedRoleId === role.id;
-                return (
-                  <button
-                    key={role.id}
-                    type="button"
-                    data-testid={`role-option-${role.id}`}
-                    onClick={() => setSelectedRoleId(role.id)}
-                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                      isSelected
-                        ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/50 shadow-soft-xs'
-                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40'
-                    }`}
-                  >
-                    <div className="space-y-0.5">
-                      <p className={`text-xs font-bold leading-snug line-clamp-1 ${
-                        isSelected ? 'text-emerald-900 dark:text-emerald-200' : 'text-slate-800 dark:text-slate-200'
-                      }`}>
-                        {isVi ? role.titleVi : role.titleEn}
-                      </p>
-                      <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                        {isVi ? 'Mốc Senior:' : 'Senior Range:'} ~{(role.baseSenior / 1000000).toFixed(0)}M/tháng
-                      </p>
-                    </div>
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border ${
-                      isSelected
-                        ? 'border-emerald-500 bg-emerald-500 text-white'
-                        : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
-                    }`}>
-                      {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+        {/* Inputs */}
+        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">
+              {mode === 'gross-to-net' ? 'Lương Gross (VNĐ)' : 'Lương Net (VNĐ)'}
+            </label>
+            <input
+              type="text"
+              value={Number(salaryInput).toLocaleString('vi-VN')}
+              onChange={(e) => setSalaryInput(e.target.value.replace(/\D/g, ''))}
+              placeholder="30,000,000"
+              className={inputCls}
+            />
           </div>
 
-          {/* 2. Experience Slider */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/90 dark:border-slate-800 shadow-soft-sm space-y-5">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-emerald-500" />
-                <span>{isVi ? '2. Số năm kinh nghiệm thực chiến' : '2. Years of Experience'}</span>
-              </label>
-              <div className="flex items-center gap-2">
-                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${expLevelInfo.badge}`}>
-                  {expLevelInfo.level}
-                </span>
-                <span className="text-base font-black text-emerald-600 dark:text-emerald-400">
-                  {yearsOfExp} {isVi ? 'năm' : 'years'}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <input
-                type="range"
-                min="0"
-                max="12"
-                step="1"
-                value={yearsOfExp}
-                data-testid="slider-experience"
-                onChange={(e) => setYearsOfExp(parseInt(e.target.value, 10))}
-                className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-              />
-              <div className="flex justify-between text-[11px] font-semibold text-slate-400 dark:text-slate-500">
-                <span>0 yr (Fresher)</span>
-                <span>3 yrs (Mid)</span>
-                <span>6 yrs (Senior)</span>
-                <span>9 yrs (Lead)</span>
-                <span>12+ yrs (Principal)</span>
-              </div>
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Khu vực làm việc</label>
+            <select value={regionId} onChange={(e) => setRegionId(Number(e.target.value))} className={inputCls}>
+              {VUNG_CONFIG.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* 3. Location & English Level */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            
-            {/* Location */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-800 shadow-soft-sm space-y-3">
-              <label className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-emerald-500" />
-                <span>{isVi ? '3. Khu vực làm việc' : '3. Work Location'}</span>
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: 'hcm', label: 'TP. HCM (1.0x)' },
-                  { id: 'hanoi', label: 'Hà Nội (0.95x)' },
-                  { id: 'danang', label: 'Đà Nẵng (0.82x)' },
-                  { id: 'remote', label: 'Global Remote (1.45x)' },
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    data-testid={`location-${item.id}`}
-                    onClick={() => setLocation(item.id as any)}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border text-center ${
-                      location === item.id
-                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
-                        : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* English Level */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-800 shadow-soft-sm space-y-3">
-              <label className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                <Globe className="w-3.5 h-3.5 text-emerald-500" />
-                <span>{isVi ? '4. Trình độ Tiếng Anh' : '4. English Proficiency'}</span>
-              </label>
-              <div className="space-y-1.5">
-                {[
-                  { id: 'basic', labelVi: 'Cơ bản (Đọc tài liệu) (+0%)', labelEn: 'Basic (Docs) (+0%)' },
-                  { id: 'working', labelVi: 'Giao tiếp tốt (Họp kỹ thuật) (+15%)', labelEn: 'Working Professional (+15%)' },
-                  { id: 'fluent', labelVi: 'Lưu loát / C-Level (+30%)', labelEn: 'Fluent / Native (+30%)' }
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    data-testid={`english-${item.id}`}
-                    onClick={() => setEnglishLevel(item.id as any)}
-                    className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border text-left flex items-center justify-between ${
-                      englishLevel === item.id
-                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
-                        : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
-                    }`}
-                  >
-                    <span>{isVi ? item.labelVi : item.labelEn}</span>
-                    {englishLevel === item.id && <Check className="w-3.5 h-3.5 text-emerald-500" />}
-                  </button>
-                ))}
-              </div>
-            </div>
-
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Người phụ thuộc</label>
+            <input
+              type="number"
+              min={0}
+              max={20}
+              value={dependents}
+              onChange={(e) => setDependents(Math.max(0, Number(e.target.value)))}
+              className={inputCls}
+            />
           </div>
 
-          {/* 4. High-Demand Skill Boosters */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/90 dark:border-slate-800 shadow-soft-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-500" />
-                <span>{isVi ? '5. Kỹ năng công nghệ giá trị cao (Salary Boosters)' : '5. High-ROI Tech Skill Boosters'}</span>
-              </label>
-              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                +{Math.round(boosterBonus * 100)}% {isVi ? 'tăng thêm' : 'bonus added'}
-              </span>
-            </div>
-
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {isVi 
-                ? 'Tích chọn các năng lực bạn thành thạo để kích hoạt mức thưởng thù lao theo chuẩn tuyển dụng quốc tế:' 
-                : 'Select competencies in your arsenal to unlock premium market compensation packages:'}
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {SKILL_BOOSTERS.map((booster) => {
-                const isSelected = selectedBoosters.includes(booster.id);
-                return (
-                  <button
-                    key={booster.id}
-                    type="button"
-                    data-testid={`booster-${booster.id}`}
-                    onClick={() => toggleBooster(booster.id)}
-                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
-                      isSelected
-                        ? 'border-emerald-500 bg-emerald-500/10 dark:bg-emerald-950/50 text-emerald-900 dark:text-emerald-200 shadow-soft-xs'
-                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300'
-                    }`}
-                  >
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-bold leading-tight">{booster.name}</p>
-                      <span className="inline-block text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                        +{booster.bonusPercent}% {isVi ? 'giá trị JD' : 'JD premium'}
-                      </span>
-                    </div>
-                    <div className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 border ${
-                      isSelected
-                        ? 'border-emerald-500 bg-emerald-500 text-white'
-                        : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
-                    }`}>
-                      {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Mức đóng bảo hiểm</label>
+            <select
+              value={insuranceType}
+              onChange={(e) => setInsuranceType(e.target.value as 'official' | 'custom')}
+              className={inputCls}
+            >
+              <option value="official">Trên lương chính thức</option>
+              <option value="custom">Mức khác...</option>
+            </select>
           </div>
-
         </div>
 
-        {/* Right Column: Dynamic Realtime Benchmark Output (5 Cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          
-          {/* Main Compensation Dashboard Card */}
-          <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 text-white rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-soft-xl relative overflow-hidden space-y-6">
-            
-            {/* Ambient Background Light */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="relative z-10 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-400">
-                <Zap className="w-4 h-4" />
-                <span>{isVi ? 'Dự phóng thu nhập thị trường' : 'Live Benchmark Prediction'}</span>
-              </div>
-              <span className="px-2.5 py-1 rounded-full bg-white/10 text-[11px] font-extrabold text-emerald-300 backdrop-blur-md">
-                {viewMode.toUpperCase()}
-              </span>
-            </div>
-
-            {/* Big Numbers */}
-            <div className="relative z-10 space-y-2">
-              <div className="flex items-baseline gap-2 flex-wrap">
-                <span 
-                  data-testid="salary-display-vnd"
-                  className="text-3xl sm:text-4xl font-black tracking-tight text-white"
-                >
-                  {displaySalaryVND.toLocaleString('vi-VN')}
-                </span>
-                <span className="text-base sm:text-lg font-bold text-emerald-400">
-                  đ / {isVi ? 'tháng' : 'month'}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 text-sm text-slate-300 font-semibold">
-                <span data-testid="salary-display-usd">~${displaySalaryUSD.toLocaleString()} USD</span>
-                <span className="text-slate-500">•</span>
-                <span>{viewMode === 'gross' ? (isVi ? 'Chưa trừ thuế & BH' : 'Pre-tax Gross') : (isVi ? 'Thực nhận về tài khoản' : 'Net Take-home')}</span>
-              </div>
-            </div>
-
-            {/* Total Annual Compensation (TC) */}
-            <div className="relative z-10 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm space-y-1">
-              <p className="text-xs text-slate-400 font-medium">
-                {isVi ? 'Tổng gói thu nhập năm ước tính (Total Compensation):' : 'Estimated Annual Package (Total Compensation):'}
-              </p>
-              <div className="flex items-baseline justify-between">
-                <span 
-                  data-testid="annual-package-display"
-                  className="text-lg font-black text-amber-400"
-                >
-                  {annualPackageVND.toLocaleString('vi-VN')} đ
-                </span>
-                <span className="text-xs font-bold text-slate-300">
-                  ~${annualPackageUSD.toLocaleString()} USD/yr
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 italic">
-                {isVi ? 'Bao gồm lương tháng 13 + thưởng hiệu suất (1.5 tháng)' : 'Includes 13th month + ~1.5 mo performance bonus'}
-              </p>
-            </div>
-
-            {/* Market Percentile Ranking Meter */}
-            <div className="relative z-10 space-y-2.5">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-slate-300">{isVi ? 'Xếp hạng trong ngành:' : 'Market Percentile:'}</span>
-                <span 
-                  data-testid="market-percentile-badge"
-                  className="text-emerald-400 font-black text-sm"
-                >
-                  Top {marketPercentile}% {isVi ? 'thị trường' : 'market'}
-                </span>
-              </div>
-
-              <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden p-0.5 border border-slate-700">
-                <div 
-                  className="bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${Math.max(10, 100 - marketPercentile)}%` }}
-                />
-              </div>
-
-              <div className="flex justify-between text-[10px] font-semibold text-slate-400">
-                <span>Entry (0-20M)</span>
-                <span>Mid (20-45M)</span>
-                <span>Senior (45-75M)</span>
-                <span className="text-emerald-400 font-bold">Elite (75M+)</span>
-              </div>
-            </div>
-
-            {/* Direct CTA Button */}
-            <div className="relative z-10 pt-2">
-              <button
-                type="button"
-                data-testid="btn-view-salary-matching-jobs"
-                onClick={onFindMatchingJobs}
-                className="w-full py-3.5 px-5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm transition-all shadow-soft-lg hover:shadow-soft-xl flex items-center justify-center gap-2 cursor-pointer group active:scale-98"
-              >
-                <span>{isVi ? 'Xem các việc làm có mức lương này ngay' : 'Browse Matching Salary Jobs Now'}</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
-
+        {insuranceType === 'custom' && (
+          <div className="mt-4 p-4 rounded-lg bg-slate-50 border border-slate-200 max-w-sm">
+            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">
+              Mức lương đóng bảo hiểm (VNĐ)
+            </label>
+            <input
+              type="text"
+              value={Number(customInsurance).toLocaleString('vi-VN')}
+              onChange={(e) => setCustomInsurance(e.target.value.replace(/\D/g, ''))}
+              className={inputCls}
+            />
           </div>
+        )}
 
-          {/* AI Skill Upside Advisor Box */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/90 dark:border-slate-800 shadow-soft-sm space-y-4">
-            <div className="flex items-center gap-2 text-sm font-black text-slate-900 dark:text-white">
-              <Award className="w-4 h-4 text-amber-500" />
-              <span>{isVi ? 'Gợi ý bứt phá thu nhập từ AI' : 'AI Career Upside Recommendations'}</span>
-            </div>
+        <div className="mt-4 flex items-center justify-between text-xs text-slate-500 pt-3 border-t border-slate-100">
+          <p>Áp dụng quy định mới nhất từ 01/07/2024: Mức lương cơ sở 2,340,000 đ/tháng; Giảm trừ cá nhân 11 tr, người phụ thuộc 4.4 tr.</p>
+        </div>
+      </div>
 
-            <div className="space-y-3">
-              {SKILL_BOOSTERS.filter(b => !selectedBoosters.includes(b.id)).slice(0, 2).map((item) => {
-                const uplift = Math.round(monthlyGrossVND * (item.bonusPercent / 100) / 100000) * 100000;
-                return (
-                  <div 
-                    key={item.id}
-                    className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-3"
-                  >
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{item.name}</p>
-                      <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                        +{uplift.toLocaleString('vi-VN')} đ/tháng (+{item.bonusPercent}%)
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      data-testid={`btn-quick-add-${item.id}`}
-                      onClick={() => toggleBooster(item.id)}
-                      className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 border border-slate-200 dark:border-slate-600 transition-all cursor-pointer"
-                    >
-                      {isVi ? '+ Thử thêm' : '+ Add'}
-                    </button>
-                  </div>
-                );
-              })}
-
-              {SKILL_BOOSTERS.filter(b => !selectedBoosters.includes(b.id)).length === 0 && (
-                <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-medium text-center">
-                  {isVi 
-                    ? '🎉 Tuyệt vời! Bạn đã chọn tất cả các kỹ năng giá trị cao nhất!'
-                    : '🎉 Awesome! You have selected all top high-value booster skills!'}
-                </div>
-              )}
-            </div>
+      {/* Main KPI cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white border-2 border-slate-200 rounded-lg p-5" data-testid="gross-card">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Lương GROSS</span>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-3xl font-bold text-slate-900" data-testid="gross-amount">{result.gross.toLocaleString('vi-VN')}</span>
+            <span className="text-sm font-medium text-slate-500">VNĐ</span>
           </div>
-
+          <p className="mt-2 text-xs text-slate-500">
+            Tổng thu nhập theo hợp đồng trước khi trích bảo hiểm và thuế thu nhập cá nhân.
+          </p>
         </div>
 
+        <div className="bg-red-50/50 border-2 border-red-500 rounded-lg p-5" data-testid="net-card">
+          <span className="text-xs font-semibold text-red-600 uppercase tracking-wider">LƯƠNG NET (THỰC NHẬN)</span>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-3xl font-bold text-red-600" data-testid="net-amount">{result.net.toLocaleString('vi-VN')}</span>
+            <span className="text-sm font-medium text-red-600">VNĐ</span>
+          </div>
+          <p className="mt-2 text-xs text-slate-600">
+            Khoản tiền thực nhận về tài khoản sau khi đã khấu trừ đầy đủ BHXH, BHYT, BHTN và Thuế TNCN.
+          </p>
+        </div>
       </div>
+
+      {/* Detailed breakdown table */}
+      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+          <h3 className="font-semibold text-slate-900 text-sm">Diễn giải chi tiết các khoản trích nộp (VNĐ)</h3>
+          <span className="text-xs text-slate-500">Đơn vị: VNĐ / tháng</span>
+        </div>
+
+        <table className="w-full text-sm">
+          <tbody className="divide-y divide-slate-100">
+            <tr className="bg-slate-50/50 font-medium">
+              <td className="px-6 py-3 text-slate-900">1. Lương GROSS</td>
+              <td className="px-6 py-3 text-right font-bold text-slate-900">{result.gross.toLocaleString('vi-VN')}</td>
+            </tr>
+
+            <tr>
+              <td className="px-6 py-3 text-slate-700 pl-10">
+                - Bảo hiểm xã hội (8%){result.gross > TRAN_BHXH_BHYT && <span className="text-xs text-slate-400 ml-1">(đã chạm trần 46.8 tr)</span>}
+              </td>
+              <td className="px-6 py-3 text-right text-red-600">-{result.bhxh.toLocaleString('vi-VN')}</td>
+            </tr>
+
+            <tr>
+              <td className="px-6 py-3 text-slate-700 pl-10">
+                - Bảo hiểm y tế (1.5%){result.gross > TRAN_BHXH_BHYT && <span className="text-xs text-slate-400 ml-1">(đã chạm trần 46.8 tr)</span>}
+              </td>
+              <td className="px-6 py-3 text-right text-red-600">-{result.bhyt.toLocaleString('vi-VN')}</td>
+            </tr>
+
+            <tr>
+              <td className="px-6 py-3 text-slate-700 pl-10">
+                - Bảo hiểm thất nghiệp (1%){result.gross > tranBhtn && <span className="text-xs text-slate-400 ml-1">(đã chạm trần)</span>}
+              </td>
+              <td className="px-6 py-3 text-right text-red-600">-{result.bhtn.toLocaleString('vi-VN')}</td>
+            </tr>
+
+            <tr className="font-medium bg-slate-50/30">
+              <td className="px-6 py-3 text-slate-900">2. Thu nhập trước thuế (Lương Gross - Tổng BH)</td>
+              <td className="px-6 py-3 text-right font-semibold text-slate-900">{result.incomeBeforeTax.toLocaleString('vi-VN')}</td>
+            </tr>
+
+            <tr>
+              <td className="px-6 py-3 text-slate-700 pl-10">- Giảm trừ gia cảnh bản thân</td>
+              <td className="px-6 py-3 text-right text-slate-600">-{GIAM_TRU_BAN_THAN.toLocaleString('vi-VN')}</td>
+            </tr>
+
+            {dependents > 0 && (
+              <tr>
+                <td className="px-6 py-3 text-slate-700 pl-10">
+                  - Giảm trừ người phụ thuộc ({dependents} người x 4.400.000)
+                </td>
+                <td className="px-6 py-3 text-right text-slate-600">
+                  -{(dependents * GIAM_TRU_PHU_THUOC).toLocaleString('vi-VN')}
+                </td>
+              </tr>
+            )}
+
+            <tr className="font-medium bg-slate-50/30">
+              <td className="px-6 py-3 text-slate-900">3. Thu nhập tính thuế (TNTT)</td>
+              <td className="px-6 py-3 text-right font-semibold text-slate-900">{result.taxableIncome.toLocaleString('vi-VN')}</td>
+            </tr>
+
+            <tr>
+              <td className="px-6 py-3 text-slate-700 pl-10">- Thuế thu nhập cá nhân (TNCN) (*)</td>
+              <td className="px-6 py-3 text-right text-red-600">-{result.totalTax.toLocaleString('vi-VN')}</td>
+            </tr>
+
+            <tr className="bg-red-50/40 font-bold text-base">
+              <td className="px-6 py-4 text-slate-900">4. LƯƠNG NET THỰC NHẬN (2 - Thuế TNCN)</td>
+              <td className="px-6 py-4 text-right text-red-600">{result.net.toLocaleString('vi-VN')} VNĐ</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Tax Brackets Breakdown */}
+      {result.taxableIncome > 0 && (
+        <div className="bg-white border border-slate-200 rounded-lg p-6">
+          <h4 className="font-semibold text-slate-900 text-sm mb-3">
+            (*) Chi tiết các bậc thuế thu nhập cá nhân (Lũy tiến từng phần)
+          </h4>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-slate-50 text-slate-500 font-medium">
+                <tr>
+                  <th className="px-4 py-2">Bậc</th>
+                  <th className="px-4 py-2">Mức thu nhập tính thuế</th>
+                  <th className="px-4 py-2">Thuế suất</th>
+                  <th className="px-4 py-2 text-right">Thu nhập tính thuế bậc này</th>
+                  <th className="px-4 py-2 text-right">Tiền thuế nộp</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {result.brackets.map((b) => (
+                  <tr key={b.bracket} className={b.taxableAmount > 0 ? 'bg-amber-50/30 font-medium' : 'text-slate-400'}>
+                    <td className="px-4 py-2">Bậc {b.bracket}</td>
+                    <td className="px-4 py-2">{b.range}</td>
+                    <td className="px-4 py-2">{b.rate}%</td>
+                    <td className="px-4 py-2 text-right">{b.taxableAmount.toLocaleString('vi-VN')} đ</td>
+                    <td className="px-4 py-2 text-right font-semibold text-slate-900">{b.taxAmount.toLocaleString('vi-VN')} đ</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Employer Cost Info Box */}
+      <div className="bg-slate-50 border border-slate-200 rounded-lg p-5 text-sm text-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 font-semibold text-slate-900">
+            <Building2 className="w-4 h-4 text-slate-500" />
+            <span>Chi phí thực tế Người sử dụng lao động (Doanh nghiệp) chi trả</span>
+          </div>
+          <p className="text-xs text-slate-500 mt-1">
+            Bao gồm lương Gross + các khoản bảo hiểm doanh nghiệp nộp (BHXH 17%, BHTNLĐ-BNN 0.5%, BHYT 3%, BHTN 1%).
+          </p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-xs text-slate-500 uppercase tracking-wide">Tổng chi phí doanh nghiệp</p>
+          <p className="text-xl font-bold text-slate-900">{result.employerTotalCost.toLocaleString('vi-VN')} VNĐ</p>
+        </div>
+      </div>
+
+      {onFindMatchingJobs && (
+        <div className="text-center pt-2">
+          <button onClick={onFindMatchingJobs} className={btnPrimary}>
+            Tìm việc làm với mức lương này <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

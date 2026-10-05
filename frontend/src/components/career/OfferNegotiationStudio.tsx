@@ -166,14 +166,14 @@ Vu Minh Khang`;
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black uppercase tracking-wider">
               <Scale className="w-3.5 h-3.5" />
-              <span>{isVi ? 'Trợ Lý So Sánh Offer & Đàm Phán Lương AI' : 'AI Offer Package & Negotiation Assistant'}</span>
+              <span>{isVi ? 'So Sánh Offer & Tính Tổng Thu Nhập (Total Compensation)' : 'Offer Comparison & Total Compensation Calculator'}</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black">
-              {isVi ? 'Đánh Giá Gói Đãi Ngộ Toàn Diện & Kịch Bản Đàm Phán Chuẩn' : 'Comprehensive Total Compensation & Smart Counter-Offers'}
+              {isVi ? 'Đánh Giá Gói Đãi Ngộ Toàn Diện & Kịch Bản Đàm Phán' : 'Comprehensive Total Compensation & Smart Counter-Offers'}
             </h2>
             <p className="text-xs text-slate-300 leading-relaxed">
               {isVi 
-                ? 'Tính toán chính xác Tổng thu nhập năm (TC = Lương cứng + Thưởng KPI + Cổ phần RSU + Quyền lợi), so sánh mức tăng trưởng thu nhập thực tế và sinh kịch bản đàm phán tự động.' 
+                ? 'Tính toán chính xác Tổng thu nhập năm (TC = Lương cứng + Thưởng KPI + Cổ phần RSU + Quyền lợi), so sánh mức tăng trưởng thu nhập thực tế và gợi ý kịch bản trao đổi chuyên nghiệp.' 
                 : 'Calculate your true Total Compensation (TC = Base + Bonus + Equity + Perks), evaluate income growth, and generate tailored counter-offer negotiation scripts.'}
             </p>
           </div>
@@ -401,17 +401,17 @@ Vu Minh Khang`;
 
       </div>
 
-      {/* 3. AI Counter-Offer Negotiation Studio */}
+      {/* 3. Counter-Offer Negotiation Script */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200/90 dark:border-slate-800 shadow-soft-sm space-y-6">
         
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
-              <Sparkles className="w-5 h-5" />
+              <FileText className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base font-black text-slate-900 dark:text-white">
-                {isVi ? 'Kịch Bản Đàm Phán Lương Tối Ưu (Counter-Offer Script)' : 'AI Strategic Counter-Offer Script'}
+                {isVi ? 'Kịch Bản Đàm Phán Lương (Mẫu gợi ý)' : 'Strategic Counter-Offer Script'}
               </h3>
               <p className="text-xs text-slate-500">
                 {isVi ? 'Lập luận thuyết phục dựa trên đóng góp chuyên môn và định vị thị trường' : 'Persuasive reasoning anchored on business value and compensation benchmarks'}
