@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { CandidateCollaborativeReviewModal } from './CandidateCollaborativeReviewModal';
+import { BackgroundCheckVerificationModal } from './BackgroundCheckVerificationModal';
 
 interface CandidateMatrixSectionProps {
   candidates: Record<string, Candidate[]>;
@@ -54,6 +55,7 @@ export const CandidateMatrixSection: React.FC<CandidateMatrixSectionProps> = ({
   const [interviewDate, setInterviewDate] = useState('2026-10-10');
   const [interviewFormat, setInterviewFormat] = useState<'google_meet' | 'office'>('google_meet');
   const [reviewingCandidate, setReviewingCandidate] = useState<Candidate | null>(null);
+  const [backgroundCheckCandidate, setBackgroundCheckCandidate] = useState<Candidate | null>(null);
 
   // Flatten all candidates with their current stage
   const allCandidatesWithStage = useMemo(() => {
@@ -518,6 +520,17 @@ export const CandidateMatrixSection: React.FC<CandidateMatrixSectionProps> = ({
                             <Users className="w-3 h-3 text-indigo-500" />
                             <span>{isVi ? 'Đánh giá' : 'Review'}</span>
                           </button>
+
+                          <button
+                            type="button"
+                            data-testid={`btn-matrix-background-check-${cand.id}`}
+                            onClick={() => setBackgroundCheckCandidate(cand)}
+                            className="px-2 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                            title={isVi ? 'Thẩm định lý lịch & Tham chiếu' : 'Background & Ref Check'}
+                          >
+                            <ShieldCheck className="w-3 h-3 text-emerald-500" />
+                            <span>{isVi ? 'Lý lịch' : 'Verify'}</span>
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -658,6 +671,17 @@ export const CandidateMatrixSection: React.FC<CandidateMatrixSectionProps> = ({
         candidate={reviewingCandidate}
         onAdvanceToOffer={(id) => {
           onAdvanceToInterview([id]);
+        }}
+        onShowToast={onShowToast}
+      />
+
+      {/* 6. Background Check & Reference Verification Modal */}
+      <BackgroundCheckVerificationModal
+        isOpen={!!backgroundCheckCandidate}
+        onClose={() => setBackgroundCheckCandidate(null)}
+        candidate={backgroundCheckCandidate}
+        onApproveClearance={() => {
+          onShowToast(isVi ? 'Đã duyệt đạt chuẩn thẩm định lý lịch!' : 'Cleared background check!');
         }}
         onShowToast={onShowToast}
       />

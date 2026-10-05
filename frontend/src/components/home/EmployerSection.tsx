@@ -40,6 +40,7 @@ import { updateApplicationStageApi } from '../../services/api';
 import { CandidateMatrixSection } from './CandidateMatrixSection';
 import { CandidateCollaborativeReviewModal } from './CandidateCollaborativeReviewModal';
 import { AiTalentSourcingSection } from './AiTalentSourcingSection';
+import { BackgroundCheckVerificationModal } from './BackgroundCheckVerificationModal';
 
 export interface Candidate {
   id: string;
@@ -610,6 +611,7 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
   const [minScoreFilter, setMinScoreFilter] = useState<number>(0);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [reviewingCandidateFromDossier, setReviewingCandidateFromDossier] = useState<Candidate | null>(null);
+  const [backgroundCheckCandidate, setBackgroundCheckCandidate] = useState<Candidate | null>(null);
   const [isRescanning, setIsRescanning] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -1782,6 +1784,16 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
+                  data-testid="btn-dossier-background-check"
+                  onClick={() => setBackgroundCheckCandidate(selectedCandidate)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5 shadow-soft cursor-pointer transition-all hover:bg-emerald-100 dark:hover:bg-emerald-900/60"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>{isVi ? 'Thẩm định lý lịch' : 'Background Check'}</span>
+                </button>
+
+                <button
+                  type="button"
                   data-testid="btn-dossier-hiring-scorecard"
                   onClick={() => setReviewingCandidateFromDossier(selectedCandidate)}
                   className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5 shadow-soft cursor-pointer transition-all hover:bg-indigo-100 dark:hover:bg-indigo-900/60"
@@ -1832,6 +1844,17 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
             if (pipeData[col]?.some(c => c.id === id)) fromCol = col;
           });
           handleMoveCandidateToStage(id, fromCol, 'offer');
+        }}
+        onShowToast={showToast}
+      />
+
+      {/* Background Check & Reference Verification Modal */}
+      <BackgroundCheckVerificationModal
+        isOpen={!!backgroundCheckCandidate}
+        onClose={() => setBackgroundCheckCandidate(null)}
+        candidate={backgroundCheckCandidate}
+        onApproveClearance={() => {
+          showToast(isVi ? 'Ứng viên đã được xác minh lý lịch hợp chuẩn 100%!' : 'Candidate 100% cleared for onboarding!');
         }}
         onShowToast={showToast}
       />
