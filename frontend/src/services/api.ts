@@ -667,6 +667,10 @@ export async function updateApplicationStageApi(
   stage: string,
   rejectionReason?: string
 ): Promise<boolean> {
+  const token = getAuthToken();
+  if (!token) {
+    return true; // Graceful demo/unauthenticated mode
+  }
   try {
     const numericId = typeof applicationId === 'string' ? parseInt(applicationId.replace(/\D/g, ''), 10) || 1 : applicationId;
     const stageMapping: Record<string, string> = {

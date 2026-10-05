@@ -25,7 +25,8 @@ import {
   Mail,
   Send,
   SlidersHorizontal,
-  ChevronDown
+  ChevronDown,
+  GripVertical
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { updateApplicationStageApi } from '../../services/api';
@@ -600,12 +601,59 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
   const [isRescanning, setIsRescanning] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Drag and Drop state
+  const [draggedCandidate, setDraggedCandidate] = useState<{ id: string; sourceCol: 'new' | 'screened' | 'interview' | 'offer' } | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<'new' | 'screened' | 'interview' | 'offer' | null>(null);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   };
 
   const currentPipelineData = candidatesState[activePipeline] || candidatesState.ai;
+
+  // Move candidate to any designated stage (Button click or Drag-and-Drop)
+  const handleMoveCandidateToStage = (
+    candidateId: string, 
+    fromCol: 'new' | 'screened' | 'interview' | 'offer',
+    toCol: 'new' | 'screened' | 'interview' | 'offer'
+  ) => {
+    if (fromCol === toCol) return;
+
+    // Asynchronously synchronize stage transition with Spring Boot backend
+    const appId = candidateId === 'cand-ai-1' ? 42 : (parseInt(candidateId.replace(/\D/g, ''), 10) || 42);
+    updateApplicationStageApi(appId, toCol).catch(() => {});
+
+    let movedCandName = '';
+    setCandidatesState((prev) => {
+      const pipelineCandidates = { ...prev[activePipeline] };
+      const cand = pipelineCandidates[fromCol].find((c) => c.id === candidateId);
+      if (!cand) return prev;
+
+      movedCandName = cand.name;
+      const updatedFrom = pipelineCandidates[fromCol].filter((c) => c.id !== candidateId);
+      const updatedTo = [cand, ...pipelineCandidates[toCol]];
+
+      return {
+        ...prev,
+        [activePipeline]: {
+          ...pipelineCandidates,
+          [fromCol]: updatedFrom,
+          [toCol]: updatedTo
+        }
+      };
+    });
+
+    const targetStageTitle = isVi 
+      ? COLUMNS.find(c => c.id === toCol)?.titleVi 
+      : COLUMNS.find(c => c.id === toCol)?.titleEn;
+
+    showToast(
+      isVi 
+        ? `🎯 Đã chuyển ứng viên ${movedCandName || ''} sang cột: ${targetStageTitle}!` 
+        : `🎯 Moved candidate ${movedCandName || ''} to: ${targetStageTitle}!`
+    );
+  };
 
   // Rescan simulation
   const handleRescan = () => {
@@ -630,34 +678,7 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
     }
 
     const nextStage = stageOrder[currentIdx + 1];
-
-    // Asynchronously synchronize stage transition with Spring Boot backend
-    const appId = candidateId === 'cand-ai-1' ? 42 : (parseInt(candidateId.replace(/\D/g, ''), 10) || 42);
-    updateApplicationStageApi(appId, nextStage).catch(() => {});
-    setCandidatesState((prev) => {
-      const pipelineCandidates = { ...prev[activePipeline] };
-      const cand = pipelineCandidates[currentColumn].find((c) => c.id === candidateId);
-      if (!cand) return prev;
-
-      const updatedFrom = pipelineCandidates[currentColumn].filter((c) => c.id !== candidateId);
-      const updatedTo = [cand, ...pipelineCandidates[nextStage]];
-
-      return {
-        ...prev,
-        [activePipeline]: {
-          ...pipelineCandidates,
-          [currentColumn]: updatedFrom,
-          [nextStage]: updatedTo
-        }
-      };
-    });
-
-    const nextStageTitle = isVi ? COLUMNS.find(c => c.id === nextStage)?.titleVi : COLUMNS.find(c => c.id === nextStage)?.titleEn;
-    showToast(
-      isVi 
-        ? `Đã chuyển ứng viên sang cột: ${nextStageTitle}!`
-        : `Moved candidate to: ${nextStageTitle}!`
-    );
+    handleMoveCandidateToStage(candidateId, currentColumn, nextStage);
   };
 
   // Filter candidates per column
@@ -956,7 +977,41 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
               return (
                 <div 
                   key={col.id} 
-                  className="bg-slate-50/90 dark:bg-slate-900/80 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800/80 flex flex-col space-y-3 min-h-[460px] transition-colors"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragOverCol !== col.id) setDragOverCol(col.id);
+                  }}
+                  onDragLeave={(e) => {
+                    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                    if (dragOverCol === col.id) setDragOverCol(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOverCol(null);
+                    const rawData = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
+                    if (rawData) {
+                      try {
+                        const parsed = JSON.parse(rawData);
+                        if (parsed.candidateId && parsed.sourceCol) {
+                          handleMoveCandidateToStage(parsed.candidateId, parsed.sourceCol, col.id);
+                          setDraggedCandidate(null);
+                          return;
+                        }
+                      } catch {
+                        // ignore and fallback
+                      }
+                    }
+                    if (draggedCandidate) {
+                      handleMoveCandidateToStage(draggedCandidate.id, draggedCandidate.sourceCol, col.id);
+                    }
+                    setDraggedCandidate(null);
+                  }}
+                  className={`rounded-2xl p-3.5 border flex flex-col space-y-3 min-h-[460px] transition-all duration-200 ${
+                    dragOverCol === col.id 
+                      ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-2 border-dashed border-emerald-500 ring-4 ring-emerald-500/10 shadow-soft-lg scale-[1.01]' 
+                      : 'bg-slate-50/90 dark:bg-slate-900/80 border-slate-200/80 dark:border-slate-800/80'
+                  }`}
                 >
                   {/* Column Header */}
                   <div className="flex items-center justify-between px-1">
@@ -984,12 +1039,29 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
                       candidates.map((cand) => (
                         <div 
                           key={cand.id}
+                          draggable={true}
+                          onDragStart={(e) => {
+                            setDraggedCandidate({ id: cand.id, sourceCol: col.id });
+                            e.dataTransfer.effectAllowed = 'move';
+                            const payload = JSON.stringify({ candidateId: cand.id, sourceCol: col.id });
+                            e.dataTransfer.setData('application/json', payload);
+                            e.dataTransfer.setData('text/plain', payload);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedCandidate(null);
+                            setDragOverCol(null);
+                          }}
                           onClick={() => setSelectedCandidate(cand)}
-                          className="bg-white dark:bg-slate-800/90 hover:bg-slate-50 dark:hover:bg-slate-800 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-700/80 space-y-3 transition-all duration-200 cursor-pointer hover:border-emerald-500/70 dark:hover:border-emerald-500 hover:shadow-soft-md hover:-translate-y-0.5 group relative"
+                          className={`bg-white dark:bg-slate-800/90 hover:bg-slate-50 dark:hover:bg-slate-800 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-700/80 space-y-3 transition-all duration-200 cursor-grab active:cursor-grabbing hover:border-emerald-500/70 dark:hover:border-emerald-500 hover:shadow-soft-md hover:-translate-y-0.5 group relative ${
+                            draggedCandidate?.id === cand.id ? 'opacity-40 scale-95 border-dashed border-emerald-500 ring-2 ring-emerald-400' : ''
+                          }`}
                         >
                           {/* Top: Avatar, Name, Company Badge, Score */}
                           <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="text-slate-300 dark:text-slate-600 group-hover:text-emerald-500 transition-colors shrink-0 -ml-1 cursor-grab" title={isVi ? 'Kéo thả để chuyển cột' : 'Drag to move stage'}>
+                                <GripVertical className="w-3.5 h-3.5" />
+                              </div>
                               <div className="relative shrink-0">
                                 <img 
                                   src={cand.avatar} 

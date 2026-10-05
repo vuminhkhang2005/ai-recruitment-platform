@@ -47,3 +47,4 @@ test_*.cjs
 !frontend/test_deep_real_user_experience.cjs
 !frontend/test_deep_round3.cjs
 !frontend/test_comprehensive_journey.cjs
+!frontend/test_ats_drag_drop.cjs
