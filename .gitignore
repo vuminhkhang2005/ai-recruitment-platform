@@ -61,3 +61,4 @@ test_*.cjs
 !frontend/test_offer_negotiation.cjs
 !frontend/test_skill_assessment.cjs
 !frontend/test_interview_scheduler.cjs
+!frontend/test_job_description_studio.cjs

@@ -21,6 +21,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { createJobApi } from '../../services/api';
 import { CompanyLogo } from '../ui/CompanyLogo';
+import { JobDescriptionStudioModal, type GeneratedJdContent } from './JobDescriptionStudioModal';
 
 interface PostJobModalProps {
   isOpen: boolean;
@@ -176,6 +177,15 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
   const [benefits, setBenefits] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [aiDraftActive, setAiDraftActive] = useState(false);
+  const [isJdStudioOpen, setIsJdStudioOpen] = useState(false);
+
+  const handleApplyGeneratedJd = (content: GeneratedJdContent) => {
+    setDescription(content.description);
+    setRequirements(content.requirements);
+    setBenefits(content.benefits);
+    setAiDraftActive(true);
+    setTimeout(() => setAiDraftActive(false), 1500);
+  };
 
   // Apply a quick 1-click template
   const handleApplyTemplate = (tmpl: typeof TEMPLATES[0]) => {
@@ -613,6 +623,33 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
             </div>
           </div>
 
+          {/* AI JD Studio Quick Launcher Banner */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 border border-emerald-200/80 dark:border-emerald-800/60 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                  {isVi ? 'Trợ lý AI Soạn Thảo & Chuẩn Hóa JD' : 'AI Job Description Studio'}
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {isVi ? 'Tự động tạo nội dung JD hoàn chỉnh, chấm điểm tính bao hàm & SEO' : 'Generate complete JD with inclusivity and readability score'}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              data-testid="btn-open-ai-jd-studio"
+              onClick={() => setIsJdStudioOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 text-white font-bold text-xs shadow-soft flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-all"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>{isVi ? 'Mở AI JD Studio' : 'Open Studio'}</span>
+            </button>
+          </div>
+
           {/* Job Description Textarea */}
           <div className="space-y-1.5">
             <label className="font-bold text-slate-800 dark:text-slate-200">
@@ -690,6 +727,15 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
         </form>
 
       </div>
+
+      <JobDescriptionStudioModal
+        isOpen={isJdStudioOpen}
+        onClose={() => setIsJdStudioOpen(false)}
+        initialRole={title || 'Senior Fullstack Engineer'}
+        initialLevel={level}
+        initialSkills={skills}
+        onApplyJd={handleApplyGeneratedJd}
+      />
     </div>
   );
 };
