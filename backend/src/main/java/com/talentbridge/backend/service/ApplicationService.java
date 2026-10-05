@@ -3,14 +3,10 @@ package com.talentbridge.backend.service;
 import com.talentbridge.backend.dto.ApplicationCreateRequestDto;
 import com.talentbridge.backend.dto.ApplicationResponseDto;
 import com.talentbridge.backend.dto.ApplicationStatusUpdateRequestDto;
-import com.talentbridge.backend.dto.QuickApplyRequestDto;
-import com.talentbridge.backend.dto.QuickApplyResponseDto;
 
 import java.util.List;
 
 public interface ApplicationService {
-
-    QuickApplyResponseDto quickApply(QuickApplyRequestDto request);
 
     ApplicationResponseDto apply(ApplicationCreateRequestDto request, Long candidateUserId);
 
@@ -19,6 +15,9 @@ public interface ApplicationService {
     ApplicationResponseDto getApplicationById(Long applicationId, Long userId, boolean isRecruiter, boolean isAdmin);
 
     List<ApplicationResponseDto> getApplicationsForJob(Long jobId, Long recruiterUserId, boolean isAdmin);
+
+    /** All applications across every job owned by the recruiter. */
+    List<ApplicationResponseDto> getApplicationsForRecruiter(Long recruiterUserId);
 
     ApplicationResponseDto updateApplicationStatus(Long applicationId, ApplicationStatusUpdateRequestDto request, Long recruiterUserId, boolean isAdmin);
 

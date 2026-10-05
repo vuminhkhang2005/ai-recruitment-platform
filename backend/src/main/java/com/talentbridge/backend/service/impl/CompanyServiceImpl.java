@@ -31,6 +31,7 @@ public class CompanyServiceImpl implements CompanyService {
 
     private final CompanyRepository companyRepository;
     private final JobRepository jobRepository;
+    private final com.talentbridge.backend.service.JobService jobService;
 
     private static final Pattern NONLATIN = Pattern.compile("[^\\w-]");
     private static final Pattern WHITESPACE = Pattern.compile("[\\s]");
@@ -67,7 +68,7 @@ public class CompanyServiceImpl implements CompanyService {
                 .orElseThrow(() -> new ResourceNotFoundException("Company not found with ID: " + companyId));
 
         return jobRepository.findByCompanyId(companyId).stream()
-                .filter(j -> "PUBLISHED".equals(j.getStatus()) && j.getDeletedAt() == null)
+                .filter(CompanyServiceImpl::isOpen)
                 .map(this::mapJobToDto)
                 .toList();
     }
@@ -152,7 +153,7 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     private CompanyResponseDto mapToDto(Company company) {
-        long openJobs = jobRepository.countByCompanyId(company.getId());
+        long openJobs = jobRepository.findByCompanyId(company.getId()).stream().filter(CompanyServiceImpl::isOpen).count();
 
         return CompanyResponseDto.builder()
                 .id(company.getId())
@@ -173,59 +174,12 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     private JobResponseDto mapJobToDto(Job job) {
-        String companyName = job.getCompany() != null ? job.getCompany().getName() : "Enterprise";
-        String companyLogo = job.getCompany() != null ? job.getCompany().getLogoUrl() : "/logos/vinai.svg";
-        String companyCity = job.getCompany() != null ? job.getCompany().getCity() : job.getLocationCity();
-
-        return JobResponseDto.builder()
-                .id(job.getId())
-                .uuid(job.getUuid())
-                .title(job.getTitle())
-                .slug(job.getSlug())
-                .companyId(job.getCompany() != null ? job.getCompany().getId() : null)
-                .companyName(companyName)
-                .companyLogo(companyLogo)
-                .companyCity(companyCity)
-                .locationCity(job.getLocationCity())
-                .locationAddress(job.getLocationAddress())
-                .jobType(job.getJobType())
-                .expLevel(job.getExpLevel())
-                .minSalary(job.getMinSalary())
-                .maxSalary(job.getMaxSalary())
-                .currency(job.getCurrency())
-                .salaryFormatted(formatSalary(job.getMinSalary(), job.getMaxSalary(), job.getCurrency(), job.getIsSalaryNegotiable()))
-                .description(job.getDescription())
-                .requirements(job.getRequirements())
-                .benefits(job.getBenefits())
-                .status(job.getStatus())
-                .deadline(job.getDeadline())
-                .viewsCount(job.getViewsCount())
-                .applicationsCount(job.getApplicationsCount())
-                .postedTimeAgo(calculateTimeAgo(job.getCreatedAt()))
-                .aiMatchScore(95)
-                .build();
+        return jobService.toDto(job);
     }
 
-    private String formatSalary(BigDecimal min, BigDecimal max, String currency, Boolean isNegotiable) {
-        if (Boolean.TRUE.equals(isNegotiable) || (min == null && max == null)) {
-            return "Thỏa thuận";
-        }
-        if (min != null && max != null) {
-            BigDecimal minMil = min.divide(new BigDecimal("1000000"), 0, RoundingMode.HALF_UP);
-            BigDecimal maxMil = max.divide(new BigDecimal("1000000"), 0, RoundingMode.HALF_UP);
-            return minMil + " - " + maxMil + " Triệu VNĐ";
-        }
-        return "Thương lượng";
-    }
-
-    private String calculateTimeAgo(LocalDateTime createdAt) {
-        if (createdAt == null) return "Vừa đăng";
-        Duration duration = Duration.between(createdAt, LocalDateTime.now());
-        long hours = duration.toHours();
-        if (hours < 1) return "Vừa đăng";
-        if (hours < 24) return hours + " giờ trước";
-        long days = duration.toDays();
-        return days + " ngày trước";
+    private static boolean isOpen(Job j) {
+        return "PUBLISHED".equals(j.getStatus()) && j.getDeletedAt() == null
+                && (j.getDeadline() == null || j.getDeadline().isAfter(LocalDateTime.now()));
     }
 
     private String toSlug(String input) {

@@ -69,19 +69,20 @@ public class JwtCookieHelper {
     }
 
     public String extractAccessToken(HttpServletRequest request) {
-        // 1. Check HttpOnly Cookie
+        // 1. Explicit Authorization header (Bearer ...) takes precedence over cookies,
+        //    otherwise a stale cookie from another account could override the caller's identity.
+        String bearerToken = request.getHeader("Authorization");
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+
+        // 2. Fall back to the HttpOnly cookie
         if (request.getCookies() != null) {
             for (Cookie cookie : request.getCookies()) {
                 if (accessTokenCookieName.equals(cookie.getName()) && StringUtils.hasText(cookie.getValue())) {
                     return cookie.getValue();
                 }
             }
-        }
-
-        // 2. Check Authorization Header (Bearer ...)
-        String bearerToken = request.getHeader("Authorization");
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
         }
 
         return null;

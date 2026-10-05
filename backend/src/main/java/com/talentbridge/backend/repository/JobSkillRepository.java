@@ -11,5 +11,7 @@ public interface JobSkillRepository extends JpaRepository<JobSkill, Long> {
 
     List<JobSkill> findByJobId(Long jobId);
 
+    List<JobSkill> findByJobIdIn(java.util.Collection<Long> jobIds);
+
     void deleteByJobId(Long jobId);
 }

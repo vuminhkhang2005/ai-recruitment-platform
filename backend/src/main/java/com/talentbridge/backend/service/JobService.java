@@ -25,4 +25,9 @@ public interface JobService {
     JobResponseDto updateJobStatus(Long id, String status, Long recruiterUserId, boolean isAdmin);
 
     void deleteJob(Long id, Long recruiterUserId, boolean isAdmin);
+
+    /** All non-deleted jobs (any status) owned by the logged-in recruiter. */
+    List<JobResponseDto> getMyJobs(Long recruiterUserId);
+
+    JobResponseDto toDto(com.talentbridge.backend.entity.Job job);
 }

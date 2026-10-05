@@ -76,6 +76,24 @@ public class UserServiceImpl implements UserService {
             if (request.getIsOpenToWork() != null) {
                 cp.setIsOpenToWork(request.getIsOpenToWork());
             }
+            if (request.getBio() != null) {
+                cp.setBio(request.getBio().trim());
+            }
+            if (request.getLinkedinUrl() != null) {
+                cp.setLinkedinUrl(request.getLinkedinUrl().trim());
+            }
+            if (request.getGithubUrl() != null) {
+                cp.setGithubUrl(request.getGithubUrl().trim());
+            }
+            if (request.getPortfolioUrl() != null) {
+                cp.setPortfolioUrl(request.getPortfolioUrl().trim());
+            }
+            if (request.getExpectedSalaryMin() != null) {
+                cp.setExpectedSalaryMin(request.getExpectedSalaryMin());
+            }
+            if (request.getExpectedSalaryMax() != null) {
+                cp.setExpectedSalaryMax(request.getExpectedSalaryMax());
+            }
             candidateProfileRepository.save(cp);
         });
 
@@ -141,7 +159,13 @@ public class UserServiceImpl implements UserService {
             builder.headline(cp.getHeadline())
                     .city(cp.getCity())
                     .country(cp.getCountry())
-                    .isOpenToWork(cp.getIsOpenToWork());
+                    .isOpenToWork(cp.getIsOpenToWork())
+                    .bio(cp.getBio())
+                    .linkedinUrl(cp.getLinkedinUrl())
+                    .githubUrl(cp.getGithubUrl())
+                    .portfolioUrl(cp.getPortfolioUrl())
+                    .expectedSalaryMin(cp.getExpectedSalaryMin())
+                    .expectedSalaryMax(cp.getExpectedSalaryMax());
         });
 
         recruiterProfileRepository.findByUserId(user.getId()).ifPresent(rp -> {
@@ -149,7 +173,7 @@ public class UserServiceImpl implements UserService {
                     .jobTitle(rp.getJobTitle());
             if (rp.getCompanyId() != null) {
                 companyRepository.findById(rp.getCompanyId()).ifPresent(comp -> {
-                    builder.companyName(comp.getName());
+                    builder.companyName(comp.getName()).companyLogo(comp.getLogoUrl());
                 });
             }
         });

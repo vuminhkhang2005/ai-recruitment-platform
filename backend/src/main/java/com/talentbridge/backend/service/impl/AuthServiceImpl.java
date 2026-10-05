@@ -37,6 +37,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserTokenRepository userTokenRepository;
     private final CandidateProfileRepository candidateProfileRepository;
     private final RecruiterProfileRepository recruiterProfileRepository;
+    private final CompanyRepository companyRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
@@ -50,12 +51,34 @@ public class AuthServiceImpl implements AuthService {
 
         String rawRole = StringUtils.hasText(request.getRole()) ? request.getRole().trim().toUpperCase() : "ROLE_CANDIDATE";
         final String targetRoleName = rawRole.startsWith("ROLE_") ? rawRole : "ROLE_" + rawRole;
+        if (!"ROLE_CANDIDATE".equals(targetRoleName) && !"ROLE_RECRUITER".equals(targetRoleName)) {
+            throw new BadRequestException("Chỉ có thể đăng ký tài khoản Ứng viên hoặc Nhà tuyển dụng.");
+        }
+
+        // Recruiters must belong to a company: pick an existing one or register a new (unverified) one.
+        Long recruiterCompanyId = null;
+        if ("ROLE_RECRUITER".equals(targetRoleName)) {
+            if (request.getCompanyId() != null) {
+                recruiterCompanyId = companyRepository.findById(request.getCompanyId())
+                        .orElseThrow(() -> new BadRequestException("Công ty không tồn tại"))
+                        .getId();
+            } else if (StringUtils.hasText(request.getCompanyName())) {
+                String name = request.getCompanyName().trim();
+                String slug = java.text.Normalizer.normalize(name.replaceAll("\\s+", "-"), java.text.Normalizer.Form.NFD)
+                        .replaceAll("[^\\w-]", "").toLowerCase(Locale.ENGLISH) + "-" + UUID.randomUUID().toString().substring(0, 6);
+                recruiterCompanyId = companyRepository.save(Company.builder()
+                        .uuid(UUID.randomUUID().toString())
+                        .name(name)
+                        .slug(slug)
+                        .verificationStatus("PENDING")
+                        .build()).getId();
+            } else {
+                throw new BadRequestException("Nhà tuyển dụng cần chọn hoặc nhập tên công ty.");
+            }
+        }
 
         Role role = roleRepository.findByName(targetRoleName)
-                .orElseGet(() -> roleRepository.save(Role.builder()
-                        .name(targetRoleName)
-                        .description("Tự động tạo cho đăng ký: " + targetRoleName)
-                        .build()));
+                .orElseThrow(() -> new BadRequestException("Vai trò không hợp lệ"));
 
         User user = User.builder()
                 .uuid(UUID.randomUUID().toString())
@@ -70,20 +93,17 @@ public class AuthServiceImpl implements AuthService {
 
         User savedUser = userRepository.save(user);
 
-        // Tạo hồ sơ ứng viên hoặc nhà tuyển dụng mặc định
         if ("ROLE_RECRUITER".equals(targetRoleName)) {
             recruiterProfileRepository.save(RecruiterProfile.builder()
                     .userId(savedUser.getId())
-                    .companyId(request.getCompanyId() != null ? request.getCompanyId() : 2L) // Default VNG
+                    .companyId(recruiterCompanyId)
                     .jobTitle("Chuyên viên tuyển dụng")
-                    .isCompanyAdmin(false)
+                    .isCompanyAdmin(request.getCompanyId() == null)
                     .build());
         } else {
             candidateProfileRepository.save(CandidateProfile.builder()
                     .uuid(UUID.randomUUID().toString())
                     .userId(savedUser.getId())
-                    .headline("Software Engineer")
-                    .city("TP. Hồ Chí Minh")
                     .country("Vietnam")
                     .isOpenToWork(true)
                     .visibility("PUBLIC")

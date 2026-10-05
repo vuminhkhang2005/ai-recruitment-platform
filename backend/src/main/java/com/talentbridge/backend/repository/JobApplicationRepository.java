@@ -18,4 +18,10 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     java.util.Optional<JobApplication> findByJobIdAndCandidateProfileId(Long jobId, Long candidateProfileId);
 
     boolean existsByJobIdAndCandidateProfileId(Long jobId, Long candidateProfileId);
+
+    boolean existsByCvIdAndJobRecruiterId(Long cvId, Long recruiterId);
+
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT a FROM JobApplication a JOIN FETCH a.job j WHERE j.recruiterId = :recruiterProfileId ORDER BY a.appliedAt DESC")
+    List<JobApplication> findAllForRecruiter(@org.springframework.data.repository.query.Param("recruiterProfileId") Long recruiterProfileId);
 }

@@ -5,8 +5,6 @@ import com.talentbridge.backend.config.OpenApiConfig;
 import com.talentbridge.backend.dto.ApplicationCreateRequestDto;
 import com.talentbridge.backend.dto.ApplicationResponseDto;
 import com.talentbridge.backend.dto.ApplicationStatusUpdateRequestDto;
-import com.talentbridge.backend.dto.QuickApplyRequestDto;
-import com.talentbridge.backend.dto.QuickApplyResponseDto;
 import com.talentbridge.backend.security.UserPrincipal;
 import com.talentbridge.backend.service.ApplicationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,117 +24,93 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/applications")
 @RequiredArgsConstructor
+@SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
+@SecurityRequirement(name = OpenApiConfig.COOKIE_AUTH)
 @Tag(name = "3. Applications Management", description = "Nộp hồ sơ (Ứng viên), Xem danh sách đơn nộp, Cập nhật trạng thái duyệt (Nhà tuyển dụng)")
 public class ApplicationController {
 
     private final ApplicationService applicationService;
 
-    @PostMapping("/quick-apply")
-    @Operation(summary = "Quick Apply for Job (Public/Demo)", description = "Submit a fast application with candidate info and cover letter for a specific job.")
-    public ResponseEntity<ApiResponse<QuickApplyResponseDto>> quickApply(
-            @Valid @RequestBody QuickApplyRequestDto request
-    ) {
-        QuickApplyResponseDto response = applicationService.quickApply(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Nộp hồ sơ ứng tuyển thành công", response));
-    }
-
     @PostMapping
     @PreAuthorize("hasRole('CANDIDATE')")
-    @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
-    @SecurityRequirement(name = OpenApiConfig.COOKIE_AUTH)
-    @Operation(summary = "Submit Application (Candidate)", description = "Candidate submits application with resume and cover letter.")
+    @Operation(summary = "Submit Application (Candidate)", description = "Candidate applies with one of their uploaded CVs (default CV if cvId is omitted).")
     public ResponseEntity<ApiResponse<ApplicationResponseDto>> apply(
             @Valid @RequestBody ApplicationCreateRequestDto request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
-        ApplicationResponseDto response = applicationService.apply(request, userId);
+        ApplicationResponseDto response = applicationService.apply(request, userPrincipal.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Nộp hồ sơ ứng tuyển thành công", response));
     }
 
     @GetMapping("/me")
     @PreAuthorize("hasRole('CANDIDATE')")
-    @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
-    @SecurityRequirement(name = OpenApiConfig.COOKIE_AUTH)
-    @Operation(summary = "Get My Submitted Applications (Candidate)", description = "Retrieve list of all applications submitted by currently logged-in candidate.")
+    @Operation(summary = "Get My Submitted Applications (Candidate)")
     public ResponseEntity<ApiResponse<List<ApplicationResponseDto>>> getMyApplications(
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
-        List<ApplicationResponseDto> applications = applicationService.getMyApplications(userId);
-        return ResponseEntity.ok(ApiResponse.ok(applications));
+        return ResponseEntity.ok(ApiResponse.ok(applicationService.getMyApplications(userPrincipal.getId())));
+    }
+
+    @GetMapping("/recruiter")
+    @PreAuthorize("hasRole('RECRUITER')")
+    @Operation(summary = "All applications for my jobs (Recruiter)")
+    public ResponseEntity<ApiResponse<List<ApplicationResponseDto>>> getRecruiterApplications(
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(applicationService.getApplicationsForRecruiter(userPrincipal.getId())));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
-    @SecurityRequirement(name = OpenApiConfig.COOKIE_AUTH)
-    @Operation(summary = "Get Application Details", description = "View details of an application. Candidate sees their own, Recruiter sees applications for their job, Admin sees all.")
+    @Operation(summary = "Get Application Details", description = "Candidate sees their own, Recruiter sees applications for their job, Admin sees all.")
     public ResponseEntity<ApiResponse<ApplicationResponseDto>> getApplicationById(
             @Parameter(description = "Application ID", example = "1")
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
-        boolean isRecruiter = userPrincipal != null && userPrincipal.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_RECRUITER"));
-        boolean isAdmin = userPrincipal != null && userPrincipal.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
-        ApplicationResponseDto response = applicationService.getApplicationById(id, userId, isRecruiter, isAdmin);
+        ApplicationResponseDto response = applicationService.getApplicationById(
+                id, userPrincipal.getId(), hasRole(userPrincipal, "ROLE_RECRUITER"), hasRole(userPrincipal, "ROLE_ADMIN"));
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
     @GetMapping("/job/{jobId}")
     @PreAuthorize("hasAnyRole('RECRUITER', 'ADMIN')")
-    @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
-    @SecurityRequirement(name = OpenApiConfig.COOKIE_AUTH)
-    @Operation(summary = "Get Candidate Applications for Job (Recruiter / Admin)", description = "View all submitted applications for a specific job posting.")
+    @Operation(summary = "Get Candidate Applications for Job (Recruiter / Admin)")
     public ResponseEntity<ApiResponse<List<ApplicationResponseDto>>> getApplicationsForJob(
             @Parameter(description = "Job ID", example = "1")
             @PathVariable Long jobId,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
-        boolean isAdmin = userPrincipal != null && userPrincipal.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
-        List<ApplicationResponseDto> applications = applicationService.getApplicationsForJob(jobId, userId, isAdmin);
+        List<ApplicationResponseDto> applications = applicationService.getApplicationsForJob(
+                jobId, userPrincipal.getId(), hasRole(userPrincipal, "ROLE_ADMIN"));
         return ResponseEntity.ok(ApiResponse.ok(applications));
     }
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('RECRUITER', 'ADMIN')")
-    @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
-    @SecurityRequirement(name = OpenApiConfig.COOKIE_AUTH)
-    @Operation(summary = "Update Application Stage (Recruiter / Admin)", description = "Update candidate application status (e.g. REVIEWING, INTERVIEW, OFFERED, REJECTED).")
+    @Operation(summary = "Update Application Stage (Recruiter / Admin)", description = "APPLIED, SCREENING, INTERVIEW, OFFERED, HIRED, REJECTED")
     public ResponseEntity<ApiResponse<ApplicationResponseDto>> updateApplicationStatus(
             @PathVariable Long id,
             @Valid @RequestBody ApplicationStatusUpdateRequestDto request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
-        boolean isAdmin = userPrincipal != null && userPrincipal.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
-        ApplicationResponseDto updated = applicationService.updateApplicationStatus(id, request, userId, isAdmin);
+        ApplicationResponseDto updated = applicationService.updateApplicationStatus(
+                id, request, userPrincipal.getId(), hasRole(userPrincipal, "ROLE_ADMIN"));
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái ứng viên thành công", updated));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('CANDIDATE', 'ADMIN')")
-    @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
-    @SecurityRequirement(name = OpenApiConfig.COOKIE_AUTH)
-    @Operation(summary = "Withdraw Application (Candidate / Admin)", description = "Candidate withdraws their submitted job application.")
+    @Operation(summary = "Withdraw Application (Candidate / Admin)")
     public ResponseEntity<Void> withdrawApplication(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
-        boolean isAdmin = userPrincipal != null && userPrincipal.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
-        applicationService.withdrawApplication(id, userId, isAdmin);
+        applicationService.withdrawApplication(id, userPrincipal.getId(), hasRole(userPrincipal, "ROLE_ADMIN"));
         return ResponseEntity.noContent().build();
+    }
+
+    private static boolean hasRole(UserPrincipal user, String role) {
+        return user.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals(role));
     }
 }

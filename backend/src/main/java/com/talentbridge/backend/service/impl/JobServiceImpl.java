@@ -1,6 +1,7 @@
 package com.talentbridge.backend.service.impl;
 
 import com.talentbridge.backend.common.PageResponse;
+import com.talentbridge.backend.common.SalaryFormatter;
 import com.talentbridge.backend.dto.JobCreateRequestDto;
 import com.talentbridge.backend.dto.JobFilterRequestDto;
 import com.talentbridge.backend.dto.JobResponseDto;
@@ -116,7 +117,8 @@ public class JobServiceImpl implements JobService {
     @Override
     @Transactional(readOnly = true)
     public List<JobResponseDto> getFeaturedJobs() {
-        return jobRepository.findTop6ByStatusOrderByCreatedAtDesc("PUBLISHED").stream()
+        Pageable top6 = PageRequest.of(0, 6, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return jobRepository.findAll(buildSpecification(new JobFilterRequestDto()), top6).stream()
                 .map(this::mapToDto)
                 .toList();
     }
@@ -124,28 +126,12 @@ public class JobServiceImpl implements JobService {
     @Override
     @Transactional
     public JobResponseDto createJob(JobCreateRequestDto request, Long recruiterUserId) {
-        Long targetCompanyId = request.getCompanyId();
-        if (targetCompanyId == null) {
-            targetCompanyId = recruiterProfileRepository.findByUserId(recruiterUserId)
-                    .map(RecruiterProfile::getCompanyId)
-                    .orElse(2L); // Default fallback VNG
-        }
-
-        final Long resolvedCompanyId = targetCompanyId;
+        RecruiterProfile recruiter = recruiterProfileRepository.findByUserId(recruiterUserId)
+                .orElseThrow(() -> new BadRequestException("Tài khoản chưa liên kết với công ty nào, không thể đăng tin."));
+        final Long resolvedCompanyId = recruiter.getCompanyId();
         Company company = companyRepository.findById(resolvedCompanyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Company not found with ID: " + resolvedCompanyId));
-
-        Long recruiterProfileId = recruiterProfileRepository.findByUserId(recruiterUserId)
-                .map(RecruiterProfile::getId)
-                .orElseGet(() -> {
-                    RecruiterProfile rp = recruiterProfileRepository.save(RecruiterProfile.builder()
-                            .userId(recruiterUserId)
-                            .companyId(resolvedCompanyId)
-                            .jobTitle("Chuyên viên tuyển dụng")
-                            .isCompanyAdmin(false)
-                            .build());
-                    return rp.getId();
-                });
+        Long recruiterProfileId = recruiter.getId();
 
         String slug = toSlug(request.getTitle()) + "-" + UUID.randomUUID().toString().substring(0, 8);
 
@@ -212,7 +198,7 @@ public class JobServiceImpl implements JobService {
 
         Long recruiterProfileId = recruiterProfileRepository.findByUserId(recruiterUserId)
                 .map(RecruiterProfile::getId)
-                .orElse(recruiterUserId);
+                .orElse(null);
 
         if (!isAdmin && !job.getRecruiterId().equals(recruiterProfileId)) {
             throw new AccessDeniedException("Bạn không có quyền chỉnh sửa tin tuyển dụng này");
@@ -270,7 +256,8 @@ public class JobServiceImpl implements JobService {
                             .orElseGet(() -> skillRepository.save(Skill.builder()
                                     .name(trimmedSkill)
                                     .slug(toSlug(trimmedSkill))
-                                    .category("Tech")
+                                    .category("OTHER")
+                                    .isActive(true)
                                     .build()));
 
                     JobSkill jobSkill = JobSkill.builder()
@@ -298,7 +285,7 @@ public class JobServiceImpl implements JobService {
 
         Long recruiterProfileId = recruiterProfileRepository.findByUserId(recruiterUserId)
                 .map(RecruiterProfile::getId)
-                .orElse(recruiterUserId);
+                .orElse(null);
 
         if (!isAdmin && !job.getRecruiterId().equals(recruiterProfileId)) {
             throw new AccessDeniedException("Bạn không có quyền thay đổi trạng thái tin tuyển dụng này");
@@ -317,7 +304,7 @@ public class JobServiceImpl implements JobService {
 
         Long recruiterProfileId = recruiterProfileRepository.findByUserId(recruiterUserId)
                 .map(RecruiterProfile::getId)
-                .orElse(recruiterUserId);
+                .orElse(null);
 
         if (!isAdmin && !job.getRecruiterId().equals(recruiterProfileId)) {
             throw new AccessDeniedException("Bạn không có quyền xóa tin tuyển dụng này");
@@ -332,8 +319,10 @@ public class JobServiceImpl implements JobService {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Filter active/published jobs
+            // Only open listings: published, not deleted, deadline not passed
             predicates.add(cb.equal(root.get("status"), "PUBLISHED"));
+            predicates.add(cb.isNull(root.get("deletedAt")));
+            predicates.add(cb.or(cb.isNull(root.get("deadline")), cb.greaterThan(root.get("deadline"), LocalDateTime.now())));
 
             // Keyword search in title or description or company name
             if (filter.getKeyword() != null && !filter.getKeyword().trim().isEmpty()) {
@@ -374,31 +363,41 @@ public class JobServiceImpl implements JobService {
         };
     }
 
-    private JobResponseDto mapToDto(Job job) {
-        List<String> skills = new ArrayList<>();
-        try {
-            List<JobSkill> jobSkills = jobSkillRepository.findByJobId(job.getId());
-            if (jobSkills != null) {
-                skills = jobSkills.stream()
-                        .map(js -> js.getSkill().getName())
-                        .toList();
-            }
-        } catch (Exception ignored) {
-        }
+    @Override
+    @Transactional(readOnly = true)
+    public List<JobResponseDto> getMyJobs(Long recruiterUserId) {
+        RecruiterProfile rp = recruiterProfileRepository.findByUserId(recruiterUserId)
+                .orElseThrow(() -> new AccessDeniedException("Tài khoản chưa có hồ sơ nhà tuyển dụng"));
+        return jobRepository.findByRecruiterIdAndDeletedAtIsNullOrderByCreatedAtDesc(rp.getId()).stream()
+                .map(this::mapToDto)
+                .toList();
+    }
 
-        String companyName = job.getCompany() != null ? job.getCompany().getName() : "Enterprise";
-        String companyLogo = job.getCompany() != null ? job.getCompany().getLogoUrl() : "/logos/vinai.svg";
-        String companyCity = job.getCompany() != null ? job.getCompany().getCity() : job.getLocationCity();
+    @Override
+    public JobResponseDto toDto(Job job) {
+        return mapToDto(job);
+    }
+
+    private JobResponseDto mapToDto(Job job) {
+        List<String> skills = jobSkillRepository.findByJobId(job.getId()).stream()
+                .map(js -> js.getSkill().getName())
+                .toList();
+
+        Company company = job.getCompany();
+        LocalDateTime now = LocalDateTime.now();
+        boolean closingSoon = job.getDeadline() != null
+                && job.getDeadline().isAfter(now)
+                && job.getDeadline().isBefore(now.plusDays(7));
 
         return JobResponseDto.builder()
                 .id(job.getId())
                 .uuid(job.getUuid())
                 .title(job.getTitle())
                 .slug(job.getSlug())
-                .companyId(job.getCompany() != null ? job.getCompany().getId() : null)
-                .companyName(companyName)
-                .companyLogo(companyLogo)
-                .companyCity(companyCity)
+                .companyId(company != null ? company.getId() : null)
+                .companyName(company != null ? company.getName() : null)
+                .companyLogo(company != null ? company.getLogoUrl() : null)
+                .companyCity(company != null ? company.getCity() : null)
                 .locationCity(job.getLocationCity())
                 .locationAddress(job.getLocationAddress())
                 .jobType(job.getJobType())
@@ -406,7 +405,7 @@ public class JobServiceImpl implements JobService {
                 .minSalary(job.getMinSalary())
                 .maxSalary(job.getMaxSalary())
                 .currency(job.getCurrency())
-                .salaryFormatted(formatSalary(job.getMinSalary(), job.getMaxSalary(), job.getCurrency(), job.getIsSalaryNegotiable()))
+                .salaryFormatted(SalaryFormatter.format(job.getMinSalary(), job.getMaxSalary(), job.getCurrency(), job.getIsSalaryNegotiable()))
                 .description(job.getDescription())
                 .requirements(job.getRequirements())
                 .benefits(job.getBenefits())
@@ -415,28 +414,10 @@ public class JobServiceImpl implements JobService {
                 .viewsCount(job.getViewsCount())
                 .applicationsCount(job.getApplicationsCount())
                 .skills(skills)
+                .createdAt(job.getCreatedAt())
                 .postedTimeAgo(calculateTimeAgo(job.getCreatedAt()))
-                .aiMatchScore(calculateAiScore(job.getId()))
-                .urgent(job.getViewsCount() > 30 || job.getApplicationsCount() > 10)
-                .bonus(job.getBenefits() != null && job.getBenefits().contains("Thưởng") ? "Thưởng hấp dẫn" : "Thưởng tháng 13")
+                .urgent(closingSoon)
                 .build();
-    }
-
-    private String formatSalary(BigDecimal min, BigDecimal max, String currency, Boolean isNegotiable) {
-        if (Boolean.TRUE.equals(isNegotiable) || (min == null && max == null)) {
-            return "Thỏa thuận";
-        }
-        if (min != null && max != null) {
-            BigDecimal minMil = min.divide(new BigDecimal("1000000"), 0, RoundingMode.HALF_UP);
-            BigDecimal maxMil = max.divide(new BigDecimal("1000000"), 0, RoundingMode.HALF_UP);
-            return minMil + " - " + maxMil + " Triệu VNĐ";
-        }
-        if (min != null) {
-            BigDecimal minMil = min.divide(new BigDecimal("1000000"), 0, RoundingMode.HALF_UP);
-            return "Từ " + minMil + " Triệu VNĐ";
-        }
-        BigDecimal maxMil = max.divide(new BigDecimal("1000000"), 0, RoundingMode.HALF_UP);
-        return "Lên đến " + maxMil + " Triệu VNĐ";
     }
 
     private String calculateTimeAgo(LocalDateTime createdAt) {
@@ -447,11 +428,6 @@ public class JobServiceImpl implements JobService {
         if (hours < 24) return hours + " giờ trước";
         long days = duration.toDays();
         return days + " ngày trước";
-    }
-
-    private Integer calculateAiScore(Long jobId) {
-        int hash = jobId != null ? Math.abs(jobId.hashCode()) % 7 : 0;
-        return 92 + hash;
     }
 
     private String toSlug(String input) {

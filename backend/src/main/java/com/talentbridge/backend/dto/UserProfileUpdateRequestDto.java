@@ -36,4 +36,11 @@ public class UserProfileUpdateRequestDto {
 
     @Schema(description = "Job Title for Recruiter", example = "Talent Acquisition Lead")
     private String jobTitle;
+
+    private String bio;
+    private String linkedinUrl;
+    private String githubUrl;
+    private String portfolioUrl;
+    private java.math.BigDecimal expectedSalaryMin;
+    private java.math.BigDecimal expectedSalaryMax;
 }

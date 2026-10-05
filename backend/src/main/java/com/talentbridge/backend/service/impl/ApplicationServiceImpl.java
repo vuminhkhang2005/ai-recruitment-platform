@@ -1,122 +1,115 @@
 package com.talentbridge.backend.service.impl;
 
+import com.talentbridge.backend.common.SalaryFormatter;
 import com.talentbridge.backend.dto.ApplicationCreateRequestDto;
 import com.talentbridge.backend.dto.ApplicationResponseDto;
 import com.talentbridge.backend.dto.ApplicationStatusUpdateRequestDto;
-import com.talentbridge.backend.dto.QuickApplyRequestDto;
-import com.talentbridge.backend.dto.QuickApplyResponseDto;
-import com.talentbridge.backend.entity.CandidateProfile;
-import com.talentbridge.backend.entity.Job;
-import com.talentbridge.backend.entity.JobApplication;
-import com.talentbridge.backend.entity.User;
+import com.talentbridge.backend.dto.MatchScoreDto;
+import com.talentbridge.backend.entity.*;
 import com.talentbridge.backend.exception.BadRequestException;
 import com.talentbridge.backend.exception.ResourceNotFoundException;
-import com.talentbridge.backend.repository.CandidateProfileRepository;
-import com.talentbridge.backend.repository.JobApplicationRepository;
-import com.talentbridge.backend.repository.JobRepository;
-import com.talentbridge.backend.repository.RecruiterProfileRepository;
-import com.talentbridge.backend.repository.UserRepository;
+import com.talentbridge.backend.repository.*;
 import com.talentbridge.backend.service.ApplicationService;
+import com.talentbridge.backend.service.CandidateService;
+import com.talentbridge.backend.service.MatchingService;
+import com.talentbridge.backend.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ApplicationServiceImpl implements ApplicationService {
 
+    private static final Set<String> STAGES = Set.of("APPLIED", "SCREENING", "INTERVIEW", "OFFERED", "HIRED", "REJECTED");
+    private static final Set<String> WITHDRAWABLE = Set.of("APPLIED", "SCREENING");
+    private static final Map<String, String> STAGE_LABELS = Map.of(
+            "APPLIED", "Đã nộp hồ sơ",
+            "SCREENING", "Đang xem xét hồ sơ",
+            "INTERVIEW", "Mời phỏng vấn",
+            "OFFERED", "Đề nghị nhận việc",
+            "HIRED", "Đã trúng tuyển",
+            "REJECTED", "Chưa phù hợp"
+    );
+
     private final JobRepository jobRepository;
     private final JobApplicationRepository jobApplicationRepository;
     private final CandidateProfileRepository candidateProfileRepository;
+    private final CandidateSkillRepository candidateSkillRepository;
     private final RecruiterProfileRepository recruiterProfileRepository;
     private final UserRepository userRepository;
-
-    @Override
-    @Transactional
-    public QuickApplyResponseDto quickApply(QuickApplyRequestDto request) {
-        Job job = jobRepository.findById(request.getJobId())
-                .orElseThrow(() -> new ResourceNotFoundException("Job not found with ID: " + request.getJobId()));
-
-        Long candidateProfileId = 1L; // Demo candidate profile
-        if (jobApplicationRepository.existsByJobIdAndCandidateProfileId(job.getId(), candidateProfileId)) {
-            throw new BadRequestException("Bạn đã gửi hồ sơ ứng tuyển vào vị trí này rồi. Vui lòng theo dõi trạng thái tại mục Hồ sơ đã ứng tuyển.");
-        }
-
-        String applicationUuid = UUID.randomUUID().toString();
-
-        JobApplication application = JobApplication.builder()
-                .uuid(applicationUuid)
-                .job(job)
-                .candidateProfileId(candidateProfileId)
-                .cvId(1L)
-                .coverLetter(request.getCoverLetter())
-                .currentStage("APPLIED")
-                .matchScore(new BigDecimal("95.00"))
-                .appliedAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
-
-        jobApplicationRepository.save(application);
-
-        job.setApplicationsCount(job.getApplicationsCount() + 1);
-        jobRepository.save(job);
-
-        String companyName = job.getCompany() != null ? job.getCompany().getName() : "Enterprise";
-
-        return QuickApplyResponseDto.builder()
-                .applicationUuid(applicationUuid)
-                .jobTitle(job.getTitle())
-                .companyName(companyName)
-                .message("Ứng tuyển thành công! Nhà tuyển dụng " + companyName + " đã nhận được hồ sơ của bạn.")
-                .appliedAt(application.getAppliedAt())
-                .build();
-    }
+    private final CvRepository cvRepository;
+    private final ApplicationStageHistoryRepository stageHistoryRepository;
+    private final CandidateService candidateService;
+    private final MatchingService matchingService;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
     public ApplicationResponseDto apply(ApplicationCreateRequestDto request, Long candidateUserId) {
-        Job job = jobRepository.findById(request.getJobId())
-                .orElseThrow(() -> new ResourceNotFoundException("Job not found with ID: " + request.getJobId()));
+        Job job = jobRepository.findByIdWithCompany(request.getJobId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tin tuyển dụng #" + request.getJobId()));
 
-        // Resolve candidate profile
-        CandidateProfile candidateProfile = candidateProfileRepository.findByUserId(candidateUserId)
-                .orElseGet(() -> candidateProfileRepository.save(CandidateProfile.builder()
-                        .userId(candidateUserId)
-                        .headline("Ứng viên")
-                        .city("TP. Hồ Chí Minh")
-                        .country("Vietnam")
-                        .isOpenToWork(true)
-                        .visibility("PUBLIC")
-                        .build()));
-
-        if (jobApplicationRepository.existsByJobIdAndCandidateProfileId(job.getId(), candidateProfile.getId())) {
-            throw new BadRequestException("Bạn đã gửi hồ sơ ứng tuyển vào vị trí này rồi.");
+        if (!"PUBLISHED".equals(job.getStatus()) || job.getDeletedAt() != null) {
+            throw new BadRequestException("Tin tuyển dụng này đã ngừng nhận hồ sơ.");
+        }
+        if (job.getDeadline() != null && job.getDeadline().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("Tin tuyển dụng đã hết hạn nộp hồ sơ.");
         }
 
-        String applicationUuid = UUID.randomUUID().toString();
+        CandidateProfile candidateProfile = candidateService.requireProfile(candidateUserId);
 
-        JobApplication application = JobApplication.builder()
-                .uuid(applicationUuid)
+        if (jobApplicationRepository.existsByJobIdAndCandidateProfileId(job.getId(), candidateProfile.getId())) {
+            throw new BadRequestException("Bạn đã ứng tuyển vị trí này rồi.");
+        }
+
+        Cv cv = candidateService.resolveCvForApplication(candidateProfile, request.getCvId());
+        MatchScoreDto match = matchingService.computeForJob(candidateProfile.getId(), job.getId());
+
+        String coverLetter = StringUtils.hasText(request.getCoverLetter()) ? request.getCoverLetter().trim() : null;
+        if (coverLetter != null && coverLetter.length() > 5000) {
+            throw new BadRequestException("Thư giới thiệu tối đa 5000 ký tự.");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        JobApplication saved = jobApplicationRepository.save(JobApplication.builder()
+                .uuid(UUID.randomUUID().toString())
                 .job(job)
                 .candidateProfileId(candidateProfile.getId())
-                .cvId(request.getCvId() != null ? request.getCvId() : 1L)
-                .coverLetter(request.getCoverLetter())
+                .cvId(cv.getId())
+                .coverLetter(coverLetter)
                 .currentStage("APPLIED")
-                .matchScore(new BigDecimal("95.00"))
-                .appliedAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
+                .matchScore(match != null && match.getScore() != null ? BigDecimal.valueOf(match.getScore()) : null)
+                .appliedAt(now)
+                .updatedAt(now)
+                .build());
 
-        JobApplication saved = jobApplicationRepository.save(application);
+        stageHistoryRepository.save(ApplicationStageHistory.builder()
+                .applicationId(saved.getId())
+                .fromStage(null)
+                .toStage("APPLIED")
+                .changedByUserId(candidateUserId)
+                .note("Ứng viên nộp hồ sơ")
+                .build());
 
         job.setApplicationsCount(job.getApplicationsCount() + 1);
         jobRepository.save(job);
+
+        String candidateName = userRepository.findById(candidateUserId).map(User::getFullName).orElse("Ứng viên");
+        recruiterProfileRepository.findById(job.getRecruiterId()).ifPresent(rp ->
+                notificationService.notify(rp.getUserId(), "NEW_APPLICATION",
+                        "Hồ sơ mới cho " + job.getTitle(),
+                        candidateName + " vừa ứng tuyển vị trí " + job.getTitle() + ".",
+                        "APPLICATION", saved.getId()));
 
         return mapToDto(saved);
     }
@@ -124,32 +117,22 @@ public class ApplicationServiceImpl implements ApplicationService {
     @Override
     @Transactional(readOnly = true)
     public List<ApplicationResponseDto> getMyApplications(Long candidateUserId) {
-        CandidateProfile profile = candidateProfileRepository.findByUserId(candidateUserId)
-                .orElse(null);
-
-        if (profile == null) {
-            return List.of();
-        }
-
-        return jobApplicationRepository.findByCandidateProfileId(profile.getId())
-                .stream()
-                .map(this::mapToDto)
-                .toList();
+        return candidateProfileRepository.findByUserId(candidateUserId)
+                .map(profile -> jobApplicationRepository.findByCandidateProfileId(profile.getId()).stream()
+                        .sorted((a, b) -> b.getAppliedAt().compareTo(a.getAppliedAt()))
+                        .map(this::mapToDto)
+                        .toList())
+                .orElse(List.of());
     }
 
     @Override
     @Transactional(readOnly = true)
     public ApplicationResponseDto getApplicationById(Long applicationId, Long userId, boolean isRecruiter, boolean isAdmin) {
-        JobApplication application = jobApplicationRepository.findById(applicationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Application not found with ID: " + applicationId));
+        JobApplication application = findApplication(applicationId);
 
         if (!isAdmin) {
             if (isRecruiter) {
-                Long recruiterProfileId = recruiterProfileRepository.findByUserId(userId)
-                        .map(com.talentbridge.backend.entity.RecruiterProfile::getId).orElse(userId);
-                if (!application.getJob().getRecruiterId().equals(recruiterProfileId)) {
-                    throw new AccessDeniedException("Bạn không có quyền xem đơn ứng tuyển này");
-                }
+                assertOwnsJob(application.getJob(), userId, "Bạn không có quyền xem đơn ứng tuyển này");
             } else {
                 CandidateProfile profile = candidateProfileRepository.findByUserId(userId).orElse(null);
                 if (profile == null || !profile.getId().equals(application.getCandidateProfileId())) {
@@ -157,7 +140,6 @@ public class ApplicationServiceImpl implements ApplicationService {
                 }
             }
         }
-
         return mapToDto(application);
     }
 
@@ -165,16 +147,22 @@ public class ApplicationServiceImpl implements ApplicationService {
     @Transactional(readOnly = true)
     public List<ApplicationResponseDto> getApplicationsForJob(Long jobId, Long recruiterUserId, boolean isAdmin) {
         Job job = jobRepository.findById(jobId)
-                .orElseThrow(() -> new ResourceNotFoundException("Job not found with ID: " + jobId));
-
-        Long recruiterProfileId = recruiterProfileRepository.findByUserId(recruiterUserId)
-                .map(com.talentbridge.backend.entity.RecruiterProfile::getId).orElse(recruiterUserId);
-
-        if (!isAdmin && !job.getRecruiterId().equals(recruiterProfileId)) {
-            throw new AccessDeniedException("Bạn không có quyền quản lý danh sách ứng viên của công việc này");
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tin tuyển dụng #" + jobId));
+        if (!isAdmin) {
+            assertOwnsJob(job, recruiterUserId, "Bạn không có quyền xem ứng viên của tin này");
         }
-
         return jobApplicationRepository.findByJobId(jobId).stream()
+                .sorted((a, b) -> b.getAppliedAt().compareTo(a.getAppliedAt()))
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ApplicationResponseDto> getApplicationsForRecruiter(Long recruiterUserId) {
+        RecruiterProfile rp = recruiterProfileRepository.findByUserId(recruiterUserId)
+                .orElseThrow(() -> new AccessDeniedException("Tài khoản chưa có hồ sơ nhà tuyển dụng"));
+        return jobApplicationRepository.findAllForRecruiter(rp.getId()).stream()
                 .map(this::mapToDto)
                 .toList();
     }
@@ -182,99 +170,148 @@ public class ApplicationServiceImpl implements ApplicationService {
     @Override
     @Transactional
     public ApplicationResponseDto updateApplicationStatus(Long applicationId, ApplicationStatusUpdateRequestDto request, Long recruiterUserId, boolean isAdmin) {
-        JobApplication application = jobApplicationRepository.findById(applicationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Application not found with ID: " + applicationId));
-
-        Long recruiterProfileId = recruiterProfileRepository.findByUserId(recruiterUserId)
-                .map(com.talentbridge.backend.entity.RecruiterProfile::getId).orElse(recruiterUserId);
-
-        if (!isAdmin && !application.getJob().getRecruiterId().equals(recruiterProfileId)) {
-            throw new AccessDeniedException("Bạn không có quyền cập nhật trạng thái đơn ứng tuyển này");
+        JobApplication application = findApplication(applicationId);
+        if (!isAdmin) {
+            assertOwnsJob(application.getJob(), recruiterUserId, "Bạn không có quyền cập nhật đơn ứng tuyển này");
         }
 
-        String stage = request.getCurrentStage().toUpperCase();
+        String stage = request.getCurrentStage() == null ? "" : request.getCurrentStage().trim().toUpperCase();
         if ("REVIEWING".equals(stage)) {
             stage = "SCREENING";
         }
+        if (!STAGES.contains(stage)) {
+            throw new BadRequestException("Trạng thái không hợp lệ: " + request.getCurrentStage());
+        }
+
+        String from = application.getCurrentStage();
+        if (stage.equals(from)) {
+            return mapToDto(application);
+        }
+
         application.setCurrentStage(stage);
-        if (request.getRejectionReason() != null) {
-            application.setRejectionReason(request.getRejectionReason());
+        if ("REJECTED".equals(stage)) {
+            application.setRejectionReason(StringUtils.hasText(request.getRejectionReason()) ? request.getRejectionReason().trim() : null);
+        } else {
+            application.setRejectionReason(null);
         }
         application.setUpdatedAt(LocalDateTime.now());
-
         JobApplication updated = jobApplicationRepository.save(application);
+
+        stageHistoryRepository.save(ApplicationStageHistory.builder()
+                .applicationId(updated.getId())
+                .fromStage(from)
+                .toStage(stage)
+                .changedByUserId(recruiterUserId)
+                .note(updated.getRejectionReason())
+                .build());
+
+        CandidateProfile cp = candidateProfileRepository.findById(updated.getCandidateProfileId()).orElse(null);
+        if (cp != null) {
+            Job job = updated.getJob();
+            String company = job.getCompany() != null ? job.getCompany().getName() : "Nhà tuyển dụng";
+            notificationService.notify(cp.getUserId(), "APPLICATION_STATUS",
+                    job.getTitle() + ": " + STAGE_LABELS.get(stage),
+                    company + " đã cập nhật trạng thái hồ sơ của bạn thành \"" + STAGE_LABELS.get(stage) + "\".",
+                    "APPLICATION", updated.getId());
+        }
+
         return mapToDto(updated);
     }
 
     @Override
     @Transactional
     public void withdrawApplication(Long applicationId, Long candidateUserId, boolean isAdmin) {
-        JobApplication application = jobApplicationRepository.findById(applicationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Application not found with ID: " + applicationId));
+        JobApplication application = findApplication(applicationId);
 
         if (!isAdmin) {
             CandidateProfile profile = candidateProfileRepository.findByUserId(candidateUserId).orElse(null);
             if (profile == null || !profile.getId().equals(application.getCandidateProfileId())) {
-                throw new AccessDeniedException("Bạn không có quyền hủy đơn ứng tuyển này");
+                throw new AccessDeniedException("Bạn không có quyền rút đơn ứng tuyển này");
+            }
+            if (!WITHDRAWABLE.contains(application.getCurrentStage())) {
+                throw new BadRequestException("Không thể rút hồ sơ khi nhà tuyển dụng đã xử lý đến bước \"" + STAGE_LABELS.get(application.getCurrentStage()) + "\".");
             }
         }
 
-        // Decrement job count
         Job job = application.getJob();
         if (job != null && job.getApplicationsCount() > 0) {
             job.setApplicationsCount(job.getApplicationsCount() - 1);
             jobRepository.save(job);
         }
-
         jobApplicationRepository.delete(application);
     }
 
-    private ApplicationResponseDto mapToDto(JobApplication app) {
-        String companyName = app.getJob() != null && app.getJob().getCompany() != null
-                ? app.getJob().getCompany().getName() : "Enterprise";
-        String companyLogo = app.getJob() != null && app.getJob().getCompany() != null
-                ? app.getJob().getCompany().getLogoUrl() : "/logos/vinai.svg";
-        String jobTitle = app.getJob() != null ? app.getJob().getTitle() : "Vị trí tuyển dụng";
+    // ------------------------------------------------------------------ helpers
 
-        String candidateName = "Ứng viên";
-        String candidateEmail = "";
-        String candidatePhone = "";
+    private JobApplication findApplication(Long id) {
+        return jobApplicationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn ứng tuyển #" + id));
+    }
 
-        if (app.getCandidateProfileId() != null) {
-            candidateProfileRepository.findById(app.getCandidateProfileId()).ifPresent(cp -> {
-                userRepository.findById(cp.getUserId()).ifPresent(user -> {
-                    // candidate details
-                });
-            });
-            // Try to find candidate user
-            CandidateProfile cp = candidateProfileRepository.findById(app.getCandidateProfileId()).orElse(null);
-            if (cp != null) {
-                User user = userRepository.findById(cp.getUserId()).orElse(null);
-                if (user != null) {
-                    candidateName = user.getFullName();
-                    candidateEmail = user.getEmail();
-                    candidatePhone = user.getPhone();
-                }
-            }
+    private void assertOwnsJob(Job job, Long recruiterUserId, String message) {
+        Long recruiterProfileId = recruiterProfileRepository.findByUserId(recruiterUserId)
+                .map(RecruiterProfile::getId)
+                .orElseThrow(() -> new AccessDeniedException(message));
+        if (!job.getRecruiterId().equals(recruiterProfileId)) {
+            throw new AccessDeniedException(message);
         }
+    }
 
-        return ApplicationResponseDto.builder()
+    private ApplicationResponseDto mapToDto(JobApplication app) {
+        Job job = app.getJob();
+        Company company = job != null ? job.getCompany() : null;
+
+        ApplicationResponseDto.ApplicationResponseDtoBuilder b = ApplicationResponseDto.builder()
                 .id(app.getId())
                 .uuid(app.getUuid())
-                .jobId(app.getJob() != null ? app.getJob().getId() : null)
-                .jobTitle(jobTitle)
-                .companyName(companyName)
-                .companyLogo(companyLogo)
+                .jobId(job != null ? job.getId() : null)
+                .jobTitle(job != null ? job.getTitle() : null)
+                .jobStatus(job != null ? job.getStatus() : null)
+                .jobLocation(job != null ? job.getLocationCity() : null)
+                .jobDeadline(job != null ? job.getDeadline() : null)
+                .jobSalary(job != null ? SalaryFormatter.format(job.getMinSalary(), job.getMaxSalary(), job.getCurrency(), job.getIsSalaryNegotiable()) : null)
+                .companyName(company != null ? company.getName() : null)
+                .companyLogo(company != null ? company.getLogoUrl() : null)
                 .candidateProfileId(app.getCandidateProfileId())
-                .candidateName(candidateName)
-                .candidateEmail(candidateEmail)
-                .candidatePhone(candidatePhone)
                 .coverLetter(app.getCoverLetter())
                 .currentStage(app.getCurrentStage())
                 .matchScore(app.getMatchScore())
                 .rejectionReason(app.getRejectionReason())
                 .appliedAt(app.getAppliedAt())
-                .updatedAt(app.getUpdatedAt())
-                .build();
+                .updatedAt(app.getUpdatedAt());
+
+        if (app.getCandidateProfileId() != null) {
+            candidateProfileRepository.findById(app.getCandidateProfileId()).ifPresent(cp -> {
+                b.candidateUserId(cp.getUserId())
+                        .candidateHeadline(cp.getHeadline())
+                        .candidateCity(cp.getCity())
+                        .candidateSkills(candidateSkillRepository.findByCandidateProfileId(cp.getId()).stream()
+                                .map(cs -> cs.getSkill().getName())
+                                .toList());
+                userRepository.findById(cp.getUserId()).ifPresent(user -> b
+                        .candidateName(user.getFullName())
+                        .candidateEmail(user.getEmail())
+                        .candidatePhone(user.getPhone()));
+            });
+        }
+
+        if (app.getCvId() != null) {
+            cvRepository.findById(app.getCvId()).ifPresent(cv -> b
+                    .cvId(cv.getId())
+                    .cvTitle(cv.getTitle())
+                    .cvFileName(cv.getFileName())
+                    .cvDownloadable(cv.getFileUrl() != null && cv.getFileUrl().startsWith(CandidateService.LOCAL_PREFIX)));
+        }
+
+        b.history(stageHistoryRepository.findByApplicationIdOrderByCreatedAtAscIdAsc(app.getId()).stream()
+                .map(h -> ApplicationResponseDto.StageHistoryItem.builder()
+                        .fromStage(h.getFromStage())
+                        .toStage(h.getToStage())
+                        .note(h.getNote())
+                        .createdAt(h.getCreatedAt())
+                        .build())
+                .toList());
+
+        return b.build();
     }
 }

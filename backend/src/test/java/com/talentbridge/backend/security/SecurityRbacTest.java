@@ -83,12 +83,18 @@ class SecurityRbacTest {
     }
 
     @Test
-    @WithMockUser(username = "candidate@talentbridge.vn", roles = {"CANDIDATE"})
     @DisplayName("RBAC: CANDIDATE role can access /api/v1/applications/me - 200 OK")
     void testCandidate_CanAccessMyApplications() throws Exception {
         when(applicationService.getMyApplications(any())).thenReturn(List.of());
 
+        com.talentbridge.backend.security.UserPrincipal principal = com.talentbridge.backend.security.UserPrincipal.builder()
+                .id(12L).uuid("u-12").email("candidate@talentbridge.vn").password("x").fullName("Candidate")
+                .authorities(List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_CANDIDATE")))
+                .build();
+
         mockMvc.perform(get("/api/v1/applications/me")
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(
+                                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));

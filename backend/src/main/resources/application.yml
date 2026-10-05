@@ -7,6 +7,11 @@ spring:
   application:
     name: talentbridge-backend
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   datasource:
     url: jdbc:mysql://localhost:3306/ai_recruitment_db?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
     username: root
@@ -64,3 +69,10 @@ app:
       client-id: ${GOOGLE_CLIENT_ID:talentbridge-google-client-id}
     linkedin:
       client-id: ${LINKEDIN_CLIENT_ID:talentbridge-linkedin-client-id}
+  storage:
+    dir: ${APP_STORAGE_DIR:uploads}
+  demo:
+    # Seed data ships with placeholder (non-verifiable) BCrypt hashes. When enabled, those
+    # accounts get a real hash of default-password at startup so demo logins work.
+    reset-placeholder-passwords: ${APP_DEMO_RESET_PASSWORDS:true}
+    default-password: ${APP_DEMO_PASSWORD:Password@123}

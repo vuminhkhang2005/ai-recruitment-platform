@@ -39,4 +39,8 @@ public class RegisterRequestDto {
 
     @Schema(description = "ID công ty liên kết nếu đăng ký vai trò Recruiter", example = "2")
     private Long companyId;
+
+    @Size(max = 200, message = "Tên công ty tối đa 200 ký tự")
+    @Schema(description = "Tên công ty mới (khi nhà tuyển dụng chưa có công ty trên hệ thống)", example = "Công ty TNHH ABC")
+    private String companyName;
 }

@@ -1,14 +1,14 @@
 package com.talentbridge.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.talentbridge.backend.dto.ApplicationCreateRequestDto;
 import com.talentbridge.backend.dto.ApplicationResponseDto;
-import com.talentbridge.backend.dto.QuickApplyRequestDto;
-import com.talentbridge.backend.dto.QuickApplyResponseDto;
 import com.talentbridge.backend.security.CustomAccessDeniedHandler;
 import com.talentbridge.backend.security.JwtAuthenticationEntryPoint;
 import com.talentbridge.backend.security.JwtCookieHelper;
 import com.talentbridge.backend.security.JwtTokenProvider;
 import com.talentbridge.backend.security.UserDetailsServiceImpl;
+import com.talentbridge.backend.security.UserPrincipal;
 import com.talentbridge.backend.service.ApplicationService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,14 +17,20 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @WebMvcTest(ApplicationController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -55,32 +61,42 @@ class ApplicationControllerTest {
     private CustomAccessDeniedHandler customAccessDeniedHandler;
 
     @Test
-    @DisplayName("POST /api/v1/applications/quick-apply - Should return 201 Created")
-    void testQuickApply_Success() throws Exception {
-        QuickApplyRequestDto request = QuickApplyRequestDto.builder()
+    @DisplayName("POST /api/v1/applications - authenticated candidate gets 201 Created")
+    void testApply_Success() throws Exception {
+        ApplicationCreateRequestDto request = ApplicationCreateRequestDto.builder()
                 .jobId(1L)
-                .fullName("Nguyen Van An")
-                .email("an.nguyen@example.com")
-                .phone("0987654321")
                 .coverLetter("Tôi rất muốn làm việc tại VNG.")
                 .build();
 
-        QuickApplyResponseDto response = QuickApplyResponseDto.builder()
-                .applicationUuid("app-uuid-123")
+        ApplicationResponseDto response = ApplicationResponseDto.builder()
+                .id(99L)
+                .jobId(1L)
                 .jobTitle("Senior Fullstack Engineer")
                 .companyName("VNG Corporation")
-                .message("Ứng tuyển thành công! Nhà tuyển dụng VNG Corporation đã nhận được hồ sơ của bạn.")
+                .currentStage("APPLIED")
                 .appliedAt(LocalDateTime.now())
                 .build();
 
-        when(applicationService.quickApply(any(QuickApplyRequestDto.class))).thenReturn(response);
+        when(applicationService.apply(any(ApplicationCreateRequestDto.class), eq(12L))).thenReturn(response);
 
-        mockMvc.perform(post("/api/v1/applications/quick-apply")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.jobTitle").value("Senior Fullstack Engineer"))
-                .andExpect(jsonPath("$.data.companyName").value("VNG Corporation"));
+        UserPrincipal candidate = UserPrincipal.builder()
+                .id(12L).uuid("u-12").email("nguyenvanan.it@gmail.com").password("x").fullName("Nguyen Van An")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_CANDIDATE")))
+                .build();
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(candidate, null, candidate.getAuthorities()));
+        try {
+            mockMvc.perform(post("/api/v1/applications")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.jobTitle").value("Senior Fullstack Engineer"))
+                    .andExpect(jsonPath("$.data.currentStage").value("APPLIED"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
     }
 }
+

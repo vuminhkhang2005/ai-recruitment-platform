@@ -68,3 +68,5 @@ test_*.cjs
 !frontend/test_ai_talent_sourcing.cjs
 !frontend/test_ai_resume_builder.cjs
 !frontend/test_background_check.cjs
+!frontend/test_real_backend_flow.cjs
+backend/uploads/

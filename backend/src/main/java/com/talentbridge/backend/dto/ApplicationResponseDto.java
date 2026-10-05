@@ -52,7 +52,7 @@ public class ApplicationResponseDto {
     @Schema(description = "Current Stage ('APPLIED', 'REVIEWING', 'INTERVIEW', 'OFFERED', 'REJECTED')", example = "APPLIED")
     private String currentStage;
 
-    @Schema(description = "AI Match score percentage", example = "95.00")
+    @Schema(description = "Skill-overlap match score (null when not computable)", example = "75.00")
     private BigDecimal matchScore;
 
     @Schema(description = "Rejection Reason if any")
@@ -63,4 +63,37 @@ public class ApplicationResponseDto {
 
     @Schema(description = "Last update timestamp")
     private LocalDateTime updatedAt;
+
+    // ---- Job context
+    private String jobStatus;
+    private String jobLocation;
+    private String jobSalary;
+    private LocalDateTime jobDeadline;
+
+    // ---- Candidate context (visible to the recruiter who owns the job)
+    private Long candidateUserId;
+    private String candidateHeadline;
+    private String candidateCity;
+    private java.util.List<String> candidateSkills;
+
+    // ---- CV used for this application
+    private Long cvId;
+    private String cvTitle;
+    private String cvFileName;
+    private Boolean cvDownloadable;
+
+    // ---- Timeline
+    private java.util.List<StageHistoryItem> history;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class StageHistoryItem {
+        private String fromStage;
+        private String toStage;
+        private String note;
+        private LocalDateTime createdAt;
+    }
 }
+

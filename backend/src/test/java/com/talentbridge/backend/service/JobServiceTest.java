@@ -95,7 +95,7 @@ class JobServiceTest {
         assertThat(result.getId()).isEqualTo(1L);
         assertThat(result.getTitle()).isEqualTo("Senior Fullstack Engineer (React & Golang)");
         assertThat(result.getCompanyName()).isEqualTo("VNG Corporation");
-        assertThat(result.getSalaryFormatted()).contains("35 - 55 Triệu VNĐ");
+        assertThat(result.getSalaryFormatted()).isEqualTo("35 - 55 triệu");
 
         verify(jobRepository, times(1)).findByIdWithCompany(1L);
         verify(jobRepository, times(1)).save(sampleJob);
@@ -138,7 +138,7 @@ class JobServiceTest {
     @Test
     @DisplayName("Should return top 6 featured jobs for homepage showcase")
     void testGetFeaturedJobs_Success() {
-        when(jobRepository.findTop6ByStatusOrderByCreatedAtDesc("PUBLISHED")).thenReturn(List.of(sampleJob));
+        when(jobRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(sampleJob)));
 
         List<JobResponseDto> featured = jobService.getFeaturedJobs();
 

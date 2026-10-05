@@ -52,12 +52,21 @@ public class UserProfileResponseDto {
     @Schema(description = "Is open to work", example = "true")
     private Boolean isOpenToWork;
 
+    private String bio;
+    private String linkedinUrl;
+    private String githubUrl;
+    private String portfolioUrl;
+    private java.math.BigDecimal expectedSalaryMin;
+    private java.math.BigDecimal expectedSalaryMax;
+
     // Recruiter Profile details
     @Schema(description = "Company ID", example = "2")
     private Long companyId;
 
     @Schema(description = "Company Name", example = "VNG Corporation")
     private String companyName;
+
+    private String companyLogo;
 
     @Schema(description = "Job Title / Designation", example = "Talent Acquisition Lead")
     private String jobTitle;

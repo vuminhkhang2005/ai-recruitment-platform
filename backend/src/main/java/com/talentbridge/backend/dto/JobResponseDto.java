@@ -92,12 +92,9 @@ public class JobResponseDto {
     @Schema(description = "Relative posted time string", example = "2 giờ trước")
     private String postedTimeAgo;
 
-    @Schema(description = "Simulated or computed AI match percentage", example = "96")
-    private Integer aiMatchScore;
+    @Schema(description = "Creation timestamp")
+    private java.time.LocalDateTime createdAt;
 
-    @Schema(description = "Whether the position is marked as urgent", example = "true")
+    @Schema(description = "True when the application deadline is within 7 days", example = "true")
     private Boolean urgent;
-
-    @Schema(description = "Bonus description", example = "Thưởng tháng 13-15")
-    private String bonus;
 }

@@ -95,10 +95,18 @@ public class JobController {
     }
 
     @GetMapping("/featured")
-    @Operation(summary = "Get Featured Recommended Jobs", description = "Get top 6 curated high-match jobs for homepage showcase.")
+    @Operation(summary = "Get Featured Jobs", description = "Latest 6 open jobs for the homepage.")
     public ResponseEntity<ApiResponse<List<JobResponseDto>>> getFeaturedJobs() {
         List<JobResponseDto> featured = jobService.getFeaturedJobs();
         return ResponseEntity.ok(ApiResponse.ok(featured));
+    }
+
+    @GetMapping("/mine")
+    @PreAuthorize("hasRole('RECRUITER')")
+    @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
+    @Operation(summary = "My Job Postings (Recruiter)", description = "All non-deleted jobs owned by the logged-in recruiter, any status.")
+    public ResponseEntity<ApiResponse<List<JobResponseDto>>> getMyJobs(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+        return ResponseEntity.ok(ApiResponse.ok(jobService.getMyJobs(userPrincipal.getId())));
     }
 
     @PostMapping
@@ -110,7 +118,7 @@ public class JobController {
             @Valid @RequestBody JobCreateRequestDto request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
+        Long userId = userPrincipal.getId();
         JobResponseDto created = jobService.createJob(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Đăng tin tuyển dụng thành công", created));
@@ -126,7 +134,7 @@ public class JobController {
             @Valid @RequestBody JobUpdateRequestDto request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
+        Long userId = userPrincipal.getId();
         boolean isAdmin = userPrincipal != null && userPrincipal.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         JobResponseDto updated = jobService.updateJob(id, request, userId, isAdmin);
@@ -143,7 +151,7 @@ public class JobController {
             @Valid @RequestBody JobStatusUpdateRequestDto request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
+        Long userId = userPrincipal.getId();
         boolean isAdmin = userPrincipal != null && userPrincipal.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         JobResponseDto updated = jobService.updateJobStatus(id, request.getStatus(), userId, isAdmin);
@@ -159,7 +167,7 @@ public class JobController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
+        Long userId = userPrincipal.getId();
         boolean isAdmin = userPrincipal != null && userPrincipal.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         jobService.deleteJob(id, userId, isAdmin);
