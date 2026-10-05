@@ -40,7 +40,10 @@ __pycache__/
 .agents/
 test_*.png
 frontend/screenshots/
+frontend/shots/
 test_*.cjs
 !frontend/test_e2e_user_journey.cjs
 !frontend/test_deep_interactive.cjs
 !frontend/test_deep_real_user_experience.cjs
+!frontend/test_deep_round3.cjs
+!frontend/test_comprehensive_journey.cjs
