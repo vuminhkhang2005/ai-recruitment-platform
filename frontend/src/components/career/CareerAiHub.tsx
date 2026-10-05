@@ -12,7 +12,8 @@ import {
   Target,
   Calculator,
   Scale,
-  Code2
+  Code2,
+  FileText
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { AiCvScannerDemo } from '../home/AiCvScannerDemo';
@@ -20,9 +21,10 @@ import { CareerRoadmapPreview } from '../home/CareerRoadmapPreview';
 import { SalaryCalculatorSection } from './SalaryCalculatorSection';
 import { OfferNegotiationStudio } from './OfferNegotiationStudio';
 import { TechAssessmentSandbox } from './TechAssessmentSandbox';
+import { AiResumeBuilderSection } from './AiResumeBuilderSection';
 
 interface CareerAiHubProps {
-  initialTab?: 'scanner' | 'roadmap' | 'salary' | 'negotiation' | 'coding';
+  initialTab?: 'scanner' | 'roadmap' | 'salary' | 'negotiation' | 'coding' | 'builder';
   onBackToHome: () => void;
   onFindMatchingJobs?: () => void;
 }
@@ -34,7 +36,7 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
 }) => {
   const { language } = useLanguage();
   const isVi = language === 'vi';
-  const [activeTab, setActiveTab] = useState<'scanner' | 'roadmap' | 'salary' | 'negotiation' | 'coding'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'scanner' | 'roadmap' | 'salary' | 'negotiation' | 'coding' | 'builder'>(initialTab);
 
   useEffect(() => {
     if (initialTab) {
@@ -74,7 +76,9 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
                   ? (isVi ? 'Định Giá Lương Tech' : 'Tech Salary Estimator')
                   : activeTab === 'negotiation'
                   ? (isVi ? 'Đàm Phán Lương & Offer' : 'Offer & Negotiation')
-                  : (isVi ? 'Thử Thách Code & Thuật Toán' : 'AI Coding Sandbox')}
+                  : activeTab === 'coding'
+                  ? (isVi ? 'Thử Thách Code & Thuật Toán' : 'AI Coding Sandbox')
+                  : (isVi ? 'Trình Tạo CV Chuẩn ATS' : 'AI ATS Resume Studio')}
               </span>
             </div>
           </div>
@@ -136,7 +140,7 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
 
         {/* Unified Segmented Tab Controller */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-1.5 border border-slate-200/90 dark:border-slate-800 shadow-soft-sm">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2">
             
             {/* Tab 1: AI CV Scanner */}
             <button
@@ -303,6 +307,39 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
               </div>
             </button>
 
+            {/* Tab 6: AI ATS Resume Builder Studio */}
+            <button
+              type="button"
+              data-testid="tab-resume-builder"
+              onClick={() => setActiveTab('builder')}
+              className={`p-4 rounded-xl flex items-center gap-3.5 transition-all text-left cursor-pointer ${
+                activeTab === 'builder'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700/70 text-slate-900 dark:text-white shadow-soft-xs'
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-transparent text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform ${
+                activeTab === 'builder'
+                  ? 'bg-emerald-600 text-white shadow-soft-xs scale-105'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+              }`}>
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-black tracking-tight">
+                    {isVi ? 'Trình Tạo CV Chuẩn ATS' : 'ATS Resume Studio'}
+                  </span>
+                  {activeTab === 'builder' && (
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
+                  {isVi ? 'Chèn từ khóa JD, xuất PDF xịn' : 'Live JD keyword injection & clean PDF'}
+                </p>
+              </div>
+            </button>
+
           </div>
         </div>
 
@@ -324,9 +361,13 @@ export const CareerAiHub: React.FC<CareerAiHubProps> = ({
             <div className="animate-fade-in">
               <OfferNegotiationStudio onFindMatchingJobs={onFindMatchingJobs} />
             </div>
-          ) : (
+          ) : activeTab === 'coding' ? (
             <div className="animate-fade-in">
               <TechAssessmentSandbox />
+            </div>
+          ) : (
+            <div className="animate-fade-in">
+              <AiResumeBuilderSection onFindMatchingJobs={onFindMatchingJobs} />
             </div>
           )}
         </div>

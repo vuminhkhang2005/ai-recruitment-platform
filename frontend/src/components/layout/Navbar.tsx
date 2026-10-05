@@ -27,13 +27,13 @@ import { useAuth } from '../../context/AuthContext';
 
 interface NavbarProps {
   currentView?: 'home' | 'jobs' | 'profile' | 'career-ai' | 'ats-pipeline';
-  careerAiTab?: 'scanner' | 'roadmap' | 'salary' | 'negotiation' | 'coding';
-  onNavigate?: (view: 'home' | 'jobs' | 'profile' | 'career-ai' | 'ats-pipeline', tab?: 'scanner' | 'roadmap' | 'salary' | 'negotiation' | 'coding') => void;
+  careerAiTab?: 'scanner' | 'roadmap' | 'salary' | 'negotiation' | 'coding' | 'builder';
+  onNavigate?: (view: 'home' | 'jobs' | 'profile' | 'career-ai' | 'ats-pipeline', tab?: 'scanner' | 'roadmap' | 'salary' | 'negotiation' | 'coding' | 'builder') => void;
   currentRole?: 'candidate' | 'recruiter';
   onRoleChange?: (role: 'candidate' | 'recruiter') => void;
   onOpenAuthModal?: () => void;
   onOpenCvScanner?: () => void;
-  onOpenCareerAi?: (tab: 'scanner' | 'roadmap' | 'salary' | 'negotiation' | 'coding') => void;
+  onOpenCareerAi?: (tab: 'scanner' | 'roadmap' | 'salary' | 'negotiation' | 'coding' | 'builder') => void;
   onOpenPostJobModal?: () => void;
   onThemeToggled?: (newTheme: 'light' | 'dark') => void;
   onOpenProfileModal?: () => void;

@@ -52,6 +52,7 @@ import { MOCK_JOBS, type Job } from '../../data/mockData';
 import { AiJobRadarSection } from './AiJobRadarSection';
 import { SkillAssessmentSection } from './SkillAssessmentSection';
 import { AiVoiceInterviewModal } from '../interview/AiVoiceInterviewModal';
+import { AiResumeBuilderModal } from '../career/AiResumeBuilderModal';
 
 export interface InterviewQuestion {
   id: string;
@@ -227,6 +228,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
   const [isEvaluatingAnswer, setIsEvaluatingAnswer] = useState<boolean>(false);
   const [evaluationResult, setEvaluationResult] = useState<InterviewEvaluation | null>(null);
   const [isVoiceInterviewActive, setIsVoiceInterviewActive] = useState<boolean>(false);
+  const [isResumeBuilderOpen, setIsResumeBuilderOpen] = useState<boolean>(false);
 
   const handleOpenInterviewPrep = (app: { id: string; jobTitle: string; company: string }) => {
     const qList = generateMockQuestionsForRole(app.jobTitle, app.company, isVi);
@@ -509,6 +511,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
               >
                 <Download className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{isVi ? 'Tải CV PDF' : 'Download CV'}</span>
+              </button>
+              <button
+                type="button"
+                data-testid="btn-open-resume-builder-from-profile"
+                onClick={() => setIsResumeBuilderOpen(true)}
+                className="px-3 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 font-bold text-xs shadow-soft transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                title={isVi ? 'Soạn CV Chuẩn ATS với AI' : 'Build ATS Resume with AI'}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
+                <span className="hidden sm:inline">{isVi ? 'Soạn CV ATS với AI' : 'ATS Resume Studio'}</span>
               </button>
             </div>
           </div>
@@ -2074,6 +2086,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBackToHome, onReques
         onClose={() => setIsVoiceInterviewActive(false)}
         jobTitle={interviewPrepApp?.jobTitle}
         company={interviewPrepApp?.company}
+      />
+
+      {/* AI ATS Resume Builder Studio Modal */}
+      <AiResumeBuilderModal
+        isOpen={isResumeBuilderOpen}
+        onClose={() => setIsResumeBuilderOpen(false)}
+        onShowToast={showToast}
       />
 
     </div>
