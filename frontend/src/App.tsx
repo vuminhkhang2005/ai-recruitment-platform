@@ -16,6 +16,7 @@ import { JobsPage } from './components/jobs/JobsPage';
 import { SavedJobsModal } from './components/profile/SavedJobsModal';
 import { AppliedJobsModal } from './components/profile/AppliedJobsModal';
 import { PostJobModal } from './components/home/PostJobModal';
+import { SmartQuickApplyModal } from './components/jobs/SmartQuickApplyModal';
 import { EmployerSection } from './components/home/EmployerSection';
 import { MOCK_JOBS, type Job } from './data/mockData';
 import { CheckCircle2, Sparkles, X, Database } from 'lucide-react';
@@ -152,6 +153,7 @@ export function App() {
   const [isSavedJobsModalOpen, setIsSavedJobsModalOpen] = useState<boolean>(false);
   const [isAppliedJobsModalOpen, setIsAppliedJobsModalOpen] = useState<boolean>(false);
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState<boolean>(false);
+  const [quickApplyJob, setQuickApplyJob] = useState<Job | null>(null);
   const [searchFilter, setSearchFilter] = useState<{ keyword: string; location: string; category: string }>({
     keyword: '',
     location: 'All',
@@ -292,22 +294,8 @@ export function App() {
     );
   };
 
-  const handleQuickApply = async (job: Job) => {
-    const success = await applyJob({ id: job.id, title: job.title, company: job.company });
-
-    if (success) {
-      showToast(
-        language === 'vi'
-          ? `🎉 Ứng tuyển thành công vào vị trí ${job.title} tại ${job.company}!`
-          : `🎉 Quick application submitted for ${job.title} at ${job.company}!`
-      );
-    } else {
-      showToast(
-        language === 'vi'
-          ? `ℹ️ Bạn đã nộp hồ sơ ứng tuyển vị trí này rồi.`
-          : `ℹ️ You have already applied for this position.`
-      );
-    }
+  const handleQuickApply = (job: Job) => {
+    setQuickApplyJob(job);
   };
 
   return (
@@ -514,6 +502,19 @@ export function App() {
         isOpen={isPostJobModalOpen}
         onClose={() => setIsPostJobModalOpen(false)}
         onJobCreated={handleJobCreated}
+      />
+
+      <SmartQuickApplyModal
+        job={quickApplyJob}
+        isOpen={!!quickApplyJob}
+        onClose={() => setQuickApplyJob(null)}
+        onSuccess={(job) => {
+          showToast(
+            language === 'vi'
+              ? `🎉 Nộp hồ sơ thành công vào vị trí ${job.title} tại ${job.company}!`
+              : `🎉 Successfully applied for ${job.title} at ${job.company}!`
+          );
+        }}
       />
 
     </div>

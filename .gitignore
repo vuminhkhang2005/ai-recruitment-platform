@@ -56,3 +56,4 @@ test_*.cjs
 !frontend/test_salary_estimator.cjs
 !frontend/test_cover_letter_studio.cjs
 !frontend/test_ai_job_radar.cjs
+!frontend/test_smart_quick_apply.cjs

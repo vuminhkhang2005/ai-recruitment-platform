@@ -267,6 +267,7 @@ export const FeaturedJobs: React.FC<FeaturedJobsProps> = ({
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
+                      data-testid={`featured-quick-apply-${job.id}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         onQuickApply(job);
