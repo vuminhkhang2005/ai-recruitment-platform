@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   X, 
   FileCheck2, 
@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { CompanyLogo } from '../ui/CompanyLogo';
+import { InterviewSchedulerModal, type InterviewScheduleData } from '../interview/InterviewSchedulerModal';
 
 interface AppliedJobsModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export const AppliedJobsModal: React.FC<AppliedJobsModalProps> = ({
   const { appliedJobs, refreshApplications } = useAuth();
   const { language } = useLanguage();
   const isVi = language === 'vi';
+  const [schedulingData, setSchedulingData] = useState<InterviewScheduleData | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -149,15 +151,27 @@ export const AppliedJobsModal: React.FC<AppliedJobsModalProps> = ({
                 </div>
 
                 {/* Progress bar / Timeline */}
-                <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
                   <div className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-slate-400" />
                     <span>{isVi ? `Nộp ngày: ${app.appliedAt}` : `Applied on: ${app.appliedAt}`}</span>
                   </div>
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" />
-                    {isVi ? 'Đã gửi tới Nhà tuyển dụng' : 'Delivered to Hiring Team'}
-                  </span>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      data-testid={`btn-sync-calendar-${app.id}`}
+                      onClick={() => setSchedulingData({ jobTitle: app.jobTitle, company: app.company })}
+                      className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/60 flex items-center gap-1 cursor-pointer transition-all"
+                    >
+                      <Calendar className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                      <span>{isVi ? 'Đồng bộ Lịch' : 'Sync Calendar'}</span>
+                    </button>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      {isVi ? 'Đã gửi tới Nhà tuyển dụng' : 'Delivered to Hiring Team'}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))
@@ -175,6 +189,12 @@ export const AppliedJobsModal: React.FC<AppliedJobsModalProps> = ({
           </button>
         </div>
       </div>
+
+      <InterviewSchedulerModal
+        isOpen={!!schedulingData}
+        onClose={() => setSchedulingData(null)}
+        data={schedulingData}
+      />
     </div>
   );
 };
