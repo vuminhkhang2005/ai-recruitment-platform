@@ -27,6 +27,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // 1. Activate loading state & set target
     setIsLanguageLoading(true);
     setTargetLang(lang);
+    setLanguageState(lang);
 
     // 2. Immediately scroll to top of page as requested: "(nhảy về đầu trang)"
     if ('scrollRestoration' in history) {

@@ -49,3 +49,4 @@ backend/uploads/
 !frontend/test_phase_d_employer.cjs
 !frontend/test_phase_e_full_flow.cjs
 !frontend/test_progress_tracker.cjs
+!frontend/test_language_switch.cjs
