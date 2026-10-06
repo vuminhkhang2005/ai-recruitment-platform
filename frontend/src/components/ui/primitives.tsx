@@ -2,20 +2,30 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 
-/** Official brand marks shipped in /public/logos, used when the API has no logo URL for a company. */
-const BRAND_LOGOS: { match: string[]; src: string; bg?: string; pad?: string }[] = [
+/** Official brand marks shipped in /public/logos. They take precedence over the API logo URL. */
+const BRAND_LOGOS: { match: string[]; src: string; pad?: string }[] = [
   { match: ['vng'], src: '/logos/vng.svg' },
   { match: ['fpt'], src: '/logos/fpt.svg' },
   { match: ['vinai', 'vingroup', 'vinfast'], src: '/logos/vinai.svg' },
   { match: ['viettel'], src: '/logos/viettel.svg' },
-  { match: ['momo'], src: '/logos/momo.png', bg: 'bg-[#A50064]', pad: 'p-0' },
+  { match: ['momo'], src: '/logos/momo.svg', pad: 'p-1' },
   { match: ['shopee'], src: '/logos/shopee.svg' },
   { match: ['techcombank', 'tcb'], src: '/logos/techcombank-icon.png' },
   { match: ['grab'], src: '/logos/grab.svg' },
-  { match: ['onemount', 'one mount', 'vinid'], src: '/logos/onemount.svg', bg: 'bg-[#0A0F1D]', pad: 'p-0' },
+  { match: ['onemount', 'one mount', 'vinid'], src: '/logos/onemount.svg', pad: 'p-1' },
 ];
 
-/** Company logo in the original TalentBridge style, with a dark initials tile as fallback. */
+/** Soft tints for companies that have no logo yet (picked deterministically from the name). */
+const INITIAL_TINTS = [
+  'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60',
+  'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800/60',
+  'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/60 dark:text-violet-300 dark:border-violet-800/60',
+  'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/60',
+  'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/60',
+  'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-800/60',
+];
+
+/** Company logo in the original TalentBridge style, with a tinted initials tile as fallback. */
 export const CompanyAvatar: React.FC<{ name: string; logoUrl?: string | null; size?: 'sm' | 'md' | 'lg' | 'xl' }> = ({
   name,
   logoUrl,
@@ -25,13 +35,12 @@ export const CompanyAvatar: React.FC<{ name: string; logoUrl?: string | null; si
   const box = { sm: 'w-10 h-10 text-xs', md: 'w-14 h-14 text-sm', lg: 'w-20 h-20 text-lg', xl: 'w-28 h-28 text-2xl' }[size];
   const lower = name.toLowerCase();
   const brand = BRAND_LOGOS.find((b) => b.match.some((m) => lower.includes(m)));
-  const src = logoUrl && !broken ? logoUrl : brand?.src;
+  const src = brand?.src ?? (logoUrl && !broken ? logoUrl : undefined);
   if (src && !(broken && !brand)) {
-    const bg = brand?.bg ?? 'bg-[#fff]';
     const pad = brand?.pad ?? 'p-1.5';
     return (
       <div
-        className={`${box} ${bg} ${pad} shrink-0 rounded-2xl border border-slate-200/90 dark:border-slate-700/80 shadow-soft-xs flex items-center justify-center overflow-hidden select-none`}
+        className={`${box} bg-[#fff] ${pad} shrink-0 rounded-2xl border border-slate-200/90 dark:border-slate-700/80 shadow-soft-xs flex items-center justify-center overflow-hidden select-none`}
       >
         <img
           src={src}
@@ -51,10 +60,9 @@ export const CompanyAvatar: React.FC<{ name: string; logoUrl?: string | null; si
     .join('')
     .slice(0, 2)
     .toUpperCase();
+  const tint = INITIAL_TINTS[[...name].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7) % INITIAL_TINTS.length];
   return (
-    <div
-      className={`${box} shrink-0 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 text-white font-black border border-slate-700 shadow-soft-xs flex items-center justify-center`}
-    >
+    <div className={`${box} ${tint} shrink-0 rounded-2xl font-black border shadow-soft-xs flex items-center justify-center select-none`}>
       {initials}
     </div>
   );

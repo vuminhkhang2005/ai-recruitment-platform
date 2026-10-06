@@ -7,7 +7,7 @@ import { CompanyAvatar, EmptyState, ErrorBox, PageLoader, inputCls } from '../co
 import { usePageTitle } from '../lib/usePageTitle';
 
 export const CompaniesPage: React.FC = () => {
-  usePageTitle('Công ty IT');
+  usePageTitle('Danh sách công ty');
   const [companies, setCompanies] = useState<Company[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -29,7 +29,7 @@ export const CompaniesPage: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">Công ty IT</h1>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">Doanh nghiệp nổi bật</h1>
           <p className="text-sm text-slate-500 mt-1">{companies ? `${companies.length} công ty` : ''}</p>
         </div>
         <div className="relative sm:w-80">

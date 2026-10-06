@@ -22,7 +22,7 @@ export const EmployersPage: React.FC = () => {
               Dành cho nhà tuyển dụng
             </span>
             <h1 className="mt-4 text-3xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">
-              Tuyển dụng nhân sự IT trên{' '}
+              Tuyển dụng nhân sự chất lượng cao trên{' '}
               <span className="bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 bg-clip-text text-transparent">TalentBridge</span>
             </h1>
             <p className="mt-4 text-slate-600 dark:text-slate-300 text-base sm:text-lg">

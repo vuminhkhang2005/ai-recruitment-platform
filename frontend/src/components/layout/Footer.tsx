@@ -28,7 +28,7 @@ export const Footer: React.FC = () => (
       <div className="lg:col-span-2">
         <Logo />
         <p className="mt-4 text-sm max-w-sm leading-relaxed">
-          Nền tảng tuyển dụng việc làm IT tại Việt Nam. Đồ án môn học — dữ liệu công ty và tin tuyển dụng là dữ liệu mẫu.
+          Nền tảng tuyển dụng việc làm tại Việt Nam. Đồ án môn học — dữ liệu công ty và tin tuyển dụng là dữ liệu mẫu.
         </p>
       </div>
       {COLUMNS.map((c) => (
@@ -48,7 +48,7 @@ export const Footer: React.FC = () => (
     </div>
     <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-12 pt-6 border-t border-slate-200 dark:border-slate-800 text-xs flex flex-col sm:flex-row gap-2 justify-between">
       <span>© {new Date().getFullYear()} TalentBridge. All rights reserved.</span>
-      <span className="font-semibold text-emerald-600 dark:text-emerald-400">Kết nối nhân tài IT Việt Nam</span>
+      <span className="font-semibold text-emerald-600 dark:text-emerald-400">Kết nối nhân tài và doanh nghiệp Việt Nam</span>
     </div>
   </footer>
 );

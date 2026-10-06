@@ -24,7 +24,7 @@ const check = (cond, msg) => {
   await page.goto(BASE + '/');
   await page.waitForSelector('[data-testid="job-card"]');
   const jobCount = await page.textContent('[data-testid="home-job-count"]');
-  check(/^\d+ việc làm IT đang tuyển$/.test(jobCount.trim()), `home hero shows real job count: "${jobCount.trim()}"`);
+  check(/^\d+ việc làm( IT)? đang tuyển$/.test(jobCount.trim()), `home hero shows real job count: "${jobCount.trim()}"`);
   const body = await page.textContent('body');
   check(!/Backend API/i.test(body), 'no backend debug pill');
   check(!/\bAI\b/.test(await page.textContent('main > section:first-child')), 'no "AI" wording in home hero');

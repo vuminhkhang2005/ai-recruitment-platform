@@ -37,7 +37,7 @@ export const JobsPage: React.FC = () => {
   const sort = (params.get('sort') ?? 'newest') as 'newest' | 'salary' | 'views';
   const page = Math.max(0, Number(params.get('page') ?? '1') - 1);
 
-  usePageTitle(q ? `Việc làm ${q}` : 'Việc làm IT');
+  usePageTitle(q ? `Việc làm ${q}` : 'Tìm việc làm');
 
   const [result, setResult] = useState<Page<Job> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,7 +85,7 @@ export const JobsPage: React.FC = () => {
         <div className="absolute inset-0 hero-grid-pattern pointer-events-none [mask-image:linear-gradient(to_bottom,black,transparent)]" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
           <span className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Tìm việc</span>
-          <p className="mt-1 mb-5 text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">Việc làm IT dành cho bạn</p>
+          <p className="mt-1 mb-5 text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">Cơ hội việc làm dành cho bạn</p>
           <SearchBar keyword={q} city={city} onSearch={(k, c) => update({ q: k, city: c })} />
         </div>
       </section>

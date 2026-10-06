@@ -460,7 +460,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"MoMo - M_Service\",\n  \"logoUrl\": \"/logos/momo.svg\",\n  \"website\": \"https://momo.vn\",\n  \"industry\": \"Fintech & Payments\",\n  \"companySize\": \"1000-2000 nhân viên\",\n  \"taxCode\": \"0309998888\",\n  \"city\": \"TP. Hồ Chí Minh\"\n}"
+              "raw": "{\n  \"name\": \"MoMo\",\n  \"logoUrl\": \"/logos/momo.svg\",\n  \"website\": \"https://momo.vn\",\n  \"industry\": \"Fintech & Payments\",\n  \"companySize\": \"1000-2000 nhân viên\",\n  \"taxCode\": \"0309998888\",\n  \"city\": \"TP. Hồ Chí Minh\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/companies",
