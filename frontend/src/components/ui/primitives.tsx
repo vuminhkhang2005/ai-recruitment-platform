@@ -13,6 +13,11 @@ const BRAND_LOGOS: { match: string[]; src: string; pad?: string }[] = [
   { match: ['techcombank', 'tcb'], src: '/logos/techcombank-icon.png' },
   { match: ['grab'], src: '/logos/grab.svg' },
   { match: ['onemount', 'one mount', 'vinid'], src: '/logos/onemount.svg', pad: 'p-1' },
+  { match: ['tiki'], src: '/logos/tiki.png', pad: 'p-1' },
+  { match: ['nab', 'national australia bank'], src: '/logos/nab.svg', pad: 'p-1' },
+  { match: ['kms'], src: '/logos/kms.png', pad: 'p-1' },
+  { match: ['nashtech', 'nash tech', 'harvey nash'], src: '/logos/nashtech.png', pad: 'p-1' },
+  { match: ['axon'], src: '/logos/axon.svg', pad: 'p-1' },
 ];
 
 /** Soft tints for companies that have no logo yet (picked deterministically from the name). */
