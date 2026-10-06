@@ -23,8 +23,8 @@ const check = (cond, msg) => {
   // 1. Home
   await page.goto(BASE + '/');
   await page.waitForSelector('[data-testid="job-card"]');
-  const h1 = await page.textContent('h1');
-  check(/^\d+ việc làm IT đang tuyển$/.test(h1.trim()), `home h1 shows real count: "${h1.trim()}"`);
+  const jobCount = await page.textContent('[data-testid="home-job-count"]');
+  check(/^\d+ việc làm IT đang tuyển$/.test(jobCount.trim()), `home hero shows real job count: "${jobCount.trim()}"`);
   const body = await page.textContent('body');
   check(!/Backend API/i.test(body), 'no backend debug pill');
   check(!/\bAI\b/.test(await page.textContent('main > section:first-child')), 'no "AI" wording in home hero');
@@ -73,8 +73,8 @@ const check = (cond, msg) => {
   await page.fill('#email', 'nguyenvanan.it@gmail.com');
   await page.fill('#password', 'wrong-password');
   await page.click('button[type="submit"]');
-  await page.waitForSelector('.bg-red-50');
-  check(true, `wrong password error: "${(await page.textContent('.bg-red-50')).trim()}"`);
+  await page.waitForSelector('[role="alert"]');
+  check(true, `wrong password error: "${(await page.textContent('[role="alert"]')).trim()}"`);
 
   // 7. Real login -> back to job
   await page.fill('#password', 'Password@123');

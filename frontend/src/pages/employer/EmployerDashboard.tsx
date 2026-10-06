@@ -9,24 +9,24 @@ import { EmptyState, ErrorBox, PageLoader, btnPrimary } from '../../components/u
 import { usePageTitle } from '../../lib/usePageTitle';
 
 const STATUS_STYLE: Record<string, string> = {
-  PUBLISHED: 'bg-green-50 text-green-700',
-  PAUSED: 'bg-amber-50 text-amber-700',
-  CLOSED: 'bg-slate-100 text-slate-600',
+  PUBLISHED: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300',
+  PAUSED: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
+  CLOSED: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
 };
 
 const Stat: React.FC<{ label: string; value: number; to?: string }> = ({ label: text, value, to }) => {
   const body = (
     <>
-      <p className="text-2xl font-bold text-slate-900">{value}</p>
-      <p className="text-sm text-slate-500">{text}</p>
+      <p className="text-2xl font-black text-slate-900 dark:text-white">{value}</p>
+      <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">{text}</p>
     </>
   );
   return to ? (
-    <Link to={to} className="bg-white border border-slate-200 rounded-lg p-4 hover:border-red-300">
+    <Link to={to} className="bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-soft-xs hover:border-emerald-400 transition-colors">
       {body}
     </Link>
   ) : (
-    <div className="bg-white border border-slate-200 rounded-lg p-4">{body}</div>
+    <div className="bg-gradient-to-br from-emerald-600 to-teal-600 rounded-2xl p-5 shadow-soft text-white [&_p]:!text-white">{body}</div>
   );
 };
 
@@ -105,14 +105,14 @@ export const EmployerDashboard: React.FC = () => {
   const interviewing = apps.filter((a) => a.currentStage === 'INTERVIEW').length;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Tin tuyển dụng</h1>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">Tin tuyển dụng</h1>
           {me?.companyName && (
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
               {me.companyName} ·{' '}
-              <Link to={`/companies/${me.companyId}`} className="text-red-600 hover:underline">
+              <Link to={`/companies/${me.companyId}`} className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
                 Xem trang công ty
               </Link>
             </p>
@@ -123,7 +123,7 @@ export const EmployerDashboard: React.FC = () => {
         </Link>
       </div>
 
-      <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat label="Tin đang tuyển" value={open} />
         <Stat label="Tổng hồ sơ" value={apps.length} to="/employer/applicants" />
         <Stat label="Hồ sơ mới chưa xem" value={fresh} to="/employer/applicants?stage=APPLIED" />
@@ -141,19 +141,19 @@ export const EmployerDashboard: React.FC = () => {
             }
           />
         ) : (
-          <div className="bg-white border border-slate-200 rounded-lg overflow-x-auto">
+          <div className="bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-3xl overflow-x-auto shadow-soft-xs">
             <table className="w-full text-sm" data-testid="my-jobs">
-              <thead className="bg-slate-50 text-slate-500 text-left">
+              <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-left text-xs uppercase tracking-wider">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Vị trí</th>
-                  <th className="px-4 py-3 font-medium">Trạng thái</th>
-                  <th className="px-4 py-3 font-medium">Hồ sơ</th>
-                  <th className="px-4 py-3 font-medium">Lượt xem</th>
-                  <th className="px-4 py-3 font-medium">Hạn nộp</th>
-                  <th className="px-4 py-3 font-medium text-right">Thao tác</th>
+                  <th className="px-4 py-3.5 font-black">Vị trí</th>
+                  <th className="px-4 py-3.5 font-black">Trạng thái</th>
+                  <th className="px-4 py-3.5 font-black">Hồ sơ</th>
+                  <th className="px-4 py-3.5 font-black">Lượt xem</th>
+                  <th className="px-4 py-3.5 font-black">Hạn nộp</th>
+                  <th className="px-4 py-3.5 font-black text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {jobs.map((j) => {
                   const left = daysLeft(j.deadline);
                   const expired = left !== null && left < 0;
@@ -162,7 +162,7 @@ export const EmployerDashboard: React.FC = () => {
                   return (
                     <tr key={j.id} data-testid="my-job-row">
                       <td className="px-4 py-3">
-                        <Link to={`/jobs/${j.id}`} className="font-medium text-slate-900 hover:text-red-600">
+                        <Link to={`/jobs/${j.id}`} className="font-bold text-slate-900 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400">
                           {j.title}
                         </Link>
                         <p className="text-xs text-slate-500">
@@ -170,35 +170,35 @@ export const EmployerDashboard: React.FC = () => {
                         </p>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs font-semibold px-2 py-1 rounded ${expired && j.status === 'PUBLISHED' ? 'bg-slate-100 text-slate-600' : STATUS_STYLE[j.status] ?? ''}`}>
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${expired && j.status === 'PUBLISHED' ? 'bg-slate-100 text-slate-600' : STATUS_STYLE[j.status] ?? ''}`}>
                           {expired && j.status === 'PUBLISHED' ? 'Hết hạn' : label(JOB_STATUS, j.status)}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <Link to={`/employer/applicants?job=${j.id}`} className="text-slate-900 hover:text-red-600">
+                        <Link to={`/employer/applicants?job=${j.id}`} className="text-slate-900 dark:text-white hover:text-emerald-600">
                           <span className="font-semibold">{c.total}</span>
-                          {c.fresh > 0 && <span className="ml-1 text-xs text-red-600">({c.fresh} mới)</span>}
+                          {c.fresh > 0 && <span className="ml-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">({c.fresh} mới)</span>}
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-slate-600">{j.viewsCount}</td>
                       <td className="px-4 py-3 text-slate-600">{formatDate(j.deadline)}</td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1 whitespace-nowrap">
-                          <Link to={`/employer/applicants?job=${j.id}`} className="px-2 py-1 rounded text-xs font-medium text-slate-700 hover:bg-slate-100">
+                          <Link to={`/employer/applicants?job=${j.id}`} className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-300">
                             Ứng viên
                           </Link>
-                          <Link to={`/employer/jobs/${j.id}/edit`} className="px-2 py-1 rounded text-xs font-medium text-slate-700 hover:bg-slate-100">
+                          <Link to={`/employer/jobs/${j.id}/edit`} className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-300">
                             Sửa
                           </Link>
                           {j.status === 'PUBLISHED' && !expired && (
                             <>
-                              <button disabled={busy} onClick={() => setStatus(j, 'PAUSED')} className="px-2 py-1 rounded text-xs font-medium text-slate-700 hover:bg-slate-100">
+                              <button disabled={busy} onClick={() => setStatus(j, 'PAUSED')} className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-300">
                                 Tạm dừng
                               </button>
                               <button
                                 disabled={busy}
                                 onClick={() => setStatus(j, 'CLOSED', `Đóng tin "${j.title}"? Ứng viên sẽ không thể nộp hồ sơ nữa.`)}
-                                className="px-2 py-1 rounded text-xs font-medium text-slate-700 hover:bg-slate-100"
+                                className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-300"
                               >
                                 Đóng tin
                               </button>
@@ -208,12 +208,12 @@ export const EmployerDashboard: React.FC = () => {
                             <button
                               disabled={busy}
                               onClick={() => (expired ? toast('Tin đã hết hạn. Hãy sửa tin và gia hạn hạn nộp để mở lại.', 'info') : setStatus(j, 'PUBLISHED'))}
-                              className="px-2 py-1 rounded text-xs font-medium text-green-700 hover:bg-green-50"
+                              className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
                             >
                               Mở lại
                             </button>
                           )}
-                          <button disabled={busy} onClick={() => remove(j)} className="px-2 py-1 rounded text-xs font-medium text-red-600 hover:bg-red-50">
+                          <button disabled={busy} onClick={() => remove(j)} className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40">
                             Xóa
                           </button>
                         </div>

@@ -18,14 +18,18 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000);
   }, []);
 
-  const color = { success: 'bg-slate-900', error: 'bg-red-600', info: 'bg-slate-700' };
+  const color = {
+    success: 'bg-gradient-to-r from-emerald-600 to-teal-600',
+    error: 'bg-rose-600',
+    info: 'bg-slate-800 dark:bg-slate-700',
+  };
 
   return (
     <ToastContext.Provider value={show}>
       {children}
       <div className="fixed bottom-5 right-5 z-[60] flex flex-col gap-2" role="status" aria-live="polite">
         {toasts.map((t) => (
-          <div key={t.id} className={`${color[t.kind]} text-white text-sm px-4 py-3 rounded-lg shadow-lg max-w-sm`}>
+          <div key={t.id} className={`${color[t.kind]} text-white text-sm font-semibold px-4 py-3 rounded-2xl shadow-soft-xl max-w-sm`}>
             {t.message}
           </div>
         ))}

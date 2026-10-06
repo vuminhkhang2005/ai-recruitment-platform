@@ -85,12 +85,12 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
   return (
     <Modal title={`Ứng tuyển: ${job.title}`} onClose={onClose} wide>
       <form onSubmit={submit} className="space-y-5">
-        <p className="text-sm text-slate-600">
+        <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
           {job.companyName} · {job.salaryFormatted}
         </p>
 
         <fieldset>
-          <legend className="text-sm font-semibold text-slate-900 mb-2">CV ứng tuyển</legend>
+          <legend className="text-sm font-black text-slate-900 dark:text-white mb-2">CV ứng tuyển</legend>
           {cvs === null ? (
             <Spinner />
           ) : (
@@ -98,9 +98,9 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
               {cvs.map((cv) => (
                 <label
                   key={cv.id}
-                  className={`flex items-center gap-3 p-3 rounded-md border cursor-pointer ${selected === cv.id ? 'border-red-500 bg-red-50/40' : 'border-slate-200'}`}
+                  className={`flex items-center gap-3 p-3.5 rounded-2xl border cursor-pointer transition-colors ${selected === cv.id ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30 ring-1 ring-emerald-500/30' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-300'}`}
                 >
-                  <input type="radio" name="cv" checked={selected === cv.id} onChange={() => setSelected(cv.id)} className="accent-red-600" />
+                  <input type="radio" name="cv" checked={selected === cv.id} onChange={() => setSelected(cv.id)} className="accent-emerald-600" />
                   <FileText className="w-5 h-5 text-slate-400 shrink-0" />
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm font-medium text-slate-900 truncate">{cv.title || cv.fileName}</span>
@@ -112,9 +112,9 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
                 </label>
               ))}
               <label
-                className={`flex items-center gap-3 p-3 rounded-md border cursor-pointer ${selected === 'new' ? 'border-red-500 bg-red-50/40' : 'border-slate-200'}`}
+                className={`flex items-center gap-3 p-3.5 rounded-2xl border cursor-pointer transition-colors ${selected === 'new' ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30 ring-1 ring-emerald-500/30' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-300'}`}
               >
-                <input type="radio" name="cv" checked={selected === 'new'} onChange={() => setSelected('new')} className="accent-red-600" />
+                <input type="radio" name="cv" checked={selected === 'new'} onChange={() => setSelected('new')} className="accent-emerald-600" />
                 <Upload className="w-5 h-5 text-slate-400 shrink-0" />
                 <span className="flex-1 text-sm">
                   {file ? (
@@ -143,7 +143,7 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
         </fieldset>
 
         <div>
-          <label htmlFor="cover" className="text-sm font-semibold text-slate-900">
+          <label htmlFor="cover" className="text-sm font-black text-slate-900 dark:text-white">
             Thư giới thiệu <span className="font-normal text-slate-500">(không bắt buộc)</span>
           </label>
           <textarea
@@ -161,7 +161,7 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
         {error && <ErrorBox message={error} />}
 
         <div className="flex items-center justify-between gap-3">
-          <Link to="/profile" className="text-sm text-slate-600 hover:underline">
+          <Link to="/profile" className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
             Quản lý CV
           </Link>
           <div className="flex gap-2">

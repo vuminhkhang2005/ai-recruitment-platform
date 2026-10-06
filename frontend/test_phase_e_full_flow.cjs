@@ -84,6 +84,7 @@ async function logout(page) {
   await page.fill('input[aria-label="Từ khóa"]', 'React');
   await page.click('button:has-text("Tìm kiếm")');
   await page.waitForURL(/\/jobs\?q=React/);
+  await page.waitForFunction(() => /\d+ việc làm/.test(document.querySelector('[data-testid="result-count"]')?.textContent || ''));
   await page.waitForSelector('[data-testid="job-card"]');
   check((await page.locator('[data-testid="job-card"]').count()) >= 1, 'Job search returns matching React jobs');
   await page.screenshot({ path: `${SHOTS}/02_job_search.png`, fullPage: true });

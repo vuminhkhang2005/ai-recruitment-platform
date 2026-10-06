@@ -62,7 +62,7 @@ const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) =
   const history = [...(app.history ?? [])].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   return (
-    <div ref={panelRef} className="bg-white border border-slate-200 rounded-lg scroll-mt-20" data-testid="candidate-panel">
+    <div ref={panelRef} className="bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-3xl shadow-soft-xs scroll-mt-24 overflow-hidden" data-testid="candidate-panel">
       <div className="p-5 border-b border-slate-100">
         <div className="flex items-start gap-3">
           <Avatar name={app.candidateName} size="w-12 h-12" />
@@ -70,13 +70,13 @@ const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) =
             <h2 className="font-bold text-slate-900">{app.candidateName}</h2>
             {app.candidateHeadline && <p className="text-sm text-slate-600">{app.candidateHeadline}</p>}
             <p className="text-xs text-slate-500 mt-1">
-              Ứng tuyển <Link to={`/jobs/${app.jobId}`} className="text-slate-700 hover:text-red-600">{app.jobTitle}</Link> · {formatDate(app.appliedAt)}
+              Ứng tuyển <Link to={`/jobs/${app.jobId}`} className="font-semibold text-slate-700 dark:text-slate-200 hover:text-emerald-600">{app.jobTitle}</Link> · {formatDate(app.appliedAt)}
             </p>
           </div>
           <StageBadge stage={app.currentStage} />
         </div>
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
-          <a href={`mailto:${app.candidateEmail}`} className="inline-flex items-center gap-1.5 hover:text-red-600">
+          <a href={`mailto:${app.candidateEmail}`} className="inline-flex items-center gap-1.5 hover:text-emerald-600">
             <Mail className="w-4 h-4" /> {app.candidateEmail}
           </a>
           {app.candidatePhone && (
@@ -127,7 +127,7 @@ const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) =
         </div>
 
         {app.currentStage === 'REJECTED' && app.rejectionReason && (
-          <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2 text-slate-700 dark:text-slate-300">
             <span className="font-medium">Lý do từ chối: </span>
             {app.rejectionReason}
           </div>
@@ -155,7 +155,7 @@ const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) =
                 {next.label}
               </button>
             )}
-            <button disabled={busy} onClick={() => setRejecting(true)} className={`${btnSecondary} text-red-600`}>
+            <button disabled={busy} onClick={() => setRejecting(true)} className={`${btnSecondary} !text-rose-600 dark:!text-rose-400 hover:!border-rose-300`}>
               Từ chối
             </button>
           </div>
@@ -241,7 +241,7 @@ export const ApplicantsPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-slate-900">Ứng viên</h1>
+      <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">Ứng viên</h1>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <select aria-label="Lọc theo tin" value={jobFilter} onChange={(e) => update({ job: e.target.value, id: '' })} className={`${inputCls} w-auto max-w-xs`}>
@@ -265,7 +265,7 @@ export const ApplicantsPage: React.FC = () => {
             <button
               key={s || 'all'}
               onClick={() => update({ stage: s, id: '' })}
-              className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px ${stageFilter === s ? 'border-red-600 text-red-600' : 'border-transparent text-slate-600 hover:text-slate-900'}`}
+              className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px ${stageFilter === s ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400' : 'border-transparent text-slate-600 dark:text-slate-300 hover:text-emerald-600'}`}
             >
               {s ? STAGE_LABELS[s] : 'Tất cả'} ({count})
             </button>
@@ -283,7 +283,7 @@ export const ApplicantsPage: React.FC = () => {
                 <li key={a.id}>
                   <button
                     onClick={() => update({ id: String(a.id) })}
-                    className={`w-full text-left bg-white border rounded-lg p-3 flex items-center gap-3 hover:border-red-300 ${selected?.id === a.id ? 'border-red-500 ring-1 ring-red-500' : 'border-slate-200'}`}
+                    className={`w-full text-left bg-white dark:bg-slate-900/95 border rounded-2xl p-3.5 flex items-center gap-3 hover:border-emerald-300 transition-colors ${selected?.id === a.id ? 'border-emerald-500 ring-1 ring-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20' : 'border-slate-200 dark:border-slate-800'}`}
                     data-testid="applicant-item"
                   >
                     <Avatar name={a.candidateName} size="w-10 h-10" />
@@ -307,7 +307,7 @@ export const ApplicantsPage: React.FC = () => {
           {selected ? (
             <CandidatePanel app={selected} onUpdated={(u) => setApps((list) => list?.map((x) => (x.id === u.id ? u : x)) ?? null)} />
           ) : (
-            <div className="hidden lg:block border border-dashed border-slate-300 rounded-lg p-10 text-center text-sm text-slate-500">Chọn một ứng viên để xem hồ sơ.</div>
+            <div className="hidden lg:block border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl p-10 text-center text-sm text-slate-500 dark:text-slate-400">Chọn một ứng viên để xem hồ sơ.</div>
           )}
         </div>
       </div>

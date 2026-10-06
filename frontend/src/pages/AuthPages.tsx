@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Briefcase } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { companyApi } from '../lib/api';
 import type { Company, UserSummary } from '../lib/types';
@@ -16,10 +17,14 @@ function homeFor(user: UserSummary) {
 }
 
 const AuthShell: React.FC<{ title: string; subtitle?: React.ReactNode; children: React.ReactNode }> = ({ title, subtitle, children }) => (
-  <div className="min-h-[calc(100vh-4rem)] bg-slate-50 py-12 px-4">
-    <div className="max-w-md mx-auto bg-white border border-slate-200 rounded-xl p-7 shadow-sm">
-      <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
-      {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
+  <div className="relative min-h-[calc(100vh-5rem)] py-12 px-4 overflow-hidden">
+    <div className="absolute inset-0 hero-grid-pattern pointer-events-none [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_70%)]" />
+    <div className="relative max-w-md mx-auto bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-7 sm:p-8 shadow-[0_15px_45px_-12px_rgba(16,185,129,0.18)]">
+      <span className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-500 flex items-center justify-center text-white shadow-soft">
+        <Briefcase className="w-6 h-6" />
+      </span>
+      <h1 className="mt-5 text-2xl font-black text-slate-900 dark:text-white">{title}</h1>
+      {subtitle && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>}
       <div className="mt-6">{children}</div>
     </div>
   </div>
@@ -60,7 +65,7 @@ export const LoginPage: React.FC = () => {
       subtitle={
         <>
           Chưa có tài khoản?{' '}
-          <Link to={`/register${next ? `?next=${encodeURIComponent(next)}` : ''}`} className="text-red-600 font-medium hover:underline">
+          <Link to={`/register${next ? `?next=${encodeURIComponent(next)}` : ''}`} className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
             Đăng ký
           </Link>
         </>
@@ -157,7 +162,9 @@ export const RegisterPage: React.FC = () => {
       type="button"
       onClick={() => setRole(r)}
       aria-pressed={role === r}
-      className={`flex-1 py-2 text-sm font-semibold rounded-md ${role === r ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}
+      className={`flex-1 py-2 text-sm font-bold rounded-xl transition-all ${
+        role === r ? 'bg-emerald-600 text-white shadow-soft-xs' : 'text-slate-500 dark:text-slate-400 hover:text-emerald-600'
+      }`}
     >
       {text}
     </button>
@@ -169,13 +176,13 @@ export const RegisterPage: React.FC = () => {
       subtitle={
         <>
           Đã có tài khoản?{' '}
-          <Link to={`/login${next ? `?next=${encodeURIComponent(next)}` : ''}`} className="text-red-600 font-medium hover:underline">
+          <Link to={`/login${next ? `?next=${encodeURIComponent(next)}` : ''}`} className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
             Đăng nhập
           </Link>
         </>
       }
     >
-      <div className="flex gap-1 p-1 bg-slate-100 rounded-lg mb-5">
+      <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 mb-5">
         {tab('ROLE_CANDIDATE', 'Tôi tìm việc')}
         {tab('ROLE_RECRUITER', 'Tôi tuyển dụng')}
       </div>

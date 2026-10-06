@@ -1,30 +1,35 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FileText, Star, Trash2, Upload, X } from 'lucide-react';
+import { Bookmark, Building2, CalendarCheck, FileCheck2, FileText, Gauge, Mail, MapPin, Star, Trash2, Upload, X } from 'lucide-react';
 import { candidateApi, openCvFile, userApi } from '../lib/api';
 import type { CvItem, SkillItem, UserProfile } from '../lib/types';
 import { CITIES, formatDate, formatFileSize } from '../lib/format';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useMyApplications } from '../context/MyApplicationsContext';
+import { useSavedJobs } from '../lib/savedJobs';
 import { ErrorBox, PageLoader, Spinner, btnPrimary, btnSecondary, inputCls } from '../components/ui/primitives';
 import { validateCvFile } from '../components/jobs/ApplyModal';
 import { Avatar } from '../components/layout/Navbar';
 import { usePageTitle } from '../lib/usePageTitle';
 
 const Card: React.FC<{ id?: string; title: string; description?: string; children: React.ReactNode }> = ({ id, title, description, children }) => (
-  <section id={id} className="bg-white border border-slate-200 rounded-lg p-6 scroll-mt-20">
-    <h2 className="text-lg font-bold text-slate-900">{title}</h2>
-    {description && <p className="text-sm text-slate-500 mt-0.5">{description}</p>}
+  <section id={id} className="bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-soft-xs scroll-mt-24">
+    <h2 className="flex items-center gap-2.5 text-lg font-black text-slate-900 dark:text-white">
+      <span className="w-1.5 h-5 rounded-full bg-gradient-to-b from-emerald-500 to-teal-500" />
+      {title}
+    </h2>
+    {description && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{description}</p>}
     <div className="mt-5">{children}</div>
   </section>
 );
 
 const Field: React.FC<{ label: string; htmlFor: string; children: React.ReactNode; hint?: string }> = ({ label, htmlFor, children, hint }) => (
   <div>
-    <label htmlFor={htmlFor} className="text-sm font-medium text-slate-700">
+    <label htmlFor={htmlFor} className="text-sm font-bold text-slate-700 dark:text-slate-200">
       {label}
     </label>
-    <div className="mt-1">{children}</div>
+    <div className="mt-1.5">{children}</div>
     {hint && <p className="text-xs text-slate-400 mt-1">{hint}</p>}
   </div>
 );
@@ -144,8 +149,8 @@ const ProfileForm: React.FC<{ profile: UserProfile; onSaved: (p: UserProfile) =>
                 <input aria-label="Lương tối đa" type="number" min={0} value={form.expectedSalaryMax} onChange={set('expectedSalaryMax')} placeholder="Đến" className={inputCls} />
               </div>
             </Field>
-            <label className="flex items-center gap-2 text-sm text-slate-700 sm:mt-7">
-              <input type="checkbox" checked={form.isOpenToWork} onChange={(e) => setForm((f) => ({ ...f, isOpenToWork: e.target.checked }))} className="accent-red-600 w-4 h-4" />
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200 sm:mt-7">
+              <input type="checkbox" checked={form.isOpenToWork} onChange={(e) => setForm((f) => ({ ...f, isOpenToWork: e.target.checked }))} className="accent-emerald-600 w-4 h-4" />
               Tôi đang tìm việc
             </label>
           </div>
@@ -229,12 +234,12 @@ const SkillsEditor: React.FC = () => {
       ) : (
         <ul className="flex flex-wrap gap-2" data-testid="skill-list">
           {skills.map((s) => (
-            <li key={s.name} className="inline-flex items-center gap-2 pl-3 pr-1.5 py-1 rounded-full border border-slate-300 bg-slate-50 text-sm">
-              <span className="font-medium text-slate-800">{s.name}</span>
+            <li key={s.name} className="inline-flex items-center gap-2 pl-3 pr-1.5 py-1 rounded-xl border border-emerald-200/90 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/40 text-sm">
+              <span className="font-bold text-emerald-800 dark:text-emerald-300">{s.name}</span>
               <span className="text-xs text-slate-500">
                 {s.yearsExperience ?? 0} năm{s.proficiency ? ` · ${PROFICIENCY[s.proficiency] ?? s.proficiency}` : ''}
               </span>
-              <button onClick={() => remove(s.name)} aria-label={`Xóa ${s.name}`} className="p-0.5 rounded-full text-slate-400 hover:text-red-600 hover:bg-red-50">
+              <button onClick={() => remove(s.name)} aria-label={`Xóa ${s.name}`} className="p-0.5 rounded-full text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40">
                 <X className="w-3.5 h-3.5" />
               </button>
             </li>
@@ -244,19 +249,19 @@ const SkillsEditor: React.FC = () => {
 
       <form onSubmit={add} className="mt-4 flex flex-wrap items-end gap-2">
         <div className="flex-1 min-w-[180px]">
-          <label htmlFor="skill-name" className="text-xs font-medium text-slate-600">
+          <label htmlFor="skill-name" className="text-xs font-bold text-slate-600 dark:text-slate-300">
             Kỹ năng
           </label>
           <input id="skill-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="VD: Java, ReactJS, Docker" className={`${inputCls} mt-1`} />
         </div>
         <div className="w-24">
-          <label htmlFor="skill-years" className="text-xs font-medium text-slate-600">
+          <label htmlFor="skill-years" className="text-xs font-bold text-slate-600 dark:text-slate-300">
             Số năm
           </label>
           <input id="skill-years" type="number" min={0} max={40} value={years} onChange={(e) => setYears(e.target.value)} className={`${inputCls} mt-1`} />
         </div>
         <div className="w-36">
-          <label htmlFor="skill-level" className="text-xs font-medium text-slate-600">
+          <label htmlFor="skill-level" className="text-xs font-bold text-slate-600 dark:text-slate-300">
             Mức độ
           </label>
           <select id="skill-level" value={level} onChange={(e) => setLevel(e.target.value)} className={`${inputCls} mt-1`}>
@@ -345,14 +350,16 @@ const CvManager: React.FC = () => {
       ) : cvs.length === 0 ? (
         <p className="text-sm text-slate-500">Bạn chưa có CV nào. Tải CV lên để có thể ứng tuyển.</p>
       ) : (
-        <ul className="divide-y divide-slate-100 border border-slate-200 rounded-md" data-testid="cv-list">
+        <ul className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden" data-testid="cv-list">
           {cvs.map((cv) => (
-            <li key={cv.id} className="flex flex-wrap items-center gap-3 p-3">
-              <FileText className="w-8 h-8 text-red-500 shrink-0" />
+            <li key={cv.id} className="flex flex-wrap items-center gap-3 p-4 hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
+              <span className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <FileText className="w-5 h-5" />
+              </span>
               <div className="flex-1 min-w-[160px]">
-                <p className="text-sm font-medium text-slate-900">
+                <p className="text-sm font-bold text-slate-900 dark:text-white">
                   {cv.title || cv.fileName}
-                  {cv.isDefault && <span className="ml-2 text-[11px] font-semibold px-1.5 py-0.5 rounded bg-green-50 text-green-700">Mặc định</span>}
+                  {cv.isDefault && <span className="ml-2 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">Mặc định</span>}
                 </p>
                 <p className="text-xs text-slate-500">
                   {cv.fileName}
@@ -361,7 +368,7 @@ const CvManager: React.FC = () => {
               </div>
               <div className="flex items-center gap-1">
                 {cv.downloadable ? (
-                  <button onClick={() => view(cv)} className="px-2.5 py-1.5 text-xs font-medium text-slate-700 rounded hover:bg-slate-100">
+                  <button onClick={() => view(cv)} className="px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/50">
                     Xem
                   </button>
                 ) : (
@@ -373,7 +380,7 @@ const CvManager: React.FC = () => {
                   <button
                     onClick={() => run(() => candidateApi.setDefaultCv(cv.id), 'Đã đặt CV mặc định')}
                     disabled={busy}
-                    className="px-2.5 py-1.5 text-xs font-medium text-slate-700 rounded hover:bg-slate-100 inline-flex items-center gap-1"
+                    className="px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 inline-flex items-center gap-1"
                   >
                     <Star className="w-3.5 h-3.5" /> Đặt mặc định
                   </button>
@@ -384,7 +391,7 @@ const CvManager: React.FC = () => {
                   }}
                   disabled={busy}
                   aria-label={`Xóa CV ${cv.title || cv.fileName}`}
-                  className="p-1.5 text-slate-400 rounded hover:text-red-600 hover:bg-red-50"
+                  className="p-1.5 text-slate-400 rounded-lg hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -416,6 +423,8 @@ export const ProfilePage: React.FC = () => {
   const location = useLocation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { applications } = useMyApplications();
+  const { saved } = useSavedJobs();
   usePageTitle(isCandidate ? 'Hồ sơ & CV' : 'Tài khoản');
 
   useEffect(() => {
@@ -434,22 +443,90 @@ export const ProfilePage: React.FC = () => {
     );
   if (!profile) return <PageLoader />;
 
+  const interviews = applications.filter((a) => ['INTERVIEW', 'OFFERED', 'HIRED'].includes(a.currentStage)).length;
+  const completenessFields = [profile.fullName, profile.phone, profile.headline, profile.city, profile.bio, profile.avatarUrl, profile.linkedinUrl || profile.githubUrl || profile.portfolioUrl];
+  const completeness = Math.round((completenessFields.filter(Boolean).length / completenessFields.length) * 100);
+  const stats = isCandidate
+    ? [
+        { icon: FileCheck2, value: applications.length, label: 'Việc đã ứng tuyển', sub: 'Theo dõi trạng thái', to: '/applications', tone: 'bg-emerald-600 text-white' },
+        { icon: CalendarCheck, value: interviews, label: 'Vào vòng phỏng vấn', sub: 'Phỏng vấn / offer / nhận việc', to: '/applications', tone: 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300' },
+        { icon: Bookmark, value: saved.length, label: 'Việc đã lưu', sub: 'Xem lại sau', to: '/saved-jobs', tone: 'bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300' },
+        { icon: Gauge, value: `${completeness}%`, label: 'Độ hoàn thiện hồ sơ', sub: 'Thông tin cá nhân & liên kết', to: '#info', tone: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300' },
+      ]
+    : [];
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      <div className="flex items-center gap-4">
-        <Avatar name={profile.fullName} url={profile.avatarUrl} size="w-16 h-16" />
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">{profile.fullName}</h1>
-          <p className="text-sm text-slate-500">
-            {profile.email}
-            {!isCandidate && profile.companyName ? ` · ${profile.companyName}` : ''}
-          </p>
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <div className="bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-[2rem] overflow-hidden shadow-soft-sm">
+        <div className="relative h-32 sm:h-44 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700">
+          <div className="absolute inset-0 opacity-25 [background-image:radial-gradient(rgba(255,255,255,0.6)_1px,transparent_1px)] [background-size:14px_14px]" />
+          {isCandidate && profile.isOpenToWork && (
+            <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/40 backdrop-blur text-white text-[11px] font-bold">
+              <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
+              Đang tìm việc
+            </span>
+          )}
         </div>
-        {isCandidate && (
-          <Link to="/applications" className="ml-auto text-sm font-medium text-red-600 hover:underline">
-            Việc đã ứng tuyển →
-          </Link>
-        )}
+        <div className="px-5 sm:px-8 pb-6">
+          <div className="relative flex flex-col sm:flex-row sm:items-start gap-4 -mt-12 sm:-mt-14">
+            <div className="p-1.5 bg-white dark:bg-slate-900 rounded-[1.4rem] shadow-soft w-fit shrink-0">
+              <Avatar name={profile.fullName} url={profile.avatarUrl} size="w-24 h-24 sm:w-28 sm:h-28 text-2xl rounded-2xl" />
+            </div>
+            <div className="min-w-0 flex-1 sm:pt-[4.25rem]">
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">{profile.fullName}</h1>
+              {(profile.headline || profile.jobTitle) && (
+                <p className="mt-0.5 font-bold text-emerald-600 dark:text-emerald-400">{isCandidate ? profile.headline : profile.jobTitle}</p>
+              )}
+              <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
+                {profile.city && (
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5" />
+                    {profile.city}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1 min-w-0">
+                  <Mail className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{profile.email}</span>
+                </span>
+                {!isCandidate && profile.companyName && (
+                  <span className="inline-flex items-center gap-1">
+                    <Building2 className="w-3.5 h-3.5" />
+                    {profile.companyName}
+                  </span>
+                )}
+              </p>
+            </div>
+            {isCandidate && (
+              <Link
+                to="/applications"
+                className="sm:self-end sm:mb-1 shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-soft-xs transition-colors"
+              >
+                Việc đã ứng tuyển →
+              </Link>
+            )}
+          </div>
+
+          {stats.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-4 gap-3">
+              {stats.map((s) => (
+                <Link
+                  key={s.label}
+                  to={s.to}
+                  className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-emerald-300 flex items-center gap-3 transition-colors"
+                >
+                  <span className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 font-black ${s.tone}`}>
+                    <s.icon className="w-5 h-5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-lg font-black text-slate-900 dark:text-white leading-tight">{s.value}</span>
+                    <span className="block text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{s.label}</span>
+                    <span className="block text-[11px] text-slate-400 truncate">{s.sub}</span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {isCandidate && (

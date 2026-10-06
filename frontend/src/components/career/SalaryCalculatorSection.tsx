@@ -238,25 +238,27 @@ export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = (
   return (
     <div className="space-y-6">
       {/* Mode switcher */}
-      <div className="bg-white border border-slate-200 rounded-lg p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
+      <div className="bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 shadow-soft-xs">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5">
           <div className="flex items-center gap-2">
-            <Calculator className="w-5 h-5 text-red-600" />
-            <h2 className="font-bold text-slate-900 text-lg">Bảng quy đổi Lương Gross ⇄ Net</h2>
+            <span className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <Calculator className="w-5 h-5" />
+            </span>
+            <h2 className="font-black text-slate-900 dark:text-white text-lg">Bảng quy đổi Lương Gross ⇄ Net</h2>
           </div>
-          <div className="inline-flex p-1 rounded-lg bg-slate-100 border border-slate-200">
+          <div className="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
             <button
               onClick={() => setMode('gross-to-net')}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                mode === 'gross-to-net' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${
+                mode === 'gross-to-net' ? 'bg-emerald-600 text-white shadow-soft-xs' : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600'
               }`}
             >
               GROSS → NET
             </button>
             <button
               onClick={() => setMode('net-to-gross')}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                mode === 'net-to-gross' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${
+                mode === 'net-to-gross' ? 'bg-emerald-600 text-white shadow-soft-xs' : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600'
               }`}
             >
               NET → GROSS
@@ -267,7 +269,7 @@ export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = (
         {/* Inputs */}
         <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">
+            <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
               {mode === 'gross-to-net' ? 'Lương Gross (VNĐ)' : 'Lương Net (VNĐ)'}
             </label>
             <input
@@ -280,7 +282,7 @@ export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = (
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Khu vực làm việc</label>
+            <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Khu vực làm việc</label>
             <select value={regionId} onChange={(e) => setRegionId(Number(e.target.value))} className={inputCls}>
               {VUNG_CONFIG.map((v) => (
                 <option key={v.id} value={v.id}>
@@ -291,7 +293,7 @@ export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = (
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Người phụ thuộc</label>
+            <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Người phụ thuộc</label>
             <input
               type="number"
               min={0}
@@ -303,7 +305,7 @@ export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = (
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Mức đóng bảo hiểm</label>
+            <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Mức đóng bảo hiểm</label>
             <select
               value={insuranceType}
               onChange={(e) => setInsuranceType(e.target.value as 'official' | 'custom')}
@@ -316,8 +318,8 @@ export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = (
         </div>
 
         {insuranceType === 'custom' && (
-          <div className="mt-4 p-4 rounded-lg bg-slate-50 border border-slate-200 max-w-sm">
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">
+          <div className="mt-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 max-w-sm">
+            <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
               Mức lương đóng bảo hiểm (VNĐ)
             </label>
             <input
@@ -336,10 +338,10 @@ export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = (
 
       {/* Main KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white border-2 border-slate-200 rounded-lg p-5" data-testid="gross-card">
+        <div className="bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 shadow-soft-xs" data-testid="gross-card">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Lương GROSS</span>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-slate-900" data-testid="gross-amount">{result.gross.toLocaleString('vi-VN')}</span>
+            <span className="text-3xl font-black text-slate-900 dark:text-white" data-testid="gross-amount">{result.gross.toLocaleString('vi-VN')}</span>
             <span className="text-sm font-medium text-slate-500">VNĐ</span>
           </div>
           <p className="mt-2 text-xs text-slate-500">
@@ -347,11 +349,11 @@ export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = (
           </p>
         </div>
 
-        <div className="bg-red-50/50 border-2 border-red-500 rounded-lg p-5" data-testid="net-card">
-          <span className="text-xs font-semibold text-red-600 uppercase tracking-wider">LƯƠNG NET (THỰC NHẬN)</span>
+        <div className="rounded-3xl p-6 border-2 border-emerald-500/60 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/40 dark:to-slate-900 shadow-[0_12px_35px_-12px_rgba(16,185,129,0.3)]" data-testid="net-card">
+          <span className="text-xs font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">LƯƠNG NET (THỰC NHẬN)</span>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-red-600" data-testid="net-amount">{result.net.toLocaleString('vi-VN')}</span>
-            <span className="text-sm font-medium text-red-600">VNĐ</span>
+            <span className="text-3xl font-black bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent" data-testid="net-amount">{result.net.toLocaleString('vi-VN')}</span>
+            <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">VNĐ</span>
           </div>
           <p className="mt-2 text-xs text-slate-600">
             Khoản tiền thực nhận về tài khoản sau khi đã khấu trừ đầy đủ BHXH, BHYT, BHTN và Thuế TNCN.
@@ -360,9 +362,9 @@ export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = (
       </div>
 
       {/* Detailed breakdown table */}
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-          <h3 className="font-semibold text-slate-900 text-sm">Diễn giải chi tiết các khoản trích nộp (VNĐ)</h3>
+      <div className="bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-3xl overflow-hidden shadow-soft-xs">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex flex-wrap gap-2 items-center justify-between">
+          <h3 className="font-black text-slate-900 dark:text-white text-sm">Diễn giải chi tiết các khoản trích nộp (VNĐ)</h3>
           <span className="text-xs text-slate-500">Đơn vị: VNĐ / tháng</span>
         </div>
 
@@ -377,21 +379,21 @@ export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = (
               <td className="px-6 py-3 text-slate-700 pl-10">
                 - Bảo hiểm xã hội (8%){result.gross > TRAN_BHXH_BHYT && <span className="text-xs text-slate-400 ml-1">(đã chạm trần 46.8 tr)</span>}
               </td>
-              <td className="px-6 py-3 text-right text-red-600">-{result.bhxh.toLocaleString('vi-VN')}</td>
+              <td className="px-6 py-3 text-right text-rose-600 dark:text-rose-400">-{result.bhxh.toLocaleString('vi-VN')}</td>
             </tr>
 
             <tr>
               <td className="px-6 py-3 text-slate-700 pl-10">
                 - Bảo hiểm y tế (1.5%){result.gross > TRAN_BHXH_BHYT && <span className="text-xs text-slate-400 ml-1">(đã chạm trần 46.8 tr)</span>}
               </td>
-              <td className="px-6 py-3 text-right text-red-600">-{result.bhyt.toLocaleString('vi-VN')}</td>
+              <td className="px-6 py-3 text-right text-rose-600 dark:text-rose-400">-{result.bhyt.toLocaleString('vi-VN')}</td>
             </tr>
 
             <tr>
               <td className="px-6 py-3 text-slate-700 pl-10">
                 - Bảo hiểm thất nghiệp (1%){result.gross > tranBhtn && <span className="text-xs text-slate-400 ml-1">(đã chạm trần)</span>}
               </td>
-              <td className="px-6 py-3 text-right text-red-600">-{result.bhtn.toLocaleString('vi-VN')}</td>
+              <td className="px-6 py-3 text-right text-rose-600 dark:text-rose-400">-{result.bhtn.toLocaleString('vi-VN')}</td>
             </tr>
 
             <tr className="font-medium bg-slate-50/30">
@@ -422,12 +424,12 @@ export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = (
 
             <tr>
               <td className="px-6 py-3 text-slate-700 pl-10">- Thuế thu nhập cá nhân (TNCN) (*)</td>
-              <td className="px-6 py-3 text-right text-red-600">-{result.totalTax.toLocaleString('vi-VN')}</td>
+              <td className="px-6 py-3 text-right text-rose-600 dark:text-rose-400">-{result.totalTax.toLocaleString('vi-VN')}</td>
             </tr>
 
-            <tr className="bg-red-50/40 font-bold text-base">
+            <tr className="bg-emerald-50/70 dark:bg-emerald-950/30 font-black text-base">
               <td className="px-6 py-4 text-slate-900">4. LƯƠNG NET THỰC NHẬN (2 - Thuế TNCN)</td>
-              <td className="px-6 py-4 text-right text-red-600">{result.net.toLocaleString('vi-VN')} VNĐ</td>
+              <td className="px-6 py-4 text-right text-emerald-700 dark:text-emerald-400">{result.net.toLocaleString('vi-VN')} VNĐ</td>
             </tr>
           </tbody>
         </table>
@@ -435,8 +437,8 @@ export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = (
 
       {/* Tax Brackets Breakdown */}
       {result.taxableIncome > 0 && (
-        <div className="bg-white border border-slate-200 rounded-lg p-6">
-          <h4 className="font-semibold text-slate-900 text-sm mb-3">
+        <div className="bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 shadow-soft-xs">
+          <h4 className="font-black text-slate-900 dark:text-white text-sm mb-3">
             (*) Chi tiết các bậc thuế thu nhập cá nhân (Lũy tiến từng phần)
           </h4>
           <div className="overflow-x-auto">
@@ -452,7 +454,7 @@ export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = (
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {result.brackets.map((b) => (
-                  <tr key={b.bracket} className={b.taxableAmount > 0 ? 'bg-amber-50/30 font-medium' : 'text-slate-400'}>
+                  <tr key={b.bracket} className={b.taxableAmount > 0 ? 'bg-amber-50/50 dark:bg-amber-950/20 font-semibold' : 'text-slate-400'}>
                     <td className="px-4 py-2">Bậc {b.bracket}</td>
                     <td className="px-4 py-2">{b.range}</td>
                     <td className="px-4 py-2">{b.rate}%</td>
@@ -467,10 +469,10 @@ export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = (
       )}
 
       {/* Employer Cost Info Box */}
-      <div className="bg-slate-50 border border-slate-200 rounded-lg p-5 text-sm text-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 text-sm text-slate-700 dark:text-slate-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 font-semibold text-slate-900">
-            <Building2 className="w-4 h-4 text-slate-500" />
+            <Building2 className="w-4 h-4 text-emerald-500" />
             <span>Chi phí thực tế Người sử dụng lao động (Doanh nghiệp) chi trả</span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
@@ -479,7 +481,7 @@ export const SalaryCalculatorSection: React.FC<SalaryCalculatorSectionProps> = (
         </div>
         <div className="text-right shrink-0">
           <p className="text-xs text-slate-500 uppercase tracking-wide">Tổng chi phí doanh nghiệp</p>
-          <p className="text-xl font-bold text-slate-900">{result.employerTotalCost.toLocaleString('vi-VN')} VNĐ</p>
+          <p className="text-xl font-black text-slate-900 dark:text-white">{result.employerTotalCost.toLocaleString('vi-VN')} VNĐ</p>
         </div>
       </div>
 

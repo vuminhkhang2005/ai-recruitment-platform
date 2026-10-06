@@ -69,7 +69,7 @@ const EMPTY: FormState = {
 const Label: React.FC<{ htmlFor: string; children: React.ReactNode; required?: boolean }> = ({ htmlFor, children, required }) => (
   <label htmlFor={htmlFor} className="text-sm font-medium text-slate-700">
     {children}
-    {required && <span className="text-red-600"> *</span>}
+    {required && <span className="text-rose-500"> *</span>}
   </label>
 );
 
@@ -175,11 +175,11 @@ export const JobFormPage: React.FC = () => {
       <Link to="/employer" className="text-sm text-slate-500 hover:text-slate-800">
         ← Tin tuyển dụng
       </Link>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">{editing ? 'Sửa tin tuyển dụng' : 'Đăng tin tuyển dụng'}</h1>
+      <h1 className="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">{editing ? 'Sửa tin tuyển dụng' : 'Đăng tin tuyển dụng'}</h1>
 
       <form onSubmit={submit} className="mt-6 space-y-6">
-        <section className="bg-white border border-slate-200 rounded-lg p-6 space-y-4">
-          <h2 className="font-semibold text-slate-900">Thông tin chung</h2>
+        <section className="bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 sm:p-7 space-y-4 shadow-soft-xs">
+          <h2 className="font-black text-slate-900 dark:text-white">Thông tin chung</h2>
           <div>
             <Label htmlFor="title" required>
               Tên vị trí
@@ -231,7 +231,7 @@ export const JobFormPage: React.FC = () => {
                 <input aria-label="Lương tối đa" type="number" min={0} disabled={form.negotiable} value={form.maxSalary} onChange={set('maxSalary')} placeholder="Đến" className={inputCls} />
               </div>
               <label className="mt-2 flex items-center gap-2 text-sm text-slate-600">
-                <input type="checkbox" checked={form.negotiable} onChange={(e) => setForm({ ...form, negotiable: e.target.checked })} className="accent-red-600" />
+                <input type="checkbox" checked={form.negotiable} onChange={(e) => setForm({ ...form, negotiable: e.target.checked })} className="accent-emerald-600" />
                 Thỏa thuận
               </label>
             </div>
@@ -269,7 +269,7 @@ export const JobFormPage: React.FC = () => {
                 {form.skills.map((s) => (
                   <span key={s} className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full border border-slate-300 bg-slate-50 text-sm">
                     {s}
-                    <button type="button" aria-label={`Xóa kỹ năng ${s}`} onClick={() => setForm({ ...form, skills: form.skills.filter((x) => x !== s) })} className="p-0.5 text-slate-400 hover:text-red-600">
+                    <button type="button" aria-label={`Xóa kỹ năng ${s}`} onClick={() => setForm({ ...form, skills: form.skills.filter((x) => x !== s) })} className="p-0.5 text-slate-400 hover:text-rose-600">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </span>
@@ -279,8 +279,8 @@ export const JobFormPage: React.FC = () => {
           </div>
         </section>
 
-        <section className="bg-white border border-slate-200 rounded-lg p-6 space-y-4">
-          <h2 className="font-semibold text-slate-900">Nội dung tin</h2>
+        <section className="bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 sm:p-7 space-y-4 shadow-soft-xs">
+          <h2 className="font-black text-slate-900 dark:text-white">Nội dung tin</h2>
           <p className="text-xs text-slate-500 -mt-2">Mỗi ý một dòng sẽ được hiển thị thành danh sách gạch đầu dòng.</p>
           <div>
             <Label htmlFor="description" required>

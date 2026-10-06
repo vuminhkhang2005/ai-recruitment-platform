@@ -29,7 +29,7 @@ export const CompaniesPage: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Công ty IT</h1>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">Công ty IT</h1>
           <p className="text-sm text-slate-500 mt-1">{companies ? `${companies.length} công ty` : ''}</p>
         </div>
         <div className="relative sm:w-80">
@@ -48,13 +48,13 @@ export const CompaniesPage: React.FC = () => {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((c) => (
-              <Link key={c.id} to={`/companies/${c.id}`} className="bg-white border border-slate-200 rounded-lg p-5 hover:border-red-300 hover:shadow-sm flex gap-4">
+              <Link key={c.id} to={`/companies/${c.id}`} className="group bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 hover:border-emerald-400 hover:shadow-[0_12px_35px_-10px_rgba(16,185,129,0.2)] hover:-translate-y-1 transition-all duration-300 flex gap-4">
                 <CompanyAvatar name={c.name} logoUrl={c.logoUrl} size="lg" />
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-slate-900 truncate">{c.name}</p>
+                  <p className="font-black text-slate-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{c.name}</p>
                   <p className="text-xs text-slate-500 mt-0.5 truncate">{[c.industry, c.city].filter(Boolean).join(' · ')}</p>
                   {c.description && <p className="text-sm text-slate-600 mt-2 line-clamp-2">{c.description}</p>}
-                  <p className="mt-2 text-sm font-medium text-red-600">{c.openJobsCount ? `${c.openJobsCount} việc làm đang tuyển` : 'Chưa có việc làm đang tuyển'}</p>
+                  <p className="mt-3 inline-block px-2.5 py-0.5 rounded-lg bg-emerald-100/90 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-black text-xs border border-emerald-200/90 dark:border-emerald-800/60">{c.openJobsCount ? `${c.openJobsCount} việc làm đang tuyển` : 'Chưa có việc làm đang tuyển'}</p>
                 </div>
               </Link>
             ))}
