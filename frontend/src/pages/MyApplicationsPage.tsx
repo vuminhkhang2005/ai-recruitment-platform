@@ -23,6 +23,81 @@ export const StageBadge: React.FC<{ stage: string }> = ({ stage }) => (
   <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${STAGE_STYLES[stage] ?? 'bg-slate-100 text-slate-700'}`}>{STAGE_LABELS[stage] ?? stage}</span>
 );
 
+const CANDIDATE_STAGES = [
+  { key: 'APPLIED', label: '1. Nộp hồ sơ' },
+  { key: 'SCREENING', label: '2. Sàng lọc' },
+  { key: 'INTERVIEW', label: '3. Phỏng vấn' },
+  { key: 'OFFERED', label: '4. Offer' },
+  { key: 'HIRED', label: '5. Đã tuyển' },
+];
+
+export const ApplicationProgressTracker: React.FC<{ stage: string }> = ({ stage }) => {
+  const isRejected = stage === 'REJECTED';
+  const isWithdrawn = stage === 'WITHDRAWN';
+  const currentIndex = CANDIDATE_STAGES.findIndex((s) => s.key === stage);
+  const activeIndex = currentIndex >= 0 ? currentIndex : 0;
+
+  return (
+    <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-slate-800" aria-label="Tiến độ hồ sơ">
+      <div className="relative">
+        {/* Track Line */}
+        <div className="absolute top-3 left-3 right-3 h-1 bg-slate-200 dark:bg-slate-800 -translate-y-1/2 rounded-full overflow-hidden">
+          <div
+            className={`h-full transition-all duration-500 rounded-full ${
+              isRejected ? 'bg-rose-500' : 'bg-gradient-to-r from-emerald-500 to-teal-500'
+            }`}
+            style={{
+              width: isWithdrawn
+                ? '0%'
+                : isRejected
+                  ? `${Math.max(10, (activeIndex / (CANDIDATE_STAGES.length - 1)) * 100)}%`
+                  : `${(activeIndex / (CANDIDATE_STAGES.length - 1)) * 100}%`,
+            }}
+          />
+        </div>
+
+        {/* Nodes */}
+        <div className="relative flex justify-between items-start">
+          {CANDIDATE_STAGES.map((s, idx) => {
+            const isCompleted = !isRejected && !isWithdrawn && idx < activeIndex;
+            const isCurrent = !isRejected && !isWithdrawn && idx === activeIndex;
+            return (
+              <div key={s.key} className="flex flex-col items-center">
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold z-10 transition-all ${
+                    isCompleted
+                      ? 'bg-emerald-500 text-white shadow-xs'
+                      : isCurrent
+                        ? 'bg-emerald-600 text-white ring-4 ring-emerald-400/30'
+                        : isRejected && idx === activeIndex
+                          ? 'bg-rose-500 text-white ring-4 ring-rose-400/30'
+                          : 'bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-400'
+                  }`}
+                >
+                  {isCompleted ? '✓' : isRejected && idx === activeIndex ? '✕' : idx + 1}
+                </div>
+                <span
+                  className={`mt-1.5 text-[10px] font-bold whitespace-nowrap ${
+                    isCurrent
+                      ? 'text-emerald-600 dark:text-emerald-400 font-extrabold'
+                      : isCompleted
+                        ? 'text-slate-700 dark:text-slate-300'
+                        : isRejected && idx === activeIndex
+                          ? 'text-rose-600 dark:text-rose-400'
+                          : 'text-slate-400 dark:text-slate-500'
+                  }`}
+                >
+                  {s.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ApplicationRow: React.FC<{ app: Application; onWithdrawn: () => void }> = ({ app, onWithdrawn }) => {
   const toast = useToast();
   const [open, setOpen] = useState(false);
@@ -67,6 +142,7 @@ const ApplicationRow: React.FC<{ app: Application; onWithdrawn: () => void }> = 
             {app.cvTitle && <span>CV: {app.cvTitle}</span>}
             {jobClosed && <span className="text-slate-400">Tin đã đóng</span>}
           </div>
+          <ApplicationProgressTracker stage={app.currentStage} />
           {app.currentStage === 'REJECTED' && app.rejectionReason && (
             <p className="mt-3 text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2">
               <span className="font-medium">Phản hồi từ nhà tuyển dụng: </span>

@@ -2,12 +2,16 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
+  Award,
   BadgeCheck,
   BellRing,
   Briefcase,
   Building2,
   Calculator,
+  Calendar,
+  Check,
   CheckCircle2,
+  Clock,
   Cloud,
   Database,
   FileText,
@@ -115,6 +119,240 @@ const SeeAll: React.FC<{ to: string; children: React.ReactNode }> = ({ to, child
     <ArrowRight className="w-4 h-4" />
   </Link>
 );
+
+const PIPELINE_STAGES = [
+  {
+    step: 1,
+    name: 'Ứng tuyển',
+    short: 'Ứng tuyển',
+    icon: Send,
+    badge: 'Tiếp nhận hồ sơ',
+    sla: '< 15 phút',
+    title: 'Tiếp nhận hồ sơ & Đồng bộ dữ liệu ứng viên',
+    desc: 'Tự động tiếp nhận CV từ mọi kênh tuyển dụng, trích xuất thông tin liên hệ và gửi email xác nhận tức thì cho ứng viên.',
+    highlight: 'Tự động gửi email xác nhận ứng tuyển',
+  },
+  {
+    step: 2,
+    name: 'Sàng lọc',
+    short: 'Sàng lọc',
+    icon: Search,
+    badge: 'Đánh giá năng lực',
+    sla: '< 24 giờ',
+    title: 'Sàng lọc hồ sơ & So khớp kỹ năng công việc',
+    desc: 'Hệ thống tự động phân tích độ tương thích giữa kinh nghiệm thực tế, kỹ năng chuyên môn của ứng viên với mô tả công việc (JD).',
+    highlight: 'Chấm điểm độ khớp kỹ năng chính xác',
+  },
+  {
+    step: 3,
+    name: 'Phỏng vấn',
+    short: 'Phỏng vấn',
+    icon: Calendar,
+    badge: 'Lên lịch & Đánh giá',
+    sla: '2 - 3 ngày',
+    title: 'Xếp lịch phỏng vấn & Đánh giá năng lực chuyên sâu',
+    desc: 'Gửi thư mời phỏng vấn tự động kèm link họp video, đồng bộ lịch Google/Outlook và cung cấp biểu mẫu chấm điểm năng lực tiêu chuẩn.',
+    highlight: 'Tự động đồng bộ lịch & gửi thông báo nhắc hẹn',
+  },
+  {
+    step: 4,
+    name: 'Offer',
+    short: 'Gửi Offer',
+    icon: Award,
+    badge: 'Thỏa thuận đãi ngộ',
+    sla: '1 - 2 ngày',
+    title: 'Đề xuất đãi ngộ & Phát hành thư mời nhận việc',
+    desc: 'Phát hành Offer Letter kỹ thuật số chuyên nghiệp, cấu hình chi tiết mức lương, phụ cấp, phúc lợi và hạn phản hồi trực tuyến.',
+    highlight: 'Hỗ trợ ký số & xác nhận nhận việc online',
+  },
+  {
+    step: 5,
+    name: 'Đã tuyển',
+    short: 'Đã tuyển',
+    icon: CheckCircle2,
+    badge: 'Tuyển thành công',
+    sla: 'Hoàn tất',
+    title: 'Tuyển dụng thành công & Kích hoạt Onboarding',
+    desc: 'Chào đón nhân sự mới chính thức gia nhập tổ chức, kích hoạt lộ trình hội nhập tự động và đồng bộ hồ sơ nhân sự nhanh chóng.',
+    highlight: 'Kích hoạt lộ trình Onboarding tự động',
+  },
+];
+
+const RecruitmentProgressTracker: React.FC = () => {
+  const [activeStageIndex, setActiveStageIndex] = useState(1);
+  const activeStage = PIPELINE_STAGES[activeStageIndex];
+
+  return (
+    <div
+      className="relative rounded-3xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white via-slate-50/50 to-slate-100/60 dark:from-slate-900/90 dark:via-slate-950/80 dark:to-slate-950 p-5 sm:p-7 shadow-sm"
+      data-testid="recruitment-progress-tracker"
+    >
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-2.5 w-2.5 relative shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+          </span>
+          <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
+            Quy trình tuyển dụng
+          </p>
+        </div>
+        <span className="text-[11px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400">
+          Bảng điều khiển nhà tuyển dụng
+        </span>
+      </div>
+
+      {/* Progress Stepper Line */}
+      <div className="mt-7">
+        <div className="relative">
+          {/* Connecting track base line */}
+          <div className="absolute top-5 left-5 right-5 h-1.5 bg-slate-200 dark:bg-slate-800 -translate-y-1/2 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 transition-all duration-500 ease-out rounded-full"
+              style={{ width: `${(activeStageIndex / (PIPELINE_STAGES.length - 1)) * 100}%` }}
+            />
+          </div>
+
+          {/* 5 Milestone Buttons */}
+          <div className="relative flex justify-between items-start">
+            {PIPELINE_STAGES.map((s, idx) => {
+              const isCompleted = idx < activeStageIndex;
+              const isCurrent = idx === activeStageIndex;
+              const Icon = s.icon;
+              return (
+                <button
+                  key={s.step}
+                  type="button"
+                  onClick={() => setActiveStageIndex(idx)}
+                  className="flex flex-col items-center group focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-xl"
+                  aria-label={`Bước ${s.step}: ${s.name}`}
+                  aria-current={isCurrent ? 'step' : undefined}
+                >
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 relative z-10 ${
+                      isCompleted
+                        ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25 group-hover:bg-emerald-600'
+                        : isCurrent
+                          ? 'bg-emerald-600 text-white ring-4 ring-emerald-400/40 shadow-lg shadow-emerald-500/30 scale-110'
+                          : 'bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 text-slate-400 dark:text-slate-500 group-hover:border-emerald-400 group-hover:text-emerald-500'
+                    }`}
+                  >
+                    {isCompleted ? (
+                      <Check className="w-5 h-5 stroke-[2.5]" />
+                    ) : (
+                      <Icon className="w-4 h-4" />
+                    )}
+                  </div>
+                  <div className="mt-2 text-center">
+                    <p
+                      className={`text-[11px] sm:text-xs font-bold transition-colors ${
+                        isCurrent
+                          ? 'text-emerald-600 dark:text-emerald-400 font-black'
+                          : isCompleted
+                            ? 'text-slate-800 dark:text-slate-200'
+                            : 'text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      {s.step}. {s.short}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Stage Detail Card */}
+        <div className="mt-6 rounded-2xl bg-white dark:bg-slate-900/90 border border-slate-200/90 dark:border-slate-800 p-4 sm:p-5 shadow-sm transition-all duration-300">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <span className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-xs">
+                0{activeStage.step}
+              </span>
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500">
+                  Giai đoạn {activeStage.step} / 5
+                </p>
+                <h4 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
+                  {activeStage.name}
+                </h4>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                <Clock className="w-3 h-3 text-emerald-500" />
+                SLA: <strong className="text-emerald-600 dark:text-emerald-400">{activeStage.sla}</strong>
+              </span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
+                {activeStage.badge}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+              {activeStage.title}
+            </p>
+            <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+              {activeStage.desc}
+            </p>
+          </div>
+
+          <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              {activeStage.highlight}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setActiveStageIndex((prev) => Math.max(0, prev - 1))}
+                disabled={activeStageIndex === 0}
+                className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                aria-label="Giai đoạn trước"
+              >
+                ← Trước
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveStageIndex((prev) => Math.min(PIPELINE_STAGES.length - 1, prev + 1))}
+                disabled={activeStageIndex === PIPELINE_STAGES.length - 1}
+                className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                aria-label="Giai đoạn kế tiếp"
+              >
+                Sau →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Action Tiles */}
+      <div className="mt-6 grid grid-cols-3 gap-3">
+        {[
+          { icon: Briefcase, label: 'Tin tuyển dụng', sub: 'Quản lý tin', to: '/employers' },
+          { icon: Users, label: 'Ứng viên', sub: 'Theo dõi pipeline', to: '/employers' },
+          { icon: BellRing, label: 'Thông báo', sub: 'Nhắc lịch & SLA', to: '/employers' },
+        ].map((t) => (
+          <Link
+            key={t.label}
+            to={t.to}
+            className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 text-center hover:border-emerald-500/60 hover:shadow-sm hover:-translate-y-0.5 transition-all group block"
+          >
+            <t.icon className="w-5 h-5 mx-auto text-emerald-500 group-hover:scale-110 transition-transform" />
+            <p className="mt-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+              {t.label}
+            </p>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium block">
+              {t.sub}
+            </span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export const HomePage: React.FC = () => {
   usePageTitle();
@@ -620,41 +858,8 @@ export const HomePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Illustration of the hiring pipeline (stage names only, no fabricated numbers). */}
-          <div className="relative rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-5 sm:p-6" aria-hidden="true">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-black text-slate-900 dark:text-white">Quy trình tuyển dụng</p>
-              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Bảng điều khiển nhà tuyển dụng</span>
-            </div>
-            <div className="mt-5 space-y-3">
-              {[
-                { label: 'Ứng tuyển', w: 'w-full', c: 'from-slate-300 to-slate-400 dark:from-slate-600 dark:to-slate-500' },
-                { label: 'Sàng lọc', w: 'w-4/5', c: 'from-sky-300 to-sky-500' },
-                { label: 'Phỏng vấn', w: 'w-3/5', c: 'from-violet-300 to-violet-500' },
-                { label: 'Offer', w: 'w-2/5', c: 'from-amber-300 to-amber-500' },
-                { label: 'Đã tuyển', w: 'w-1/4', c: 'from-emerald-400 to-teal-500' },
-              ].map((s) => (
-                <div key={s.label} className="flex items-center gap-3">
-                  <span className="w-20 shrink-0 text-xs font-bold text-slate-600 dark:text-slate-300">{s.label}</span>
-                  <div className="flex-1 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden">
-                    <div className={`h-full ${s.w} rounded-xl bg-gradient-to-r ${s.c}`} />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              {[
-                { icon: Briefcase, label: 'Tin tuyển dụng' },
-                { icon: Users, label: 'Ứng viên' },
-                { icon: BellRing, label: 'Thông báo' },
-              ].map((t) => (
-                <div key={t.label} className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
-                  <t.icon className="w-5 h-5 mx-auto text-emerald-500" />
-                  <p className="mt-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-300">{t.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Interactive Recruitment Progress Tracker */}
+          <RecruitmentProgressTracker />
         </div>
       </section>
     </>

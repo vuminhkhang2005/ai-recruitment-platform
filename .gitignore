@@ -48,3 +48,4 @@ backend/uploads/
 !frontend/test_phase_c_candidate.cjs
 !frontend/test_phase_d_employer.cjs
 !frontend/test_phase_e_full_flow.cjs
+!frontend/test_progress_tracker.cjs
