@@ -14,9 +14,10 @@ import {
   Users,
 } from 'lucide-react';
 import type { Company, Job, MatchScore } from '../../lib/types';
-import { EXP_LEVELS, JOB_TYPES, daysLeft, formatDate, label, toLines } from '../../lib/format';
+import { EXP_LEVELS, JOB_TYPES, daysLeft, formatDate, formatSalary, getExpLevels, getJobTypes, label, timeAgo, toLines } from '../../lib/format';
 import { useAuth } from '../../context/AuthContext';
 import { useMyApplications } from '../../context/MyApplicationsContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { CompanyAvatar, Tag, cardCls } from '../ui/primitives';
 import { SaveJobButton } from './JobCard';
 import { ApplyModal } from './ApplyModal';
@@ -63,6 +64,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
   onApplied,
   standalone = false,
 }) => {
+  const { language } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, isCandidate, isRecruiter } = useAuth();
@@ -74,6 +76,10 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
   const isOpen = job.status === 'PUBLISHED' && (left === null || left >= 0);
   const applied = appliedJobIds.has(job.id);
   const myApp = applications.find((a) => a.jobId === job.id);
+  const expLevels = getExpLevels(language);
+  const jobTypes = getJobTypes(language);
+  const salaryDisplay = formatSalary(job.salaryFormatted, language);
+  const postedText = timeAgo(job.createdAt, language) || job.postedTimeAgo;
 
   const onApplyClick = () => {
     if (!isAuthenticated) {
@@ -94,7 +100,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
     if (!isOpen) {
       applyButton = (
         <button disabled className={`${ctaBase} bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed`}>
-          Đã ngừng nhận hồ sơ
+          {language === 'vi' ? 'Đã ngừng nhận hồ sơ' : 'Applications Closed'}
         </button>
       );
     } else if (applied) {
@@ -104,7 +110,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
           className={`${ctaBase} bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60 hover:border-sky-400`}
         >
           <CheckCircle2 className="w-4 h-4" />
-          Đã ứng tuyển · Xem trạng thái
+          {language === 'vi' ? 'Đã ứng tuyển · Xem trạng thái' : 'Applied · View Status'}
         </Link>
       );
     } else {
@@ -115,7 +121,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
           data-testid="apply-button"
         >
           <Send className="w-3.5 h-3.5" />
-          Ứng tuyển ngay
+          {language === 'vi' ? 'Ứng tuyển ngay' : 'Apply Now'}
         </button>
       );
     }
@@ -159,14 +165,14 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
             <button
               type="button"
               onClick={handleShare}
-              title="Sao chép liên kết việc làm"
-              aria-label="Chia sẻ việc làm"
+              title={language === 'vi' ? 'Sao chép liên kết việc làm' : 'Share job link'}
+              aria-label={language === 'vi' ? 'Chia sẻ việc làm' : 'Share job'}
               className="p-1.5 sm:p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer relative"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
               {copied && (
                 <span className="absolute -bottom-7 right-0 text-[10px] font-bold bg-slate-900 text-white px-2 py-0.5 rounded shadow-soft-sm whitespace-nowrap z-20 animate-fade-in">
-                  Đã chép link!
+                  {language === 'vi' ? 'Đã chép link!' : 'Copied link!'}
                 </span>
               )}
             </button>
@@ -180,21 +186,21 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
         {/* Salary & Highlights Row */}
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           <span className="px-2.5 py-0.5 rounded-lg bg-emerald-100/90 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 font-black text-xs border border-emerald-300/80 dark:border-emerald-800/80">
-            {job.salaryFormatted}
+            {salaryDisplay}
           </span>
           {job.urgent && (
             <span className="px-2 py-0.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 text-[11px] font-extrabold">
-              Tuyển gấp
+              {language === 'vi' ? 'Tuyển gấp' : 'Urgent'}
             </span>
           )}
           {job.jobType && (
             <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-semibold">
-              {label(JOB_TYPES, job.jobType)}
+              {label(jobTypes, job.jobType)}
             </span>
           )}
           {job.expLevel && (
             <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-semibold">
-              {label(EXP_LEVELS, job.expLevel)}
+              {label(expLevels, job.expLevel)}
             </span>
           )}
         </div>
@@ -211,7 +217,11 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
           ) : null}
         </div>
         {applied && myApp && (
-          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">Bạn đã nộp hồ sơ ngày {formatDate(myApp.appliedAt)}.</p>
+          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+            {language === 'vi'
+              ? `Bạn đã nộp hồ sơ ngày ${formatDate(myApp.appliedAt, 'vi')}.`
+              : `You applied for this job on ${formatDate(myApp.appliedAt, 'en')}.`}
+          </p>
         )}
       </div>
 
@@ -233,14 +243,16 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
               <Briefcase className="w-3.5 h-3.5" />
             </span>
             <span className="pt-0.5">
-              {label(EXP_LEVELS, job.expLevel)} · {label(JOB_TYPES, job.jobType)}
+              {label(expLevels, job.expLevel)} · {label(jobTypes, job.jobType)}
             </span>
           </div>
           <div className={metaItem}>
             <span className={metaIcon}>
               <Clock className="w-3.5 h-3.5" />
             </span>
-            <span className="pt-0.5">Đăng {job.postedTimeAgo.toLowerCase()}</span>
+            <span className="pt-0.5">
+              {language === 'vi' ? `Đăng ${postedText.toLowerCase()}` : `Posted ${postedText}`}
+            </span>
           </div>
           {job.deadline && (
             <div className={metaItem}>
@@ -248,8 +260,8 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
                 <CalendarClock className="w-3.5 h-3.5" />
               </span>
               <span className={`pt-0.5 ${isOpen && left !== null && left <= 7 ? 'text-amber-600 dark:text-amber-400 font-bold' : ''}`}>
-                Hạn nộp {formatDate(job.deadline)}
-                {isOpen && left !== null ? ` (còn ${left} ngày)` : ''}
+                {language === 'vi' ? `Hạn nộp ${formatDate(job.deadline, 'vi')}` : `Deadline: ${formatDate(job.deadline, 'en')}`}
+                {isOpen && left !== null ? (language === 'vi' ? ` (còn ${left} ngày)` : ` (${left}d left)`) : ''}
               </span>
             </div>
           )}
@@ -257,7 +269,9 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
             <span className={metaIcon}>
               <Users className="w-3.5 h-3.5" />
             </span>
-            <span className="pt-0.5">{job.applicationsCount} người đã ứng tuyển cho vị trí này</span>
+            <span className="pt-0.5">
+              {job.applicationsCount} {language === 'vi' ? 'người đã ứng tuyển cho vị trí này' : 'applicant(s) for this position'}
+            </span>
           </div>
         </dl>
 
@@ -269,35 +283,43 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
           >
             <p className="flex items-center gap-2 font-black text-sm text-slate-900 dark:text-white">
               <Sparkles className="w-4 h-4 text-emerald-500" />
-              Hồ sơ của bạn khớp {match.score}% kỹ năng yêu cầu
+              {language === 'vi'
+                ? `Hồ sơ của bạn khớp ${match.score}% kỹ năng yêu cầu`
+                : `Your profile matches ${match.score}% of required skills`}
             </p>
             <div className="mt-2.5 h-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950 overflow-hidden">
               <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500" style={{ width: `${match.score}%` }} />
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
-              Tính từ danh sách kỹ năng trong hồ sơ của bạn so với kỹ năng của tin tuyển dụng.
+              {language === 'vi'
+                ? 'Tính từ danh sách kỹ năng trong hồ sơ của bạn so với kỹ năng của tin tuyển dụng.'
+                : 'Calculated by comparing skills from your profile against this job opening.'}
             </p>
             <div className="mt-3 grid sm:grid-cols-2 gap-2 text-xs">
               <div className="rounded-xl bg-white/80 dark:bg-slate-900/60 border border-emerald-200/70 dark:border-emerald-900/60 p-2.5">
-                <p className="text-emerald-700 dark:text-emerald-400 font-bold mb-0.5">Bạn đã có</p>
+                <p className="text-emerald-700 dark:text-emerald-400 font-bold mb-0.5">
+                  {language === 'vi' ? 'Bạn đã có' : 'Matched Skills'}
+                </p>
                 <p className="text-slate-700 dark:text-slate-300">{match.matchedSkills.length ? match.matchedSkills.join(', ') : '—'}</p>
               </div>
               <div className="rounded-xl bg-white/80 dark:bg-slate-900/60 border border-amber-200/70 dark:border-amber-900/60 p-2.5">
-                <p className="text-amber-700 dark:text-amber-400 font-bold mb-0.5">Còn thiếu</p>
+                <p className="text-amber-700 dark:text-amber-400 font-bold mb-0.5">
+                  {language === 'vi' ? 'Còn thiếu' : 'Missing Skills'}
+                </p>
                 <p className="text-slate-700 dark:text-slate-300">{match.missingSkills.length ? match.missingSkills.join(', ') : '—'}</p>
               </div>
             </div>
             <Link to="/profile#skills" className="mt-2.5 inline-block text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline">
-              Cập nhật kỹ năng →
+              {language === 'vi' ? 'Cập nhật kỹ năng →' : 'Update your skills →'}
             </Link>
           </div>
         )}
 
         {/* Structured Job Description Content */}
         <div className={`${cardCls} p-4 sm:p-5 job-description-content`}>
-          <Section title="Mô tả công việc" text={job.description} />
-          <Section title="Yêu cầu" text={job.requirements} />
-          <Section title="Quyền lợi" text={job.benefits} />
+          <Section title={language === 'vi' ? 'Mô tả công việc' : 'Job Description'} text={job.description} />
+          <Section title={language === 'vi' ? 'Yêu cầu' : 'Requirements'} text={job.requirements} />
+          <Section title={language === 'vi' ? 'Quyền lợi' : 'Benefits & Perks'} text={job.benefits} />
         </div>
 
         {/* Required Skills Tags */}
@@ -305,7 +327,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
           <div className={`${cardCls} p-4`}>
             <h2 className="flex items-center gap-2 text-sm font-black text-slate-900 dark:text-white mb-2.5">
               <span className="w-1.5 h-3.5 rounded-full bg-emerald-500" />
-              Kỹ năng chuyên môn
+              {language === 'vi' ? 'Kỹ năng chuyên môn' : 'Required Skills'}
             </h2>
             <div className="flex flex-wrap gap-1.5">
               {job.skills.map((s) => (
@@ -335,13 +357,15 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
             <dl className="mt-4 space-y-2 text-xs sm:text-sm">
               {company.companySize && (
                 <div className="flex justify-between gap-3">
-                  <dt className="text-slate-500 dark:text-slate-400">Quy mô</dt>
-                  <dd className="font-semibold text-slate-800 dark:text-slate-200 text-right">{company.companySize} nhân viên</dd>
+                  <dt className="text-slate-500 dark:text-slate-400">{language === 'vi' ? 'Quy mô' : 'Company Size'}</dt>
+                  <dd className="font-semibold text-slate-800 dark:text-slate-200 text-right">
+                    {company.companySize} {language === 'vi' ? 'nhân viên' : 'employees'}
+                  </dd>
                 </div>
               )}
               {company.city && (
                 <div className="flex justify-between gap-3">
-                  <dt className="text-slate-500 dark:text-slate-400">Địa điểm</dt>
+                  <dt className="text-slate-500 dark:text-slate-400">{language === 'vi' ? 'Địa điểm' : 'Location'}</dt>
                   <dd className="font-semibold text-slate-800 dark:text-slate-200 text-right">{company.city}</dd>
                 </div>
               )}
@@ -367,7 +391,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
               to={`/companies/${job.companyId}`}
               className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
             >
-              Xem trang công ty & cơ hội khác →
+              {language === 'vi' ? 'Xem trang công ty & cơ hội khác →' : 'View Company Profile & Open Roles →'}
             </Link>
           </div>
         </div>
@@ -376,15 +400,21 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
         {!applied && isOpen && !isRecruiter && (
           <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-bold text-slate-900 dark:text-white">Sẵn sàng ứng tuyển cho vị trí này?</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Hồ sơ của bạn sẽ được gửi trực tiếp tới nhà tuyển dụng.</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-white">
+                {language === 'vi' ? 'Sẵn sàng ứng tuyển cho vị trí này?' : 'Ready to apply for this position?'}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {language === 'vi'
+                  ? 'Hồ sơ của bạn sẽ được gửi trực tiếp tới nhà tuyển dụng.'
+                  : 'Your profile and application will be submitted directly to the employer.'}
+              </p>
             </div>
             <button
               onClick={onApplyClick}
               className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-soft transition-all shrink-0 cursor-pointer inline-flex items-center gap-1.5"
             >
               <Send className="w-3.5 h-3.5" />
-              Ứng tuyển ngay
+              {language === 'vi' ? 'Ứng tuyển ngay' : 'Apply Now'}
             </button>
           </div>
         )}

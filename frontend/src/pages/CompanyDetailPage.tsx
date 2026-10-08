@@ -8,16 +8,19 @@ import { JobCard } from '../components/jobs/JobCard';
 import { useMatchScores } from '../lib/useMatchScores';
 import { useMyApplications } from '../context/MyApplicationsContext';
 import { usePageTitle } from '../lib/usePageTitle';
+import { useLanguage } from '../i18n/LanguageContext';
 import { NotFoundPage } from './NotFoundPage';
 
 export const CompanyDetailPage: React.FC = () => {
   const { id } = useParams();
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
   const [company, setCompany] = useState<Company | null>(null);
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const scores = useMatchScores(jobs?.map((j) => j.id) ?? []);
   const { appliedJobIds } = useMyApplications();
-  usePageTitle(company?.name ?? 'Công ty');
+  usePageTitle(company?.name ?? (isVi ? 'Công ty' : 'Company'));
 
   useEffect(() => {
     setCompany(null);
@@ -27,7 +30,9 @@ export const CompanyDetailPage: React.FC = () => {
     companyApi.jobs(id!).then(setJobs).catch(() => setJobs([]));
   }, [id]);
 
-  if (error && (error.status === 404 || error.status === 400)) return <NotFoundPage message="Công ty không tồn tại." />;
+  if (error && (error.status === 404 || error.status === 400)) {
+    return <NotFoundPage message={isVi ? "Công ty không tồn tại." : "Company not found."} />;
+  }
   if (error)
     return (
       <div className="max-w-5xl mx-auto px-4 py-10">
@@ -65,7 +70,7 @@ export const CompanyDetailPage: React.FC = () => {
                 {company.companySize && (
                   <span className="inline-flex items-center gap-1.5">
                     <Users className="w-4 h-4 text-emerald-500" />
-                    {company.companySize} nhân viên
+                    {company.companySize} {isVi ? 'nhân viên' : 'employees'}
                   </span>
                 )}
               </div>
@@ -76,11 +81,15 @@ export const CompanyDetailPage: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="min-w-0 order-2 lg:order-1">
-          <h2 className="text-xl font-black text-slate-900 dark:text-white mb-5">{jobs ? `${jobs.length} việc làm đang tuyển` : 'Việc làm đang tuyển'}</h2>
+          <h2 className="text-xl font-black text-slate-900 dark:text-white mb-5">
+            {jobs
+              ? (isVi ? `${jobs.length} việc làm đang tuyển` : `${jobs.length} open jobs hiring`)
+              : (isVi ? 'Việc làm đang tuyển' : 'Open jobs')}
+          </h2>
           {!jobs ? (
             <PageLoader />
           ) : jobs.length === 0 ? (
-            <EmptyState title="Công ty hiện chưa có tin tuyển dụng nào đang mở." />
+            <EmptyState title={isVi ? "Công ty hiện chưa có tin tuyển dụng nào đang mở." : "No open job listings for this company at the moment."} />
           ) : (
             <div className="grid gap-5 md:grid-cols-2">
               {jobs.map((j) => (
@@ -93,12 +102,14 @@ export const CompanyDetailPage: React.FC = () => {
         <aside className="order-1 lg:order-2 bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 h-fit shadow-soft-xs">
           <h2 className="flex items-center gap-2.5 font-black text-slate-900 dark:text-white">
             <span className="w-1.5 h-5 rounded-full bg-gradient-to-b from-emerald-500 to-teal-500" />
-            Giới thiệu công ty
+            {isVi ? 'Giới thiệu công ty' : 'About Company'}
           </h2>
-          <p className="mt-2 text-sm text-slate-700 leading-relaxed selectable-text">{company.description || 'Công ty chưa cập nhật phần giới thiệu.'}</p>
+          <p className="mt-2 text-sm text-slate-700 dark:text-slate-300 leading-relaxed selectable-text">
+            {company.description || (isVi ? 'Công ty chưa cập nhật phần giới thiệu.' : 'No company introduction provided yet.')}
+          </p>
           {company.address && (
-            <p className="mt-4 text-sm text-slate-600">
-              <span className="font-medium text-slate-800">Địa chỉ: </span>
+            <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
+              <span className="font-medium text-slate-800 dark:text-slate-200">{isVi ? 'Địa chỉ: ' : 'Address: '}</span>
               {company.address}
               {company.city ? `, ${company.city}` : ''}
             </p>

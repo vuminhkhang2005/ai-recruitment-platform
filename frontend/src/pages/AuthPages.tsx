@@ -6,6 +6,7 @@ import { companyApi } from '../lib/api';
 import type { Company, UserSummary } from '../lib/types';
 import { ErrorBox, btnPrimary, inputCls } from '../components/ui/primitives';
 import { usePageTitle } from '../lib/usePageTitle';
+import { useLanguage } from '../i18n/LanguageContext';
 
 /** Only allow in-app relative redirects. */
 function safeNext(next: string | null) {
@@ -31,7 +32,9 @@ const AuthShell: React.FC<{ title: string; subtitle?: React.ReactNode; children:
 );
 
 export const LoginPage: React.FC = () => {
-  usePageTitle('Đăng nhập');
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
+  usePageTitle(isVi ? 'Đăng nhập' : 'Sign In');
   const { login, user } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -61,26 +64,26 @@ export const LoginPage: React.FC = () => {
 
   return (
     <AuthShell
-      title="Đăng nhập"
+      title={isVi ? "Đăng nhập" : "Sign In"}
       subtitle={
         <>
-          Chưa có tài khoản?{' '}
+          {isVi ? 'Chưa có tài khoản? ' : "Don't have an account? "}
           <Link to={`/register${next ? `?next=${encodeURIComponent(next)}` : ''}`} className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
-            Đăng ký
+            {isVi ? 'Đăng ký' : 'Sign Up'}
           </Link>
         </>
       }
     >
       <form onSubmit={submit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="text-sm font-medium text-slate-700">
+          <label htmlFor="email" className="text-sm font-medium text-slate-700 dark:text-slate-300">
             Email
           </label>
           <input id="email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={`${inputCls} mt-1`} />
         </div>
         <div>
-          <label htmlFor="password" className="text-sm font-medium text-slate-700">
-            Mật khẩu
+          <label htmlFor="password" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            {isVi ? 'Mật khẩu' : 'Password'}
           </label>
           <input
             id="password"
@@ -94,7 +97,7 @@ export const LoginPage: React.FC = () => {
         </div>
         {error && <ErrorBox message={error} />}
         <button type="submit" disabled={loading} className={`${btnPrimary} w-full py-2.5`}>
-          {loading ? 'Đang đăng nhập…' : 'Đăng nhập'}
+          {loading ? (isVi ? 'Đang đăng nhập…' : 'Signing In...') : (isVi ? 'Đăng nhập' : 'Sign In')}
         </button>
       </form>
     </AuthShell>
@@ -102,7 +105,9 @@ export const LoginPage: React.FC = () => {
 };
 
 export const RegisterPage: React.FC = () => {
-  usePageTitle('Đăng ký');
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
+  usePageTitle(isVi ? 'Đăng ký' : 'Sign Up');
   const { register, user } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -134,10 +139,10 @@ export const RegisterPage: React.FC = () => {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (form.password.length < 6) return setError('Mật khẩu tối thiểu 6 ký tự.');
-    if (form.password !== form.confirm) return setError('Mật khẩu nhập lại không khớp.');
-    if (isRecruiter && !companyId) return setError('Vui lòng chọn công ty của bạn.');
-    if (isRecruiter && companyId === 'new' && !companyName.trim()) return setError('Vui lòng nhập tên công ty.');
+    if (form.password.length < 6) return setError(isVi ? 'Mật khẩu tối thiểu 6 ký tự.' : 'Password must be at least 6 characters.');
+    if (form.password !== form.confirm) return setError(isVi ? 'Mật khẩu nhập lại không khớp.' : 'Passwords do not match.');
+    if (isRecruiter && !companyId) return setError(isVi ? 'Vui lòng chọn công ty của bạn.' : 'Please select your company.');
+    if (isRecruiter && companyId === 'new' && !companyName.trim()) return setError(isVi ? 'Vui lòng nhập tên công ty.' : 'Please enter company name.');
     setLoading(true);
     try {
       const u = await register({
@@ -172,85 +177,86 @@ export const RegisterPage: React.FC = () => {
 
   return (
     <AuthShell
-      title="Tạo tài khoản"
+      title={isVi ? "Tạo tài khoản" : "Create Account"}
       subtitle={
         <>
-          Đã có tài khoản?{' '}
+          {isVi ? 'Đã có tài khoản? ' : 'Already have an account? '}
           <Link to={`/login${next ? `?next=${encodeURIComponent(next)}` : ''}`} className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
-            Đăng nhập
+            {isVi ? 'Đăng nhập' : 'Sign In'}
           </Link>
         </>
       }
     >
       <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 mb-5">
-        {tab('ROLE_CANDIDATE', 'Tôi tìm việc')}
-        {tab('ROLE_RECRUITER', 'Tôi tuyển dụng')}
+        {tab('ROLE_CANDIDATE', isVi ? 'Tôi tìm việc' : 'Job Seeker')}
+        {tab('ROLE_RECRUITER', isVi ? 'Tôi tuyển dụng' : 'Employer')}
       </div>
       <form onSubmit={submit} className="space-y-4">
         <div>
-          <label htmlFor="fullName" className="text-sm font-medium text-slate-700">
-            Họ và tên
+          <label htmlFor="fullName" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            {isVi ? 'Họ và tên' : 'Full Name'}
           </label>
           <input id="fullName" required value={form.fullName} onChange={set('fullName')} className={`${inputCls} mt-1`} />
         </div>
         <div>
-          <label htmlFor="reg-email" className="text-sm font-medium text-slate-700">
-            {isRecruiter ? 'Email công việc' : 'Email'}
+          <label htmlFor="reg-email" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            {isRecruiter ? (isVi ? 'Email công việc' : 'Work Email') : 'Email'}
           </label>
           <input id="reg-email" type="email" required autoComplete="email" value={form.email} onChange={set('email')} className={`${inputCls} mt-1`} />
         </div>
         <div>
-          <label htmlFor="phone" className="text-sm font-medium text-slate-700">
-            Số điện thoại <span className="font-normal text-slate-400">(không bắt buộc)</span>
+          <label htmlFor="phone" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            {isVi ? 'Số điện thoại ' : 'Phone Number '}
+            <span className="font-normal text-slate-400">({isVi ? 'không bắt buộc' : 'optional'})</span>
           </label>
           <input id="phone" type="tel" value={form.phone} onChange={set('phone')} className={`${inputCls} mt-1`} />
         </div>
         {isRecruiter && (
           <div>
-            <label htmlFor="company" className="text-sm font-medium text-slate-700">
-              Công ty
+            <label htmlFor="company" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              {isVi ? 'Công ty' : 'Company'}
             </label>
             <select id="company" value={companyId} onChange={(e) => setCompanyId(e.target.value)} className={`${inputCls} mt-1`}>
-              <option value="">-- Chọn công ty --</option>
+              <option value="">{isVi ? '-- Chọn công ty --' : '-- Select company --'}</option>
               {companies.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
-              <option value="new">Công ty chưa có trong danh sách…</option>
+              <option value="new">{isVi ? 'Công ty chưa có trong danh sách…' : 'Company not listed...'}</option>
             </select>
             {companyId === 'new' && (
               <>
                 <input
-                  aria-label="Tên công ty"
-                  placeholder="Tên công ty"
+                  aria-label={isVi ? "Tên công ty" : "Company Name"}
+                  placeholder={isVi ? "Tên công ty" : "Company Name"}
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   maxLength={200}
                   className={`${inputCls} mt-2`}
                 />
-                <p className="mt-1 text-xs text-slate-500">Công ty mới sẽ ở trạng thái chờ xác minh.</p>
+                <p className="mt-1 text-xs text-slate-500">{isVi ? 'Công ty mới sẽ ở trạng thái chờ xác minh.' : 'New company will be in pending verification status.'}</p>
               </>
             )}
           </div>
         )}
         <div className="grid sm:grid-cols-2 gap-3">
           <div>
-            <label htmlFor="reg-password" className="text-sm font-medium text-slate-700">
-              Mật khẩu
+            <label htmlFor="reg-password" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              {isVi ? 'Mật khẩu' : 'Password'}
             </label>
             <input id="reg-password" type="password" required autoComplete="new-password" value={form.password} onChange={set('password')} className={`${inputCls} mt-1`} />
           </div>
           <div>
-            <label htmlFor="confirm" className="text-sm font-medium text-slate-700">
-              Nhập lại mật khẩu
+            <label htmlFor="confirm" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              {isVi ? 'Nhập lại mật khẩu' : 'Confirm Password'}
             </label>
             <input id="confirm" type="password" required autoComplete="new-password" value={form.confirm} onChange={set('confirm')} className={`${inputCls} mt-1`} />
           </div>
         </div>
         {error && <ErrorBox message={error} />}
         <button type="submit" disabled={loading} className={`${btnPrimary} w-full py-2.5`}>
-          {loading ? 'Đang tạo tài khoản…' : isRecruiter ? 'Tạo tài khoản nhà tuyển dụng' : 'Đăng ký'}
+          {loading ? (isVi ? 'Đang tạo tài khoản…' : 'Creating Account...') : isRecruiter ? (isVi ? 'Tạo tài khoản nhà tuyển dụng' : 'Register Employer Account') : (isVi ? 'Đăng ký' : 'Sign Up')}
         </button>
       </form>
     </AuthShell>

@@ -5,9 +5,12 @@ import { companyApi } from '../lib/api';
 import type { Company } from '../lib/types';
 import { CompanyAvatar, EmptyState, ErrorBox, PageLoader, inputCls } from '../components/ui/primitives';
 import { usePageTitle } from '../lib/usePageTitle';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export const CompaniesPage: React.FC = () => {
-  usePageTitle('Danh sách công ty');
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
+  usePageTitle(isVi ? 'Danh sách công ty' : 'Companies Directory');
   const [companies, setCompanies] = useState<Company[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -29,12 +32,22 @@ export const CompaniesPage: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">Doanh nghiệp nổi bật</h1>
-          <p className="text-sm text-slate-500 mt-1">{companies ? `${companies.length} công ty` : ''}</p>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+            {isVi ? 'Doanh nghiệp nổi bật' : 'Featured Employers'}
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            {companies ? (isVi ? `${companies.length} công ty` : `${companies.length} companies`) : ''}
+          </p>
         </div>
         <div className="relative sm:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tìm công ty" aria-label="Tìm công ty" className={`${inputCls} pl-9`} />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={isVi ? "Tìm công ty" : "Search companies..."}
+            aria-label="Tìm công ty"
+            className={`${inputCls} pl-9`}
+          />
         </div>
       </div>
 
@@ -44,7 +57,7 @@ export const CompaniesPage: React.FC = () => {
         ) : !companies ? (
           <PageLoader />
         ) : filtered.length === 0 ? (
-          <EmptyState title="Không tìm thấy công ty" />
+          <EmptyState title={isVi ? "Không tìm thấy công ty" : "No companies found"} />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((c) => (
@@ -54,7 +67,9 @@ export const CompaniesPage: React.FC = () => {
                   <p className="font-black text-slate-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{c.name}</p>
                   <p className="text-xs text-slate-500 mt-0.5 truncate">{[c.industry, c.city].filter(Boolean).join(' · ')}</p>
                   {c.description && <p className="text-sm text-slate-600 mt-2 line-clamp-2">{c.description}</p>}
-                  <p className="mt-3 inline-block px-2.5 py-0.5 rounded-lg bg-emerald-100/90 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-black text-xs border border-emerald-200/90 dark:border-emerald-800/60">{c.openJobsCount ? `${c.openJobsCount} việc làm đang tuyển` : 'Chưa có việc làm đang tuyển'}</p>
+                  <p className="mt-3 inline-block px-2.5 py-0.5 rounded-lg bg-emerald-100/90 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-black text-xs border border-emerald-200/90 dark:border-emerald-800/60">
+                    {c.openJobsCount ? (isVi ? `${c.openJobsCount} việc làm đang tuyển` : `${c.openJobsCount} open jobs`) : (isVi ? 'Chưa có việc làm đang tuyển' : 'No active jobs')}
+                  </p>
                 </div>
               </Link>
             ))}

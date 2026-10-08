@@ -2,14 +2,16 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Bookmark, BookmarkCheck, CheckCircle2, ChevronRight, Clock, Flame, MapPin, Send, Sparkles, Users } from 'lucide-react';
 import type { Job, MatchScore } from '../../lib/types';
-import { EXP_LEVELS, JOB_TYPES, daysLeft, label } from '../../lib/format';
+import { EXP_LEVELS, JOB_TYPES, daysLeft, formatSalary, getExpLevels, getJobTypes, label, timeAgo } from '../../lib/format';
 import { useAuth } from '../../context/AuthContext';
 import { useSavedJobs } from '../../lib/savedJobs';
 import { useToast } from '../../context/ToastContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { CompanyAvatar } from '../ui/primitives';
 
 export const SaveJobButton: React.FC<{ job: Job; className?: string; withLabel?: boolean }> = ({ job, className = '', withLabel }) => {
   const { isAuthenticated, isCandidate } = useAuth();
+  const { language } = useLanguage();
   const { isSaved, toggle } = useSavedJobs();
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,7 +28,12 @@ export const SaveJobButton: React.FC<{ job: Job; className?: string; withLabel?:
       return;
     }
     const nowSaved = toggle(job);
-    toast(nowSaved ? 'Đã lưu việc làm' : 'Đã bỏ lưu việc làm', 'info');
+    toast(
+      nowSaved
+        ? (language === 'vi' ? 'Đã lưu việc làm' : 'Job saved to wishlist')
+        : (language === 'vi' ? 'Đã bỏ lưu việc làm' : 'Job removed from saved list'),
+      'info'
+    );
   };
 
   return (
@@ -39,12 +46,13 @@ export const SaveJobButton: React.FC<{ job: Job; className?: string; withLabel?:
       } ${saved ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400'} ${className}`}
     >
       {saved ? <BookmarkCheck className="w-5 h-5 fill-emerald-600/20" /> : <Bookmark className="w-5 h-5" />}
-      {withLabel && <span className="font-bold">{saved ? 'Đã lưu' : 'Lưu tin'}</span>}
+      {withLabel && <span className="font-bold">{saved ? (language === 'vi' ? 'Đã lưu' : 'Saved') : (language === 'vi' ? 'Lưu tin' : 'Save')}</span>}
     </button>
   );
 };
 
 export const MatchBadge: React.FC<{ match?: MatchScore }> = ({ match }) => {
+  const { language } = useLanguage();
   if (!match || match.score === null || match.score === undefined) return null;
   const color =
     match.score >= 70
@@ -55,10 +63,10 @@ export const MatchBadge: React.FC<{ match?: MatchScore }> = ({ match }) => {
   return (
     <span
       className={`inline-flex items-center gap-1 text-[11px] font-extrabold px-2 py-0.5 rounded-lg border ${color}`}
-      title={`Khớp ${match.matchedSkills.length} kỹ năng với hồ sơ của bạn`}
+      title={language === 'vi' ? `Khớp ${match.matchedSkills.length} kỹ năng với hồ sơ của bạn` : `Matches ${match.matchedSkills.length} skills from your profile`}
     >
       <Sparkles className="w-3 h-3" />
-      Khớp {match.score}% kỹ năng
+      {language === 'vi' ? `Khớp ${match.score}% kỹ năng` : `${match.score}% Match`}
     </span>
   );
 };
@@ -82,10 +90,16 @@ export const JobCard: React.FC<JobCardProps> = ({
   preserveSearch = false,
   onClick,
 }) => {
+  const { language } = useLanguage();
   const location = useLocation();
   const left = daysLeft(job.deadline);
+  const expLevels = getExpLevels(language);
+  const jobTypes = getJobTypes(language);
+  const salaryDisplay = formatSalary(job.salaryFormatted, language);
+  const postedText = timeAgo(job.createdAt, language) || job.postedTimeAgo;
   const chip = 'px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-300';
   const targetTo = preserveSearch ? `/jobs/${job.id}${location.search}` : `/jobs/${job.id}`;
+
   if (compact) {
     return (
       <Link
@@ -118,7 +132,7 @@ export const JobCard: React.FC<JobCardProps> = ({
             {/* Salary + Location row */}
             <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
               <span className="font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-200/70 dark:border-emerald-800/60">
-                {job.salaryFormatted}
+                {salaryDisplay}
               </span>
               {job.locationCity && (
                 <span className="text-slate-500 dark:text-slate-400 truncate flex items-center gap-0.5">
@@ -128,7 +142,7 @@ export const JobCard: React.FC<JobCardProps> = ({
               )}
               {job.jobType && (
                 <span className="text-slate-400 dark:text-slate-500 hidden sm:inline">
-                  • {label(JOB_TYPES, job.jobType)}
+                  • {label(jobTypes, job.jobType)}
                 </span>
               )}
             </div>
@@ -155,18 +169,20 @@ export const JobCard: React.FC<JobCardProps> = ({
               <div className="flex items-center gap-1.5 truncate">
                 {job.urgent && (
                   <span className="text-rose-600 dark:text-rose-400 font-extrabold flex items-center gap-0.5">
-                    <Flame className="w-3 h-3" /> Tuyển gấp
+                    <Flame className="w-3 h-3" /> {language === 'vi' ? 'Tuyển gấp' : 'Urgent'}
                   </span>
                 )}
-                {applied && <span className="text-sky-600 font-bold">Đã nộp</span>}
+                {applied && <span className="text-sky-600 font-bold">{language === 'vi' ? 'Đã nộp' : 'Applied'}</span>}
                 <MatchBadge match={match} />
-                <span>{job.postedTimeAgo}</span>
+                <span>{postedText}</span>
                 {left !== null && left >= 0 && (
-                  <span className="text-amber-600 dark:text-amber-400 font-bold">• Còn {left} ngày</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-bold">
+                    • {language === 'vi' ? `Còn ${left} ngày` : `${left}d left`}
+                  </span>
                 )}
               </div>
               <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-0.5 shrink-0 text-[11px]">
-                Chi tiết <ChevronRight className="w-3 h-3" />
+                {language === 'vi' ? 'Chi tiết' : 'Details'} <ChevronRight className="w-3 h-3" />
               </span>
             </div>
           </div>
@@ -189,7 +205,7 @@ export const JobCard: React.FC<JobCardProps> = ({
     >
       {selected && <div className="absolute left-0 top-2.5 bottom-2.5 w-1.5 bg-emerald-500 rounded-r-full" />}
       <div className="flex items-start gap-2.5">
-        <CompanyAvatar name={job.companyName} logoUrl={job.companyLogo} size={compact ? 'sm' : 'sm'} />
+        <CompanyAvatar name={job.companyName} logoUrl={job.companyLogo} size="sm" />
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1 text-xs font-bold text-slate-700 dark:text-slate-200">
             <span className="truncate">{job.companyName}</span>
@@ -198,9 +214,13 @@ export const JobCard: React.FC<JobCardProps> = ({
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-slate-400">
             <span className="inline-flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              {job.postedTimeAgo}
+              {postedText}
             </span>
-            {left !== null && left >= 0 && <span className="font-bold text-amber-600 dark:text-amber-400">Còn {left} ngày</span>}
+            {left !== null && left >= 0 && (
+              <span className="font-bold text-amber-600 dark:text-amber-400">
+                {language === 'vi' ? `Còn ${left} ngày` : `${left}d left`}
+              </span>
+            )}
           </p>
         </div>
         <SaveJobButton job={job} className="shrink-0 -mt-1 -mr-1" />
@@ -210,12 +230,12 @@ export const JobCard: React.FC<JobCardProps> = ({
         {job.urgent && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 text-[11px] font-extrabold">
             <Flame className="w-3 h-3" />
-            Tuyển gấp
+            {language === 'vi' ? 'Tuyển gấp' : 'Urgent'}
           </span>
         )}
         {applied && (
           <span className="px-2 py-0.5 rounded-lg bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-900/60 text-[11px] font-extrabold">
-            Đã ứng tuyển
+            {language === 'vi' ? 'Đã ứng tuyển' : 'Applied'}
           </span>
         )}
         <MatchBadge match={match} />
@@ -235,10 +255,18 @@ export const JobCard: React.FC<JobCardProps> = ({
             compact ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-0.5 text-xs'
           } rounded-lg bg-emerald-100/90 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-black border border-emerald-200/90 dark:border-emerald-800/60`}
         >
-          {job.salaryFormatted}
+          {salaryDisplay}
         </span>
-        {job.jobType && <span className={compact ? 'px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-semibold text-slate-600 dark:text-slate-300' : chip}>{label(JOB_TYPES, job.jobType)}</span>}
-        {job.expLevel && <span className={compact ? 'px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-semibold text-slate-600 dark:text-slate-300' : chip}>{label(EXP_LEVELS, job.expLevel)}</span>}
+        {job.jobType && (
+          <span className={compact ? 'px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-semibold text-slate-600 dark:text-slate-300' : chip}>
+            {label(jobTypes, job.jobType)}
+          </span>
+        )}
+        {job.expLevel && (
+          <span className={compact ? 'px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-semibold text-slate-600 dark:text-slate-300' : chip}>
+            {label(expLevels, job.expLevel)}
+          </span>
+        )}
       </div>
 
       {job.locationCity && (
@@ -250,7 +278,7 @@ export const JobCard: React.FC<JobCardProps> = ({
 
       {job.skills.length > 0 && (
         <div className={`${compact ? 'mt-2 gap-1' : 'mt-3 gap-1.5'} flex flex-wrap`}>
-          {job.skills.slice(0, compact ? 3 : 3).map((s) => (
+          {job.skills.slice(0, 3).map((s) => (
             <span
               key={s}
               className={`${
@@ -272,17 +300,19 @@ export const JobCard: React.FC<JobCardProps> = ({
         <div className={`${compact ? 'pt-2' : 'pt-4'} border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2`}>
           <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 min-w-0">
             <Users className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">{job.applicationsCount} ứng tuyển</span>
+            <span className="truncate">
+              {job.applicationsCount} {language === 'vi' ? 'ứng tuyển' : 'applicants'}
+            </span>
           </span>
           <span className="flex items-center gap-1.5 shrink-0">
             {!compact && !applied && (
               <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 group-hover:bg-emerald-700 text-white text-xs font-bold shadow-soft-xs transition-colors">
                 <Send className="w-3 h-3" />
-                Ứng tuyển
+                {language === 'vi' ? 'Ứng tuyển' : 'Apply'}
               </span>
             )}
             <span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
-              Chi tiết
+              {language === 'vi' ? 'Chi tiết' : 'Details'}
               <ChevronRight className="w-3 h-3" />
             </span>
           </span>

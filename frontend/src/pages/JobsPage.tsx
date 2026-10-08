@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { ArrowLeft, Flame, Sparkles } from 'lucide-react';
 import { ApiError, companyApi, jobApi } from '../lib/api';
 import type { Company, Job, Page } from '../lib/types';
-import { EXP_LEVELS, JOB_TYPES } from '../lib/format';
+import { EXP_LEVELS, JOB_TYPES, getExpLevels, getJobTypes } from '../lib/format';
 import { SearchBar } from '../components/jobs/SearchBar';
 import { JobCard } from '../components/jobs/JobCard';
 import { JobDetailPanel } from '../components/jobs/JobDetailPanel';
@@ -11,20 +11,21 @@ import { EmptyState, ErrorBox, Pagination, Spinner } from '../components/ui/prim
 import { useMatchScores } from '../lib/useMatchScores';
 import { useMyApplications } from '../context/MyApplicationsContext';
 import { usePageTitle } from '../lib/usePageTitle';
+import { useLanguage } from '../i18n/LanguageContext';
 import { NotFoundPage } from './NotFoundPage';
 
 const PAGE_SIZE = 12;
-const SALARY_OPTIONS = [
-  { value: '', label: 'Mọi mức lương' },
-  { value: '10', label: 'Từ 10 triệu' },
-  { value: '20', label: 'Từ 20 triệu' },
-  { value: '30', label: 'Từ 30 triệu' },
-  { value: '50', label: 'Từ 50 triệu' },
+const getSalaryOptions = (lang: string) => [
+  { value: '', label: lang === 'vi' ? 'Mọi mức lương' : 'All Salary Ranges' },
+  { value: '10', label: lang === 'vi' ? 'Từ 10 triệu' : 'From 10M' },
+  { value: '20', label: lang === 'vi' ? 'Từ 20 triệu' : 'From 20M' },
+  { value: '30', label: lang === 'vi' ? 'Từ 30 triệu' : 'From 30M' },
+  { value: '50', label: lang === 'vi' ? 'Từ 50 triệu' : 'From 50M' },
 ];
-const SORTS = [
-  { value: 'newest', label: 'Mới nhất' },
-  { value: 'salary', label: 'Lương cao nhất' },
-  { value: 'views', label: 'Xem nhiều nhất' },
+const getSorts = (lang: string) => [
+  { value: 'newest', label: lang === 'vi' ? 'Mới nhất' : 'Newest' },
+  { value: 'salary', label: lang === 'vi' ? 'Lương cao nhất' : 'Highest Salary' },
+  { value: 'views', label: lang === 'vi' ? 'Xem nhiều nhất' : 'Most Viewed' },
 ];
 
 const selectCls =
@@ -35,6 +36,8 @@ export const JobsPage: React.FC = () => {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
 
   const q = params.get('q') ?? params.get('keyword') ?? '';
   const city = params.get('city') ?? '';
@@ -63,8 +66,8 @@ export const JobsPage: React.FC = () => {
     selectedJob
       ? `${selectedJob.title} - ${selectedJob.companyName}`
       : q
-        ? `Việc làm ${q}`
-        : 'Tìm việc làm'
+        ? (isVi ? `Việc làm ${q}` : `Jobs for ${q}`)
+        : (isVi ? 'Tìm việc làm' : 'Job Search')
   );
 
   // Match scores for current page items + selected job
@@ -149,7 +152,7 @@ export const JobsPage: React.FC = () => {
 
   // If a nonexistent job was requested directly via URL (/jobs/999999), show 404 page
   if (routeJobId && detailError && (detailError.status === 404 || detailError.status === 400)) {
-    return <NotFoundPage message="Tin tuyển dụng không tồn tại hoặc đã bị gỡ." />;
+    return <NotFoundPage message={isVi ? "Tin tuyển dụng không tồn tại hoặc đã bị gỡ." : "This job post does not exist or has been removed."} />;
   }
 
   const update = (changes: Record<string, string>) => {
@@ -167,6 +170,10 @@ export const JobsPage: React.FC = () => {
   };
 
   const hasFilters = !!(level || type || salary || q || city);
+  const salaryOptions = getSalaryOptions(language);
+  const sorts = getSorts(language);
+  const expLevels = getExpLevels(language);
+  const jobTypes = getJobTypes(language);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -177,17 +184,17 @@ export const JobsPage: React.FC = () => {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white">
-                Tìm kiếm việc làm
+                {isVi ? 'Tìm kiếm việc làm' : 'Job Search'}
               </h1>
               <span className="text-xs text-slate-400 hidden sm:inline">•</span>
               <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
-                Khám phá cơ hội nghề nghiệp đa lĩnh vực
+                {isVi ? 'Khám phá cơ hội nghề nghiệp đa lĩnh vực' : 'Explore opportunities across multiple industries'}
               </span>
             </div>
             {result && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200/80 dark:border-emerald-800/60 text-xs font-bold text-emerald-800 dark:text-emerald-300">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>{result.totalElements} việc làm</span>
+                <span>{result.totalElements} {isVi ? 'việc làm' : 'jobs'}</span>
               </span>
             )}
           </div>
@@ -199,8 +206,8 @@ export const JobsPage: React.FC = () => {
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/80 text-xs">
             <div className="flex flex-wrap items-center gap-2">
               <select aria-label="Cấp bậc" value={level} onChange={(e) => update({ level: e.target.value })} className={selectCls}>
-                <option value="">Tất cả cấp bậc</option>
-                {Object.entries(EXP_LEVELS).map(([k, v]) => (
+                <option value="">{isVi ? 'Tất cả cấp bậc' : 'All Levels'}</option>
+                {Object.entries(expLevels).map(([k, v]) => (
                   <option key={k} value={k}>
                     {v}
                   </option>
@@ -208,16 +215,16 @@ export const JobsPage: React.FC = () => {
               </select>
 
               <select aria-label="Hình thức" value={type} onChange={(e) => update({ type: e.target.value })} className={selectCls}>
-                <option value="">Tất cả hình thức</option>
+                <option value="">{isVi ? 'Tất cả hình thức' : 'All Job Types'}</option>
                 {['FULL_TIME', 'HYBRID', 'INTERNSHIP'].map((k) => (
                   <option key={k} value={k}>
-                    {JOB_TYPES[k]}
+                    {jobTypes[k]}
                   </option>
                 ))}
               </select>
 
               <select aria-label="Mức lương" value={salary} onChange={(e) => update({ salary: e.target.value })} className={selectCls}>
-                {SALARY_OPTIONS.map((o) => (
+                {salaryOptions.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
                   </option>
@@ -233,7 +240,7 @@ export const JobsPage: React.FC = () => {
                   }}
                   className="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 font-bold px-2 py-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                 >
-                  Xóa bộ lọc
+                  {isVi ? 'Xóa bộ lọc' : 'Clear Filters'}
                 </button>
               )}
             </div>
@@ -250,7 +257,7 @@ export const JobsPage: React.FC = () => {
                       : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-700/80 hover:border-emerald-400'
                   }`}
                 >
-                  💰 Lương &gt; 30M
+                  {isVi ? '💰 Lương > 30M' : '💰 Salary > 30M'}
                 </button>
                 <button
                   type="button"
@@ -277,13 +284,13 @@ export const JobsPage: React.FC = () => {
               </div>
 
               <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300">
-                Sắp xếp:
+                {isVi ? 'Sắp xếp:' : 'Sort by:'}
                 <select
                   value={sort}
                   onChange={(e) => update({ sort: e.target.value === 'newest' ? '' : e.target.value })}
                   className={selectCls}
                 >
-                  {SORTS.map((s) => (
+                  {sorts.map((s) => (
                     <option key={s.value} value={s.value}>
                       {s.label}
                     </option>
@@ -308,8 +315,8 @@ export const JobsPage: React.FC = () => {
             </div>
           ) : result && result.items.length === 0 ? (
             <EmptyState
-              title="Không tìm thấy việc làm phù hợp"
-              description="Thử bỏ bớt bộ lọc hoặc dùng từ khóa khác để khám phá cơ hội mới."
+              title={isVi ? "Không tìm thấy việc làm phù hợp" : "No matching jobs found"}
+              description={isVi ? "Thử bỏ bớt bộ lọc hoặc dùng từ khóa khác để khám phá cơ hội mới." : "Try adjusting your filters or search keywords to discover new opportunities."}
               action={
                 <button
                   type="button"
@@ -319,7 +326,7 @@ export const JobsPage: React.FC = () => {
                   }}
                   className="text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
                 >
-                  Xem tất cả việc làm
+                  {isVi ? 'Xem tất cả việc làm' : 'View all jobs'}
                 </button>
               }
             />
@@ -330,10 +337,14 @@ export const JobsPage: React.FC = () => {
                 {/* Result count & active query */}
                 <div className="flex items-center justify-between px-1">
                   <h1 className="text-sm sm:text-base font-black text-slate-900 dark:text-white" data-testid="result-count">
-                    {result ? `${result.totalElements} việc làm${q ? ` cho "${q}"` : ''}${city ? ` tại ${city}` : ''}` : 'Đang tìm việc làm…'}
+                    {result
+                      ? (isVi
+                          ? `${result.totalElements} việc làm${q ? ` cho "${q}"` : ''}${city ? ` tại ${city}` : ''}`
+                          : `${result.totalElements} jobs found${q ? ` for "${q}"` : ''}${city ? ` in ${city}` : ''}`)
+                      : (isVi ? 'Đang tìm việc làm…' : 'Searching for jobs...')}
                   </h1>
                   <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    Trang {page + 1}/{result?.totalPages || 1}
+                    {isVi ? `Trang ${page + 1}/${result?.totalPages || 1}` : `Page ${page + 1} of ${result?.totalPages || 1}`}
                   </span>
                 </div>
 
@@ -385,7 +396,7 @@ export const JobsPage: React.FC = () => {
                       className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-soft-xs"
                     >
                       <ArrowLeft className="w-4 h-4" />
-                      Quay lại danh sách việc làm
+                      {isVi ? 'Quay lại danh sách việc làm' : 'Back to job list'}
                     </Link>
                   </div>
                 )}
@@ -404,7 +415,7 @@ export const JobsPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="p-16 text-center text-slate-500 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800">
-                    Chọn một việc làm bên danh sách để xem chi tiết
+                    {isVi ? 'Chọn một việc làm bên danh sách để xem chi tiết' : 'Select a job from the list to view details'}
                   </div>
                 )}
               </div>

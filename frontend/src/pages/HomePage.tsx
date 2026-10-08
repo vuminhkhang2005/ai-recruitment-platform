@@ -40,25 +40,27 @@ import { useMatchScores } from '../lib/useMatchScores';
 import { useMyApplications } from '../context/MyApplicationsContext';
 import { useAuth } from '../context/AuthContext';
 import { usePageTitle } from '../lib/usePageTitle';
+import { useLanguage } from '../i18n/LanguageContext';
 
-const POPULAR_KEYWORDS = ['Kinh doanh', 'Marketing', 'Java', 'ReactJS', '.NET', 'Kế toán', 'Data', 'Nhân sự'];
+const POPULAR_KEYWORDS_VI = ['Kinh doanh', 'Marketing', 'Java', 'ReactJS', '.NET', 'Kế toán', 'Data', 'Nhân sự'];
+const POPULAR_KEYWORDS_EN = ['Business', 'Marketing', 'Java', 'ReactJS', '.NET', 'Accounting', 'Data', 'Human Resources'];
 
 /** Categories shown in the "Top ngành nghề" grid. */
-const SPECIALTIES = [
-  { keyword: 'Developer', label: 'Công nghệ thông tin', icon: Layout, tint: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400' },
-  { keyword: 'Kinh doanh', label: 'Kinh doanh & Bán hàng', icon: TrendingUp, tint: 'bg-sky-50 text-sky-600 dark:bg-sky-950/60 dark:text-sky-400' },
-  { keyword: 'Marketing', label: 'Marketing & Truyền thông', icon: Send, tint: 'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400' },
-  { keyword: 'Tài chính', label: 'Tài chính - Ngân hàng', icon: Building2, tint: 'bg-violet-50 text-violet-600 dark:bg-violet-950/60 dark:text-violet-400' },
-  { keyword: 'Thiết kế', label: 'Thiết kế & Sáng tạo', icon: Sparkles, tint: 'bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400' },
-  { keyword: 'Nhân sự', label: 'Nhân sự & Hành chính', icon: Users, tint: 'bg-teal-50 text-teal-600 dark:bg-teal-950/60 dark:text-teal-400' },
+const getSpecialties = (lang: string) => [
+  { keyword: 'Developer', label: lang === 'vi' ? 'Công nghệ thông tin' : 'Information Technology', icon: Layout, tint: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400' },
+  { keyword: 'Kinh doanh', label: lang === 'vi' ? 'Kinh doanh & Bán hàng' : 'Sales & Business', icon: TrendingUp, tint: 'bg-sky-50 text-sky-600 dark:bg-sky-950/60 dark:text-sky-400' },
+  { keyword: 'Marketing', label: lang === 'vi' ? 'Marketing & Truyền thông' : 'Marketing & Media', icon: Send, tint: 'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400' },
+  { keyword: 'Tài chính', label: lang === 'vi' ? 'Tài chính - Ngân hàng' : 'Finance & Banking', icon: Building2, tint: 'bg-violet-50 text-violet-600 dark:bg-violet-950/60 dark:text-violet-400' },
+  { keyword: 'Thiết kế', label: lang === 'vi' ? 'Thiết kế & Sáng tạo' : 'Design & Creative', icon: Sparkles, tint: 'bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400' },
+  { keyword: 'Nhân sự', label: lang === 'vi' ? 'Nhân sự & Hành chính' : 'HR & Administration', icon: Users, tint: 'bg-teal-50 text-teal-600 dark:bg-teal-950/60 dark:text-teal-400' },
 ];
 
 type TabKey = 'all' | 'salary' | 'urgent' | 'remote';
-const TABS: { key: TabKey; label: string; to: string }[] = [
-  { key: 'all', label: 'Tất cả việc làm', to: '/jobs' },
-  { key: 'salary', label: 'Lương cao (≥ 30 triệu)', to: '/jobs?sort=salary' },
-  { key: 'urgent', label: 'Tuyển gấp', to: '/jobs' },
-  { key: 'remote', label: 'Remote / Hybrid', to: '/jobs?type=REMOTE' },
+const getTabs = (lang: string): { key: TabKey; label: string; to: string }[] => [
+  { key: 'all', label: lang === 'vi' ? 'Tất cả việc làm' : 'All Jobs', to: '/jobs' },
+  { key: 'salary', label: lang === 'vi' ? 'Lương cao (≥ 30 triệu)' : 'High Salary (≥ 30M)', to: '/jobs?sort=salary' },
+  { key: 'urgent', label: lang === 'vi' ? 'Tuyển gấp' : 'Urgent Hiring', to: '/jobs' },
+  { key: 'remote', label: lang === 'vi' ? 'Remote / Hybrid' : 'Remote / Hybrid', to: '/jobs?type=REMOTE' },
 ];
 
 const filterJobs = (jobs: Job[], tab: TabKey) => {
@@ -120,67 +122,80 @@ const SeeAll: React.FC<{ to: string; children: React.ReactNode }> = ({ to, child
   </Link>
 );
 
-const PIPELINE_STAGES = [
+const getPipelineStages = (lang: string) => [
   {
     step: 1,
-    name: 'Ứng tuyển',
-    short: 'Ứng tuyển',
+    name: lang === 'vi' ? 'Ứng tuyển' : 'Applied',
+    short: lang === 'vi' ? 'Ứng tuyển' : 'Applied',
     icon: Send,
-    badge: 'Tiếp nhận hồ sơ',
-    sla: '< 15 phút',
-    title: 'Tiếp nhận hồ sơ & Đồng bộ dữ liệu ứng viên',
-    desc: 'Tự động tiếp nhận CV từ mọi kênh tuyển dụng, trích xuất thông tin liên hệ và gửi email xác nhận tức thì cho ứng viên.',
-    highlight: 'Tự động gửi email xác nhận ứng tuyển',
+    badge: lang === 'vi' ? 'Tiếp nhận hồ sơ' : 'Profile Intake',
+    sla: lang === 'vi' ? '< 15 phút' : '< 15 mins',
+    title: lang === 'vi' ? 'Tiếp nhận hồ sơ & Đồng bộ dữ liệu ứng viên' : 'Candidate Intake & Profile Synchronization',
+    desc: lang === 'vi'
+      ? 'Tự động tiếp nhận CV từ mọi kênh tuyển dụng, trích xuất thông tin liên hệ và gửi email xác nhận tức thì cho ứng viên.'
+      : 'Automatically capture CVs from all recruitment channels, extract contact details, and send instant confirmation emails.',
+    highlight: lang === 'vi' ? 'Tự động gửi email xác nhận ứng tuyển' : 'Instant automated confirmation email',
   },
   {
     step: 2,
-    name: 'Sàng lọc',
-    short: 'Sàng lọc',
+    name: lang === 'vi' ? 'Sàng lọc' : 'Screening',
+    short: lang === 'vi' ? 'Sàng lọc' : 'Screening',
     icon: Search,
-    badge: 'Đánh giá năng lực',
-    sla: '< 24 giờ',
-    title: 'Sàng lọc hồ sơ & So khớp kỹ năng công việc',
-    desc: 'Hệ thống tự động phân tích độ tương thích giữa kinh nghiệm thực tế, kỹ năng chuyên môn của ứng viên với mô tả công việc (JD).',
-    highlight: 'Chấm điểm độ khớp kỹ năng chính xác',
+    badge: lang === 'vi' ? 'Đánh giá năng lực' : 'Skill Assessment',
+    sla: lang === 'vi' ? '< 24 giờ' : '< 24 hours',
+    title: lang === 'vi' ? 'Sàng lọc hồ sơ & So khớp kỹ năng công việc' : 'Resume Screening & Skill Matching',
+    desc: lang === 'vi'
+      ? 'Hệ thống tự động phân tích độ tương thích giữa kinh nghiệm thực tế, kỹ năng chuyên môn của ứng viên với mô tả công việc (JD).'
+      : 'Intelligent parsing matches candidate experience and technical skills directly against the job requirements.',
+    highlight: lang === 'vi' ? 'Chấm điểm độ khớp kỹ năng chính xác' : 'Accurate skill matching score',
   },
   {
     step: 3,
-    name: 'Phỏng vấn',
-    short: 'Phỏng vấn',
+    name: lang === 'vi' ? 'Phỏng vấn' : 'Interview',
+    short: lang === 'vi' ? 'Phỏng vấn' : 'Interview',
     icon: Calendar,
-    badge: 'Lên lịch & Đánh giá',
-    sla: '2 - 3 ngày',
-    title: 'Xếp lịch phỏng vấn & Đánh giá năng lực chuyên sâu',
-    desc: 'Gửi thư mời phỏng vấn tự động kèm link họp video, đồng bộ lịch Google/Outlook và cung cấp biểu mẫu chấm điểm năng lực tiêu chuẩn.',
-    highlight: 'Tự động đồng bộ lịch & gửi thông báo nhắc hẹn',
+    badge: lang === 'vi' ? 'Lên lịch & Đánh giá' : 'Schedule & Evaluate',
+    sla: lang === 'vi' ? '2 - 3 ngày' : '2 - 3 days',
+    title: lang === 'vi' ? 'Xếp lịch phỏng vấn & Đánh giá năng lực chuyên sâu' : 'Interview Scheduling & Deep Evaluation',
+    desc: lang === 'vi'
+      ? 'Gửi thư mời phỏng vấn tự động kèm link họp video, đồng bộ lịch Google/Outlook và cung cấp biểu mẫu chấm điểm năng lực tiêu chuẩn.'
+      : 'Send interview invites with video call links, sync Google/Outlook calendars, and utilize standardized scoring scorecards.',
+    highlight: lang === 'vi' ? 'Tự động đồng bộ lịch & gửi thông báo nhắc hẹn' : 'Automated calendar sync & reminders',
   },
   {
     step: 4,
-    name: 'Offer',
-    short: 'Gửi Offer',
+    name: lang === 'vi' ? 'Offer' : 'Offer',
+    short: lang === 'vi' ? 'Gửi Offer' : 'Send Offer',
     icon: Award,
-    badge: 'Thỏa thuận đãi ngộ',
-    sla: '1 - 2 ngày',
-    title: 'Đề xuất đãi ngộ & Phát hành thư mời nhận việc',
-    desc: 'Phát hành Offer Letter kỹ thuật số chuyên nghiệp, cấu hình chi tiết mức lương, phụ cấp, phúc lợi và hạn phản hồi trực tuyến.',
-    highlight: 'Hỗ trợ ký số & xác nhận nhận việc online',
+    badge: lang === 'vi' ? 'Thỏa thuận đãi ngộ' : 'Offer Terms',
+    sla: lang === 'vi' ? '1 - 2 ngày' : '1 - 2 days',
+    title: lang === 'vi' ? 'Đề xuất đãi ngộ & Phát hành thư mời nhận việc' : 'Compensation Proposal & Offer Letter Issuance',
+    desc: lang === 'vi'
+      ? 'Phát hành Offer Letter kỹ thuật số chuyên nghiệp, cấu hình chi tiết mức lương, phụ cấp, phúc lợi và hạn phản hồi trực tuyến.'
+      : 'Issue professional digital offer letters, configure salary, benefits, allowances, and set response deadlines.',
+    highlight: lang === 'vi' ? 'Hỗ trợ ký số & xác nhận nhận việc online' : 'Digital signing & online acceptance',
   },
   {
     step: 5,
-    name: 'Đã tuyển',
-    short: 'Đã tuyển',
+    name: lang === 'vi' ? 'Đã tuyển' : 'Hired',
+    short: lang === 'vi' ? 'Đã tuyển' : 'Hired',
     icon: CheckCircle2,
-    badge: 'Tuyển thành công',
-    sla: 'Hoàn tất',
-    title: 'Tuyển dụng thành công & Kích hoạt Onboarding',
-    desc: 'Chào đón nhân sự mới chính thức gia nhập tổ chức, kích hoạt lộ trình hội nhập tự động và đồng bộ hồ sơ nhân sự nhanh chóng.',
-    highlight: 'Kích hoạt lộ trình Onboarding tự động',
+    badge: lang === 'vi' ? 'Tuyển thành công' : 'Placement Success',
+    sla: lang === 'vi' ? 'Hoàn tất' : 'Completed',
+    title: lang === 'vi' ? 'Tuyển dụng thành công & Kích hoạt Onboarding' : 'Successful Placement & Onboarding Activation',
+    desc: lang === 'vi'
+      ? 'Chào đón nhân sự mới chính thức gia nhập tổ chức, kích hoạt lộ trình hội nhập tự động và đồng bộ hồ sơ nhân sự nhanh chóng.'
+      : 'Welcome new employees to the organization, trigger automated onboarding workflows, and sync HR profiles.',
+    highlight: lang === 'vi' ? 'Kích hoạt lộ trình Onboarding tự động' : 'Automated onboarding workflow activation',
   },
 ];
 
 const RecruitmentProgressTracker: React.FC = () => {
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
+  const pipelineStages = getPipelineStages(language);
   const [activeStageIndex, setActiveStageIndex] = useState(1);
-  const activeStage = PIPELINE_STAGES[activeStageIndex];
+  const activeStage = pipelineStages[activeStageIndex];
 
   return (
     <div
@@ -195,11 +210,11 @@ const RecruitmentProgressTracker: React.FC = () => {
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
           </span>
           <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
-            Quy trình tuyển dụng
+            {isVi ? 'Quy trình tuyển dụng' : 'Recruitment Workflow'}
           </p>
         </div>
         <span className="text-[11px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400">
-          Bảng điều khiển nhà tuyển dụng
+          {isVi ? 'Bảng điều khiển nhà tuyển dụng' : 'Employer Recruitment Suite'}
         </span>
       </div>
 
@@ -210,13 +225,13 @@ const RecruitmentProgressTracker: React.FC = () => {
           <div className="absolute top-5 left-5 right-5 h-1.5 bg-slate-200 dark:bg-slate-800 -translate-y-1/2 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 transition-all duration-500 ease-out rounded-full"
-              style={{ width: `${(activeStageIndex / (PIPELINE_STAGES.length - 1)) * 100}%` }}
+              style={{ width: `${(activeStageIndex / (pipelineStages.length - 1)) * 100}%` }}
             />
           </div>
 
           {/* 5 Milestone Buttons */}
           <div className="relative flex justify-between items-start">
-            {PIPELINE_STAGES.map((s, idx) => {
+            {pipelineStages.map((s, idx) => {
               const isCompleted = idx < activeStageIndex;
               const isCurrent = idx === activeStageIndex;
               const Icon = s.icon;
@@ -226,7 +241,7 @@ const RecruitmentProgressTracker: React.FC = () => {
                   type="button"
                   onClick={() => setActiveStageIndex(idx)}
                   className="flex flex-col items-center group focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-xl"
-                  aria-label={`Bước ${s.step}: ${s.name}`}
+                  aria-label={isVi ? `Bước ${s.step}: ${s.name}` : `Step ${s.step}: ${s.name}`}
                   aria-current={isCurrent ? 'step' : undefined}
                 >
                   <div
@@ -272,7 +287,7 @@ const RecruitmentProgressTracker: React.FC = () => {
               </span>
               <div>
                 <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500">
-                  Giai đoạn {activeStage.step} / 5
+                  {isVi ? `Giai đoạn ${activeStage.step} / 5` : `Stage ${activeStage.step} of 5`}
                 </p>
                 <h4 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
                   {activeStage.name}
@@ -310,18 +325,18 @@ const RecruitmentProgressTracker: React.FC = () => {
                 onClick={() => setActiveStageIndex((prev) => Math.max(0, prev - 1))}
                 disabled={activeStageIndex === 0}
                 className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                aria-label="Giai đoạn trước"
+                aria-label={isVi ? "Giai đoạn trước" : "Previous stage"}
               >
-                ← Trước
+                {isVi ? '← Trước' : '← Previous'}
               </button>
               <button
                 type="button"
-                onClick={() => setActiveStageIndex((prev) => Math.min(PIPELINE_STAGES.length - 1, prev + 1))}
-                disabled={activeStageIndex === PIPELINE_STAGES.length - 1}
+                onClick={() => setActiveStageIndex((prev) => Math.min(pipelineStages.length - 1, prev + 1))}
+                disabled={activeStageIndex === pipelineStages.length - 1}
                 className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                aria-label="Giai đoạn kế tiếp"
+                aria-label={isVi ? "Giai đoạn kế tiếp" : "Next stage"}
               >
-                Sau →
+                {isVi ? 'Sau →' : 'Next →'}
               </button>
             </div>
           </div>
@@ -331,9 +346,9 @@ const RecruitmentProgressTracker: React.FC = () => {
       {/* Quick Action Tiles */}
       <div className="mt-6 grid grid-cols-3 gap-3">
         {[
-          { icon: Briefcase, label: 'Tin tuyển dụng', sub: 'Quản lý tin', to: '/employers' },
-          { icon: Users, label: 'Ứng viên', sub: 'Theo dõi pipeline', to: '/employers' },
-          { icon: BellRing, label: 'Thông báo', sub: 'Nhắc lịch & SLA', to: '/employers' },
+          { icon: Briefcase, label: isVi ? 'Tin tuyển dụng' : 'Job Openings', sub: isVi ? 'Quản lý tin' : 'Manage postings', to: '/employers' },
+          { icon: Users, label: isVi ? 'Ứng viên' : 'Candidates', sub: isVi ? 'Theo dõi pipeline' : 'Pipeline tracking', to: '/employers' },
+          { icon: BellRing, label: isVi ? 'Thông báo' : 'Notifications', sub: isVi ? 'Nhắc lịch & SLA' : 'Reminders & SLAs', to: '/employers' },
         ].map((t) => (
           <Link
             key={t.label}
@@ -357,6 +372,10 @@ const RecruitmentProgressTracker: React.FC = () => {
 export const HomePage: React.FC = () => {
   usePageTitle();
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
+  const specialties = useMemo(() => getSpecialties(language), [language]);
+  const tabs = useMemo(() => getTabs(language), [language]);
   const { user, isRecruiter } = useAuth();
   const [allJobs, setAllJobs] = useState<Job[] | null>(null);
   const [total, setTotal] = useState<number | null>(null);
@@ -380,7 +399,7 @@ export const HomePage: React.FC = () => {
       .then((list) => setAllCompanies(list))
       .catch(() => setAllCompanies([]));
     Promise.all(
-      SPECIALTIES.map((s) =>
+      specialties.map((s) =>
         jobApi
           .search({ keyword: s.keyword, page: 0, size: 1 })
           .then((p) => [s.keyword, p.totalElements] as const)
@@ -389,7 +408,7 @@ export const HomePage: React.FC = () => {
     ).then((entries) => setSpecialtyCounts(Object.fromEntries(entries)));
   };
 
-  useEffect(load, []);
+  useEffect(load, [specialties]);
 
   const visibleJobs = useMemo(() => (allJobs ? filterJobs(allJobs, tab).slice(0, 6) : null), [allJobs, tab]);
   const scores = useMatchScores(visibleJobs?.map((j) => j.id) ?? []);
@@ -413,13 +432,14 @@ export const HomePage: React.FC = () => {
     .map(([k]) => k);
 
   const stats = [
-    { icon: Briefcase, value: total, label: 'Việc làm đang tuyển', sub: 'Cập nhật theo thời gian thực' },
-    { icon: Building2, value: hiring?.length ?? null, label: 'Công ty đang tuyển', sub: 'Hồ sơ doanh nghiệp xác thực' },
-    { icon: MapPin, value: cities, label: 'Thành phố', sub: 'Trên khắp Việt Nam' },
-    { icon: ShieldCheck, value: '100%', label: 'Miễn phí cho ứng viên', sub: 'Ứng tuyển không giới hạn' },
+    { icon: Briefcase, value: total, label: isVi ? 'Việc làm đang tuyển' : 'Active Jobs', sub: isVi ? 'Cập nhật theo thời gian thực' : 'Real-time updates' },
+    { icon: Building2, value: hiring?.length ?? null, label: isVi ? 'Công ty đang tuyển' : 'Hiring Companies', sub: isVi ? 'Hồ sơ doanh nghiệp xác thực' : 'Verified enterprise profiles' },
+    { icon: MapPin, value: cities, label: isVi ? 'Thành phố' : 'Cities Covered', sub: isVi ? 'Trên khắp Việt Nam' : 'Across Vietnam' },
+    { icon: ShieldCheck, value: '100%', label: isVi ? 'Miễn phí cho ứng viên' : 'Free for Candidates', sub: isVi ? 'Ứng tuyển không giới hạn' : 'Unlimited applications' },
   ];
 
-  const activeTab = TABS.find((t) => t.key === tab)!;
+  const activeTab = tabs.find((t) => t.key === tab) || tabs[0];
+  const popularKeywords = isVi ? POPULAR_KEYWORDS_VI : POPULAR_KEYWORDS_EN;
 
   return (
     <>
@@ -435,18 +455,26 @@ export const HomePage: React.FC = () => {
                 <span className="inline-flex items-center gap-2 font-black text-emerald-800 dark:text-emerald-300">
                   <Sparkles className="w-4 h-4 text-emerald-500" />
                   <span data-testid="home-job-count">
-                    {total !== null ? `${total} việc làm đang tuyển` : 'Việc làm đang tuyển'}
+                    {total !== null
+                      ? (isVi ? `${total} việc làm đang tuyển` : `${total} open jobs hiring`)
+                      : (isVi ? 'Việc làm đang tuyển' : 'Open jobs hiring')}
                   </span>
                 </span>
-                <span className="hidden sm:inline text-slate-500 dark:text-slate-400 font-medium">Ứng tuyển nhanh — theo dõi từng vòng</span>
+                <span className="hidden sm:inline text-slate-500 dark:text-slate-400 font-medium">
+                  {isVi ? 'Ứng tuyển nhanh — theo dõi từng vòng' : 'Fast applications — real-time tracking'}
+                </span>
               </span>
 
               <h1 className="mt-5 text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.1]">
-                Tìm kiếm{' '}
-                <span className="bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 bg-clip-text text-transparent">công việc mơ ước</span>
+                {isVi ? 'Tìm kiếm ' : 'Find Your '}
+                <span className="bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 bg-clip-text text-transparent">
+                  {isVi ? 'công việc mơ ước' : 'Dream Career'}
+                </span>
               </h1>
               <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300">
-                Kết nối ứng viên tài năng với nhà tuyển dụng hàng đầu — tìm việc theo ngành nghề, kỹ năng, địa điểm và công ty bạn quan tâm.
+                {isVi
+                  ? 'Kết nối ứng viên tài năng với nhà tuyển dụng hàng đầu — tìm việc theo ngành nghề, kỹ năng, địa điểm và công ty bạn quan tâm.'
+                  : 'Connecting top talent with leading employers — discover jobs by industry, skill, location, and company.'}
               </p>
 
               {hiring && hiring.length > 0 && (
@@ -459,10 +487,12 @@ export const HomePage: React.FC = () => {
                   <div className="text-left">
                     <p className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                      {hiring.length} doanh nghiệp đang tuyển dụng
+                      {isVi ? `${hiring.length} doanh nghiệp đang tuyển dụng` : `${hiring.length} companies hiring now`}
                     </p>
                     {totalApplications !== null && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{totalApplications} lượt ứng tuyển qua TalentBridge</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {isVi ? `${totalApplications} lượt ứng tuyển qua TalentBridge` : `${totalApplications} applications via TalentBridge`}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -475,9 +505,9 @@ export const HomePage: React.FC = () => {
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-sm">
                 <span className="inline-flex items-center gap-1.5 font-bold text-slate-600 dark:text-slate-300">
                   <TrendingUp className="w-4 h-4 text-emerald-500" />
-                  Gợi ý xu hướng:
+                  {isVi ? 'Gợi ý xu hướng:' : 'Trending searches:'}
                 </span>
-                {POPULAR_KEYWORDS.map((k) => (
+                {popularKeywords.map((k) => (
                   <Link
                     key={k}
                     to={`/jobs?q=${encodeURIComponent(k)}`}
@@ -494,7 +524,7 @@ export const HomePage: React.FC = () => {
             <div className="mt-10">
               <p className="flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 <span className="hidden sm:block w-8 h-px bg-slate-300 dark:bg-slate-700" />
-                Các doanh nghiệp đang tuyển dụng trên TalentBridge
+                {isVi ? 'Các doanh nghiệp đang tuyển dụng trên TalentBridge' : 'Leading employers hiring on TalentBridge'}
                 <span className="hidden sm:block w-8 h-px bg-slate-300 dark:bg-slate-700" />
               </p>
               <div className="mt-5 flex flex-wrap justify-center gap-2.5">
@@ -536,13 +566,13 @@ export const HomePage: React.FC = () => {
       <section className="bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-900 py-14 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <SectionHeading
-            eyebrow={<Eyebrow icon={Flame}>Ngành nghề nổi bật</Eyebrow>}
-            title="Top ngành nghề nổi bật"
-            subtitle="Khám phá các cơ hội nghề nghiệp đang có nhu cầu tuyển dụng lớn nhất trên TalentBridge."
-            action={<SeeAll to="/jobs">Xem tất cả việc làm</SeeAll>}
+            eyebrow={<Eyebrow icon={Flame}>{isVi ? 'Ngành nghề nổi bật' : 'Featured Fields'}</Eyebrow>}
+            title={isVi ? 'Top ngành nghề nổi bật' : 'Top Career Categories'}
+            subtitle={isVi ? 'Khám phá các cơ hội nghề nghiệp đang có nhu cầu tuyển dụng lớn nhất trên TalentBridge.' : 'Explore career opportunities with the highest hiring demand on TalentBridge.'}
+            action={<SeeAll to="/jobs">{isVi ? 'Xem tất cả việc làm' : 'View all jobs'}</SeeAll>}
           />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {SPECIALTIES.map((s) => {
+            {specialties.map((s) => {
               const count = specialtyCounts[s.keyword];
               return (
                 <Link
@@ -563,7 +593,7 @@ export const HomePage: React.FC = () => {
                     {s.label}
                   </p>
                   <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    {count === undefined ? '…' : count > 0 ? `${count} việc làm` : 'Xem việc làm'}
+                    {count === undefined ? '…' : count > 0 ? (isVi ? `${count} việc làm` : `${count} jobs`) : (isVi ? 'Xem việc làm' : 'Explore jobs')}
                   </p>
                 </Link>
               );
@@ -576,12 +606,12 @@ export const HomePage: React.FC = () => {
       <section className="bg-slate-50 dark:bg-slate-900/40 border-y border-slate-200/70 dark:border-slate-800/70 py-16 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <SectionHeading
-            eyebrow={<Eyebrow icon={Flame}>Cơ hội tuyển dụng hàng đầu</Eyebrow>}
-            title="Việc làm nổi bật"
-            subtitle="Tin tuyển dụng mới nhất từ các doanh nghiệp hàng đầu — lọc nhanh theo mức lương, độ gấp và hình thức làm việc."
+            eyebrow={<Eyebrow icon={Flame}>{isVi ? 'Cơ hội tuyển dụng hàng đầu' : 'Top Opportunities'}</Eyebrow>}
+            title={isVi ? 'Việc làm nổi bật' : 'Featured Jobs'}
+            subtitle={isVi ? 'Tin tuyển dụng mới nhất từ các doanh nghiệp hàng đầu — lọc nhanh theo mức lương, độ gấp và hình thức làm việc.' : 'Latest job openings from top employers — filter by salary, urgency, and work arrangement.'}
             action={
-              <div className="flex flex-wrap gap-2" role="tablist" aria-label="Lọc việc làm nổi bật">
-                {TABS.map((t) => (
+              <div className="flex flex-wrap gap-2" role="tablist" aria-label={isVi ? "Lọc việc làm nổi bật" : "Filter featured jobs"}>
+                {tabs.map((t) => (
                   <button
                     key={t.key}
                     type="button"
@@ -607,7 +637,10 @@ export const HomePage: React.FC = () => {
               <Spinner />
             </div>
           ) : visibleJobs.length === 0 ? (
-            <EmptyState title="Chưa có việc làm phù hợp" description="Hiện chưa có tin tuyển dụng nào thuộc nhóm này. Hãy thử bộ lọc khác." />
+            <EmptyState
+              title={isVi ? "Chưa có việc làm phù hợp" : "No matching jobs"}
+              description={isVi ? "Hiện chưa có tin tuyển dụng nào thuộc nhóm này. Hãy thử bộ lọc khác." : "No job openings found in this category. Try another filter."}
+            />
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {visibleJobs.map((j) => (
@@ -620,7 +653,9 @@ export const HomePage: React.FC = () => {
               to={activeTab.to}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-black text-sm hover:bg-emerald-50 dark:hover:bg-emerald-950/60 shadow-soft-xs transition-colors"
             >
-              {tab === 'all' ? `Xem tất cả ${total ?? ''} việc làm` : 'Xem thêm việc làm'}
+              {tab === 'all'
+                ? (isVi ? `Xem tất cả ${total ?? ''} việc làm` : `View all ${total ?? ''} jobs`)
+                : (isVi ? 'Xem thêm việc làm' : 'View more jobs')}
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -632,10 +667,10 @@ export const HomePage: React.FC = () => {
         <section className="bg-white dark:bg-slate-950 py-16 transition-colors duration-300">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <SectionHeading
-              eyebrow={<Eyebrow icon={Building2} tone="sky">Doanh nghiệp công nghệ hàng đầu</Eyebrow>}
-              title="Top công ty đang tuyển"
-              subtitle="Tìm hiểu môi trường làm việc, quy mô và các vị trí đang mở của từng doanh nghiệp."
-              action={<SeeAll to="/companies">Xem tất cả {allCompanies?.length ?? ''} công ty</SeeAll>}
+              eyebrow={<Eyebrow icon={Building2} tone="sky">{isVi ? 'Doanh nghiệp công nghệ hàng đầu' : 'Featured Employers'}</Eyebrow>}
+              title={isVi ? 'Top công ty đang tuyển' : 'Top Hiring Companies'}
+              subtitle={isVi ? 'Tìm hiểu môi trường làm việc, quy mô và các vị trí đang mở của từng doanh nghiệp.' : 'Discover company work cultures, team sizes, and active job openings.'}
+              action={<SeeAll to="/companies">{isVi ? `Xem tất cả ${allCompanies?.length ?? ''} công ty` : `View all ${allCompanies?.length ?? ''} companies`}</SeeAll>}
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {topCompanies.map((c) => (
@@ -649,7 +684,7 @@ export const HomePage: React.FC = () => {
                       {c.bannerUrl ? (
                         <img
                           src={c.bannerUrl}
-                          alt={`${c.name} văn phòng`}
+                          alt={`${c.name} banner`}
                           loading="lazy"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                         />
@@ -674,7 +709,7 @@ export const HomePage: React.FC = () => {
                       {c.verificationStatus === 'VERIFIED' && <BadgeCheck className="w-4 h-4 text-emerald-500 shrink-0" />}
                     </p>
                     <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 line-clamp-2 min-h-[2.5rem]">
-                      {c.description || 'Doanh nghiệp đang tuyển dụng trên TalentBridge.'}
+                      {c.description || (isVi ? 'Doanh nghiệp đang tuyển dụng trên TalentBridge.' : 'Leading employer hiring on TalentBridge.')}
                     </p>
                     <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
                       {c.city && (
@@ -686,13 +721,13 @@ export const HomePage: React.FC = () => {
                       {c.companySize && (
                         <span className="inline-flex items-center gap-1">
                           <Users className="w-3.5 h-3.5" />
-                          {c.companySize} nhân viên
+                          {c.companySize} {isVi ? 'nhân viên' : 'employees'}
                         </span>
                       )}
                     </div>
                     <span className="mt-4 w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:bg-emerald-50 group-hover:border-emerald-300 group-hover:text-emerald-700 dark:group-hover:bg-emerald-950/60 dark:group-hover:text-emerald-300 transition-colors">
                       <Briefcase className="w-4 h-4" />
-                      {c.openJobsCount} việc làm đang mở
+                      {c.openJobsCount} {isVi ? 'việc làm đang mở' : 'open positions'}
                     </span>
                   </div>
                 </Link>
@@ -711,22 +746,24 @@ export const HomePage: React.FC = () => {
               <div className="relative max-w-2xl">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 text-xs font-black uppercase tracking-wide">
                   <FileText className="w-3.5 h-3.5" />
-                  Hồ sơ & CV
+                  {isVi ? 'Hồ sơ & CV' : 'Resume & Profile'}
                 </span>
                 <h2 className="mt-4 text-2xl sm:text-3xl font-black text-white leading-tight">
-                  Tải CV một lần — ứng tuyển mọi việc làm chỉ với một cú nhấp
+                  {isVi ? 'Tải CV một lần — ứng tuyển mọi việc làm chỉ với một cú nhấp' : 'Upload CV once — apply to any job with a single click'}
                 </h2>
                 <p className="mt-3 text-slate-300 text-sm sm:text-base">
-                  Lưu nhiều phiên bản CV, chọn CV mặc định và theo dõi trạng thái từng hồ sơ: sàng lọc, phỏng vấn, offer — giống cách các nền tảng tuyển dụng lớn vận hành.
+                  {isVi
+                    ? 'Lưu nhiều phiên bản CV, chọn CV mặc định và theo dõi trạng thái từng hồ sơ: sàng lọc, phỏng vấn, offer — giống cách các nền tảng tuyển dụng lớn vận hành.'
+                    : 'Manage multiple CV versions, select your default resume, and track application stages: screening, interview, offer in real time.'}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-400">
                   <span className="inline-flex items-center gap-1.5">
                     <FileText className="w-3.5 h-3.5 text-emerald-400" />
-                    PDF, DOC, DOCX · tối đa 5MB
+                    {isVi ? 'PDF, DOC, DOCX · tối đa 5MB' : 'PDF, DOC, DOCX · up to 5MB'}
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    CV chỉ được gửi khi bạn ứng tuyển
+                    {isVi ? 'CV chỉ được gửi khi bạn ứng tuyển' : 'CV is only shared when you apply'}
                   </span>
                 </div>
               </div>
@@ -736,13 +773,13 @@ export const HomePage: React.FC = () => {
                   className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm shadow-[0_10px_30px_-10px_rgba(16,185,129,0.7)] transition-colors"
                 >
                   <UploadCloud className="w-5 h-5" />
-                  {user ? 'Tải CV lên ngay' : 'Tạo hồ sơ miễn phí'}
+                  {user ? (isVi ? 'Tải CV lên ngay' : 'Upload CV Now') : (isVi ? 'Tạo hồ sơ miễn phí' : 'Create Free Profile')}
                 </Link>
                 <Link
                   to="/jobs"
                   className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl border border-slate-600 bg-slate-800/60 hover:bg-slate-800 text-white font-bold text-sm transition-colors"
                 >
-                  Khám phá việc làm
+                  {isVi ? 'Khám phá việc làm' : 'Explore Jobs'}
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -755,17 +792,17 @@ export const HomePage: React.FC = () => {
       <section className="bg-slate-50 dark:bg-slate-900/40 border-y border-slate-200/70 dark:border-slate-800/70 py-16 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <SectionHeading
-            eyebrow={<Eyebrow icon={Workflow}>Dành cho ứng viên</Eyebrow>}
-            title="Tìm việc trên TalentBridge như thế nào?"
-            subtitle="Bốn bước đơn giản từ lúc tạo hồ sơ đến khi nhận offer."
+            eyebrow={<Eyebrow icon={Workflow}>{isVi ? 'Dành cho ứng viên' : 'For Candidates'}</Eyebrow>}
+            title={isVi ? 'Tìm việc trên TalentBridge như thế nào?' : 'How job searching works on TalentBridge'}
+            subtitle={isVi ? 'Bốn bước đơn giản từ lúc tạo hồ sơ đến khi nhận offer.' : 'Four simple steps from creating your profile to receiving an offer.'}
           />
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2 grid gap-4 sm:grid-cols-2">
               {[
-                { icon: UserPlus, title: 'Tạo hồ sơ & tải CV', text: 'Điền thông tin, kỹ năng và tải lên các phiên bản CV của bạn.' },
-                { icon: Search, title: 'Tìm & lưu việc phù hợp', text: 'Lọc theo kỹ năng, mức lương, cấp bậc, địa điểm; lưu tin để xem sau.' },
-                { icon: MousePointerClick, title: 'Ứng tuyển một chạm', text: 'Chọn CV, thêm thư giới thiệu và gửi hồ sơ trực tiếp tới nhà tuyển dụng.' },
-                { icon: BellRing, title: 'Theo dõi từng vòng', text: 'Nhận thông báo khi hồ sơ được chuyển vòng, mời phỏng vấn hoặc có kết quả.' },
+                { icon: UserPlus, title: isVi ? 'Tạo hồ sơ & tải CV' : 'Create profile & upload CV', text: isVi ? 'Điền thông tin, kỹ năng và tải lên các phiên bản CV của bạn.' : 'Fill in background, skills, and upload your resume versions.' },
+                { icon: Search, title: isVi ? 'Tìm & lưu việc phù hợp' : 'Find & save matched jobs', text: isVi ? 'Lọc theo kỹ năng, mức lương, cấp bậc, địa điểm; lưu tin để xem sau.' : 'Filter by skills, salary, experience level, location; bookmark for later.' },
+                { icon: MousePointerClick, title: isVi ? 'Ứng tuyển một chạm' : 'One-click application', text: isVi ? 'Chọn CV, thêm thư giới thiệu và gửi hồ sơ trực tiếp tới nhà tuyển dụng.' : 'Pick CV, add a cover letter, and submit directly to employers.' },
+                { icon: BellRing, title: isVi ? 'Theo dõi từng vòng' : 'Track every round', text: isVi ? 'Nhận thông báo khi hồ sơ được chuyển vòng, mời phỏng vấn hoặc có kết quả.' : 'Receive updates when your application moves to screening, interview, or offer.' },
               ].map((step, i) => (
                 <div
                   key={step.title}
@@ -790,13 +827,19 @@ export const HomePage: React.FC = () => {
                 <span className="w-12 h-12 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center">
                   <Calculator className="w-6 h-6" />
                 </span>
-                <p className="mt-5 text-xs font-black uppercase tracking-wider text-emerald-100">Công cụ nghề nghiệp</p>
-                <h3 className="mt-1 text-2xl font-black leading-tight">Tính lương Gross ⇄ Net</h3>
+                <p className="mt-5 text-xs font-black uppercase tracking-wider text-emerald-100">{isVi ? 'Công cụ nghề nghiệp' : 'Career Tools'}</p>
+                <h3 className="mt-1 text-2xl font-black leading-tight">{isVi ? 'Tính lương Gross ⇄ Net' : 'Gross ⇄ Net Salary Calculator'}</h3>
                 <p className="mt-2 text-sm text-emerald-50/90">
-                  Quy đổi lương theo quy định BHXH, BHYT, BHTN và thuế TNCN hiện hành — biết chính xác số tiền thực nhận trước khi deal lương.
+                  {isVi
+                    ? 'Quy đổi lương theo quy định BHXH, BHYT, BHTN và thuế TNCN hiện hành — biết chính xác số tiền thực nhận trước khi deal lương.'
+                    : 'Calculate net take-home pay based on current social insurance, health insurance, and personal income tax rules in Vietnam.'}
                 </p>
                 <ul className="mt-4 space-y-1.5 text-sm text-emerald-50">
-                  {['Giảm trừ gia cảnh & người phụ thuộc', 'Mức đóng theo vùng lương tối thiểu', 'Bảng chi tiết từng khoản khấu trừ'].map((t) => (
+                  {[
+                    isVi ? 'Giảm trừ gia cảnh & người phụ thuộc' : 'Personal & dependent tax relief',
+                    isVi ? 'Mức đóng theo vùng lương tối thiểu' : 'Regional minimum wage compliance',
+                    isVi ? 'Bảng chi tiết từng khoản khấu trừ' : 'Itemized deductions breakdown',
+                  ].map((t) => (
                     <li key={t} className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-200 shrink-0" />
                       {t}
@@ -805,7 +848,7 @@ export const HomePage: React.FC = () => {
                 </ul>
               </div>
               <span className="relative mt-6 inline-flex items-center gap-2 self-start px-5 py-2.5 rounded-xl bg-white text-emerald-700 font-black text-sm group-hover:bg-emerald-50 transition-colors">
-                Dùng thử ngay
+                {isVi ? 'Dùng thử ngay' : 'Try Calculator'}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </span>
             </Link>
@@ -818,20 +861,24 @@ export const HomePage: React.FC = () => {
         <div className="relative overflow-hidden rounded-[2rem] border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900/95 grid lg:grid-cols-2 gap-10 p-6 sm:p-10 lg:p-12 shadow-soft-sm">
           <div className="absolute -left-24 -bottom-24 w-80 h-80 rounded-full bg-emerald-400/10 blur-3xl pointer-events-none" />
           <div className="relative">
-            <Eyebrow icon={Users}>Dành cho nhà tuyển dụng</Eyebrow>
+            <Eyebrow icon={Users}>{isVi ? 'Dành cho nhà tuyển dụng' : 'For Employers'}</Eyebrow>
             <h2 className="mt-4 text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">
-              Tuyển đúng người,{' '}
-              <span className="bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 bg-clip-text text-transparent">nhanh hơn</span>
+              {isVi ? 'Tuyển đúng người, ' : 'Hire the right talent, '}
+              <span className="bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 bg-clip-text text-transparent">
+                {isVi ? 'nhanh hơn' : 'faster'}
+              </span>
             </h2>
             <p className="mt-3 text-slate-500 dark:text-slate-400">
-              Đăng tin miễn phí, nhận hồ sơ trực tiếp và quản lý ứng viên theo từng vòng tuyển dụng ngay trên một bảng điều khiển.
+              {isVi
+                ? 'Đăng tin miễn phí, nhận hồ sơ trực tiếp và quản lý ứng viên theo từng vòng tuyển dụng ngay trên một bảng điều khiển.'
+                : 'Post jobs for free, receive direct applications, and manage candidates across recruitment stages in one unified dashboard.'}
             </p>
             <ul className="mt-6 space-y-3">
               {[
-                { icon: Send, text: 'Đăng, tạm dừng, đóng tin tuyển dụng bất cứ lúc nào' },
-                { icon: Workflow, text: 'Chuyển vòng ứng viên: Sàng lọc → Phỏng vấn → Offer → Tuyển' },
-                { icon: FileText, text: 'Xem CV, thông tin liên hệ và lịch sử từng hồ sơ' },
-                { icon: BellRing, text: 'Ứng viên được thông báo tự động khi bạn cập nhật trạng thái' },
+                { icon: Send, text: isVi ? 'Đăng, tạm dừng, đóng tin tuyển dụng bất cứ lúc nào' : 'Publish, pause, or close job postings at any time' },
+                { icon: Workflow, text: isVi ? 'Chuyển vòng ứng viên: Sàng lọc → Phỏng vấn → Offer → Tuyển' : 'Progress candidates: Screening → Interview → Offer → Hired' },
+                { icon: FileText, text: isVi ? 'Xem CV, thông tin liên hệ và lịch sử từng hồ sơ' : 'Review CVs, contact details, and applicant histories' },
+                { icon: BellRing, text: isVi ? 'Ứng viên được thông báo tự động khi bạn cập nhật trạng thái' : 'Candidates receive automated notifications when status updates' },
               ].map((f) => (
                 <li key={f.text} className="flex items-start gap-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
                   <span className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
@@ -846,14 +893,14 @@ export const HomePage: React.FC = () => {
                 to="/employers"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-sm shadow-[0_10px_30px_-10px_rgba(16,185,129,0.6)] transition-colors"
               >
-                Đăng tin tuyển dụng
+                {isVi ? 'Đăng tin tuyển dụng' : 'Post a Job Opening'}
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 to="/employers"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm hover:border-emerald-400 transition-colors"
               >
-                Tìm hiểu thêm
+                {isVi ? 'Tìm hiểu thêm' : 'Learn More'}
               </Link>
             </div>
           </div>

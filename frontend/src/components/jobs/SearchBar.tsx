@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, MapPin, Search } from 'lucide-react';
 import { CITIES } from '../../lib/format';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 /** Search console in the original TalentBridge style: gradient frame, divided fields, gradient button. */
 export const SearchBar: React.FC<{
@@ -8,6 +9,7 @@ export const SearchBar: React.FC<{
   city?: string;
   onSearch: (keyword: string, city: string) => void;
 }> = ({ keyword = '', city = '', onSearch }) => {
+  const { language } = useLanguage();
   const [kw, setKw] = useState(keyword);
   const [ct, setCt] = useState(city);
 
@@ -29,7 +31,7 @@ export const SearchBar: React.FC<{
           <input
             value={kw}
             onChange={(e) => setKw(e.target.value)}
-            placeholder="Nhập từ khóa theo kỹ năng, chức vụ, công ty…"
+            placeholder={language === 'vi' ? 'Nhập từ khóa theo kỹ năng, chức vụ, công ty…' : 'Search by keyword, skill, title, company...'}
             aria-label="Từ khóa"
             className="w-full h-12 pl-12 pr-3 rounded-2xl bg-transparent text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:bg-slate-50 dark:focus:bg-slate-800/60"
           />
@@ -43,7 +45,7 @@ export const SearchBar: React.FC<{
             aria-label="Địa điểm"
             className="w-full h-12 pl-12 pr-3 rounded-2xl bg-transparent text-sm font-medium text-slate-800 dark:text-slate-100 focus:outline-none focus:bg-slate-50 dark:focus:bg-slate-800/60 dark:[&>option]:bg-slate-900"
           >
-            <option value="">Tất cả thành phố</option>
+            <option value="">{language === 'vi' ? 'Tất cả thành phố' : 'All Cities'}</option>
             {CITIES.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -55,7 +57,7 @@ export const SearchBar: React.FC<{
           type="submit"
           className="sm:ml-2 h-12 px-7 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm shadow-soft inline-flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
         >
-          Tìm kiếm
+          {language === 'vi' ? 'Tìm kiếm' : 'Search'}
           <ArrowRight className="w-4 h-4" />
         </button>
       </form>

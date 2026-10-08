@@ -6,20 +6,24 @@ import { TechAssessmentSandbox } from '../components/career/TechAssessmentSandbo
 import { AiResumeBuilderSection } from '../components/career/AiResumeBuilderSection';
 import { CareerRoadmapPreview } from '../components/home/CareerRoadmapPreview';
 import { usePageTitle } from '../lib/usePageTitle';
+import { useLanguage } from '../i18n/LanguageContext';
 
-const TOOLS = [
-  { slug: 'salary', label: 'Tính lương Gross / Net', description: 'Quy đổi lương Gross sang Net theo bảo hiểm và thuế TNCN hiện hành.' },
-  { slug: 'offer', label: 'So sánh offer', description: 'Đặt các offer cạnh nhau để so sánh tổng thu nhập và phúc lợi.' },
-  { slug: 'cv-builder', label: 'Tạo CV', description: 'Soạn CV theo mẫu và xuất ra file.' },
-  { slug: 'coding', label: 'Luyện code', description: 'Bài tập thuật toán để ôn phỏng vấn kỹ thuật.' },
-  { slug: 'roadmap', label: 'Lộ trình kỹ năng', description: 'Lộ trình học tham khảo cho các vị trí phổ biến.' },
+const getTools = (lang: string) => [
+  { slug: 'salary', label: lang === 'vi' ? 'Tính lương Gross / Net' : 'Gross / Net Salary', description: lang === 'vi' ? 'Quy đổi lương Gross sang Net theo bảo hiểm và thuế TNCN hiện hành.' : 'Convert Gross to Net salary based on current insurance and personal income tax.' },
+  { slug: 'offer', label: lang === 'vi' ? 'So sánh offer' : 'Offer Comparison', description: lang === 'vi' ? 'Đặt các offer cạnh nhau để so sánh tổng thu nhập và phúc lợi.' : 'Compare compensation packages and benefits side-by-side.' },
+  { slug: 'cv-builder', label: lang === 'vi' ? 'Tạo CV' : 'CV Builder', description: lang === 'vi' ? 'Soạn CV theo mẫu và xuất ra file.' : 'Create professional resumes and export to file.' },
+  { slug: 'coding', label: lang === 'vi' ? 'Luyện code' : 'Code Practice', description: lang === 'vi' ? 'Bài tập thuật toán để ôn phỏng vấn kỹ thuật.' : 'Practice coding challenges for technical interviews.' },
+  { slug: 'roadmap', label: lang === 'vi' ? 'Lộ trình kỹ năng' : 'Skill Roadmaps', description: lang === 'vi' ? 'Lộ trình học tham khảo cho các vị trí phổ biến.' : 'Skill roadmaps and career progression for popular roles.' },
 ] as const;
 
 export const ToolsPage: React.FC = () => {
   const { tool } = useParams();
   const navigate = useNavigate();
-  const current = TOOLS.find((t) => t.slug === tool);
-  usePageTitle(current ? current.label : 'Công cụ');
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
+  const tools = getTools(language);
+  const current = tools.find((t) => t.slug === tool);
+  usePageTitle(current ? current.label : (isVi ? 'Công cụ' : 'Tools'));
 
   if (!current) return <Navigate to="/tools/salary" replace />;
 
@@ -27,9 +31,11 @@ export const ToolsPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">Công cụ nghề nghiệp</h1>
+      <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+        {isVi ? 'Công cụ nghề nghiệp' : 'Career Tools'}
+      </h1>
       <nav className="mt-4 flex gap-1 overflow-x-auto border-b border-slate-200" aria-label="Công cụ">
-        {TOOLS.map((t) => (
+        {tools.map((t) => (
           <NavLink
             key={t.slug}
             to={`/tools/${t.slug}`}

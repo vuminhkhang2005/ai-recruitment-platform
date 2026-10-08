@@ -5,11 +5,14 @@ import { notificationApi } from '../../lib/api';
 import type { NotificationItem } from '../../lib/types';
 import { timeAgo } from '../../lib/format';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const POLL_MS = 60_000;
 
 export const NotificationBell: React.FC = () => {
   const { user, isRecruiter } = useAuth();
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [count, setCount] = useState(0);
@@ -74,7 +77,7 @@ export const NotificationBell: React.FC = () => {
       <button
         onClick={toggle}
         className="relative p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-        aria-label={`Thông báo${count ? ` (${count} chưa đọc)` : ''}`}
+        aria-label={isVi ? `Thông báo${count ? ` (${count} chưa đọc)` : ''}` : `Notifications${count ? ` (${count} unread)` : ''}`}
         data-testid="notification-bell"
       >
         <Bell className="w-5 h-5" />
@@ -87,18 +90,18 @@ export const NotificationBell: React.FC = () => {
       {open && (
         <div className="absolute right-0 mt-3 w-80 sm:w-96 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-2xl shadow-soft-xl border border-slate-200 dark:border-slate-800 overflow-hidden z-50">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-            <span className="text-xs font-black uppercase tracking-wider">Thông báo</span>
+            <span className="text-xs font-black uppercase tracking-wider">{isVi ? 'Thông báo' : 'Notifications'}</span>
             {count > 0 && (
               <button onClick={markAll} className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
-                Đánh dấu đã đọc tất cả
+                {isVi ? 'Đánh dấu đã đọc tất cả' : 'Mark all as read'}
               </button>
             )}
           </div>
           <div className="max-h-96 overflow-y-auto">
             {items === null ? (
-              <p className="p-4 text-sm text-slate-500">Đang tải…</p>
+              <p className="p-4 text-sm text-slate-500">{isVi ? 'Đang tải…' : 'Loading...'}</p>
             ) : items.length === 0 ? (
-              <p className="p-6 text-sm text-slate-500 text-center">Chưa có thông báo nào.</p>
+              <p className="p-6 text-sm text-slate-500 text-center">{isVi ? 'Chưa có thông báo nào.' : 'No notifications yet.'}</p>
             ) : (
               items.map((n) => (
                 <button
@@ -113,7 +116,7 @@ export const NotificationBell: React.FC = () => {
                     <div className="min-w-0">
                       <p className="text-sm font-semibold leading-snug">{n.title}</p>
                       {n.content && <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 line-clamp-2">{n.content}</p>}
-                      <p className="text-[11px] text-slate-400 mt-1">{timeAgo(n.createdAt)}</p>
+                      <p className="text-[11px] text-slate-400 mt-1">{timeAgo(n.createdAt, language)}</p>
                     </div>
                   </div>
                 </button>
@@ -125,7 +128,7 @@ export const NotificationBell: React.FC = () => {
             onClick={() => setOpen(false)}
             className="block text-center text-sm font-bold text-emerald-600 dark:text-emerald-400 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/60"
           >
-            {isRecruiter ? 'Xem tất cả ứng viên' : 'Xem việc đã ứng tuyển'}
+            {isRecruiter ? (isVi ? 'Xem tất cả ứng viên' : 'View all applicants') : (isVi ? 'Xem việc đã ứng tuyển' : 'View my applications')}
           </Link>
         </div>
       )}
