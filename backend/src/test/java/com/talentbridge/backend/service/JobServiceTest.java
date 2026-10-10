@@ -41,6 +41,9 @@ class JobServiceTest {
     @Mock
     private JobSkillRepository jobSkillRepository;
 
+    @Mock
+    private HiringTeamService hiringTeamService;
+
     @InjectMocks
     private JobServiceImpl jobService;
 

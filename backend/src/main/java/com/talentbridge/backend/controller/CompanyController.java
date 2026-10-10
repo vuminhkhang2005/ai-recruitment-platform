@@ -16,6 +16,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.talentbridge.backend.entity.RecruiterProfile;
+import com.talentbridge.backend.security.UserPrincipal;
+import com.talentbridge.backend.service.HiringTeamService;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,6 +32,7 @@ import java.util.List;
 public class CompanyController {
 
     private final CompanyService companyService;
+    private final HiringTeamService hiringTeamService;
 
     @GetMapping
     @Operation(summary = "List Top Hiring Companies", description = "Retrieve list of all verified hiring enterprise employers.")
@@ -85,8 +91,19 @@ public class CompanyController {
     @Operation(summary = "Update Company Profile (Recruiter / Admin)", description = "Update enterprise company details and branding.")
     public ResponseEntity<ApiResponse<CompanyResponseDto>> updateCompany(
             @PathVariable Long id,
-            @Valid @RequestBody CompanyUpdateRequestDto request
+            @Valid @RequestBody CompanyUpdateRequestDto request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
+        boolean isSysAdmin = userPrincipal != null && userPrincipal.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        if (!isSysAdmin) {
+            if (userPrincipal == null) throw new AccessDeniedException("Chưa xác thực");
+            RecruiterProfile rp = hiringTeamService.requireCompanyAdmin(userPrincipal.getId());
+            if (!id.equals(rp.getCompanyId())) {
+                throw new AccessDeniedException("Bạn chỉ có quyền cập nhật thông tin công ty của mình");
+            }
+            request.setVerificationStatus(null);
+        }
         CompanyResponseDto updated = companyService.updateCompany(id, request);
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật thông tin công ty thành công", updated));
     }

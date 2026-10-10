@@ -37,6 +37,9 @@ class CompanyControllerTest {
     private CompanyService companyService;
 
     @MockBean
+    private com.talentbridge.backend.service.HiringTeamService hiringTeamService;
+
+    @MockBean
     private JwtCookieHelper jwtCookieHelper;
 
     @MockBean

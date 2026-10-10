@@ -3,24 +3,65 @@ import { Link } from 'react-router-dom';
 import { FileText, Upload } from 'lucide-react';
 import { applicationApi, candidateApi } from '../../lib/api';
 import type { CvItem, Job } from '../../lib/types';
-import { formatDate, formatFileSize } from '../../lib/format';
+import { formatDate, formatFileSize, formatSalary } from '../../lib/format';
 import { ErrorBox, Modal, Spinner, btnPrimary, btnSecondary, inputCls } from '../ui/primitives';
 import { useToast } from '../../context/ToastContext';
 import { useMyApplications } from '../../context/MyApplicationsContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ACCEPT = '.pdf,.doc,.docx';
 
-export function validateCvFile(file: File): string | null {
+export function validateCvFile(file: File, lang: 'vi' | 'en' = 'vi'): string | null {
   const ext = file.name.split('.').pop()?.toLowerCase();
-  if (!ext || !['pdf', 'doc', 'docx'].includes(ext)) return 'Chỉ nhận file PDF, DOC hoặc DOCX.';
-  if (file.size > MAX_BYTES) return 'File CV tối đa 5MB.';
+  if (!ext || !['pdf', 'doc', 'docx'].includes(ext)) return lang === 'en' ? 'Only PDF, DOC or DOCX files are accepted.' : 'Chỉ nhận file PDF, DOC hoặc DOCX.';
+  if (file.size > MAX_BYTES) return lang === 'en' ? 'CV files must be 5MB or smaller.' : 'File CV tối đa 5MB.';
   return null;
 }
+
+const TEXT = {
+  vi: {
+    errNoFile: 'Vui lòng chọn file CV để tải lên.',
+    toastApplied: (title: string) => `Đã nộp hồ sơ vào vị trí ${title}`,
+    modalTitle: (title: string) => `Ứng tuyển: ${title}`,
+    cvLegend: 'CV ứng tuyển',
+    uploaded: ' · Tải lên ',
+    isDefault: ' · Mặc định',
+    uploadNew: 'Tải CV mới từ máy (PDF, DOC, DOCX, tối đa 5MB)',
+    chooseFile: 'Chọn file',
+    coverLetter: 'Thư giới thiệu ',
+    optional: '(không bắt buộc)',
+    coverPlaceholder: 'Giới thiệu ngắn gọn về bản thân và lý do bạn phù hợp với vị trí này.',
+    manageCvs: 'Quản lý CV',
+    cancel: 'Hủy',
+    submitting: 'Đang nộp…',
+    submit: 'Nộp hồ sơ',
+  },
+  en: {
+    errNoFile: 'Please choose a CV file to upload.',
+    toastApplied: (title: string) => `Application submitted for ${title}`,
+    modalTitle: (title: string) => `Apply: ${title}`,
+    cvLegend: 'CV to submit',
+    uploaded: ' · Uploaded ',
+    isDefault: ' · Default',
+    uploadNew: 'Upload a new CV from your device (PDF, DOC, DOCX, max 5MB)',
+    chooseFile: 'Choose file',
+    coverLetter: 'Cover letter ',
+    optional: '(optional)',
+    coverPlaceholder: 'Briefly introduce yourself and explain why you are a great fit for this role.',
+    manageCvs: 'Manage CVs',
+    cancel: 'Cancel',
+    submitting: 'Submitting…',
+    submit: 'Submit application',
+  },
+};
 
 export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: () => void }> = ({ job, onClose, onApplied }) => {
   const toast = useToast();
   const { refresh } = useMyApplications();
+  const { language } = useLanguage();
+  const lang: 'vi' | 'en' = language === 'en' ? 'en' : 'vi';
+  const t = TEXT[lang];
   const [cvs, setCvs] = useState<CvItem[] | null>(null);
   const [selected, setSelected] = useState<number | 'new' | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -46,7 +87,7 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
 
   const pickFile = (f: File | undefined) => {
     if (!f) return;
-    const msg = validateCvFile(f);
+    const msg = validateCvFile(f, lang);
     if (msg) {
       setError(msg);
       setFile(null);
@@ -61,7 +102,7 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
     e.preventDefault();
     setError(null);
     if (selected === 'new' && !file) {
-      setError('Vui lòng chọn file CV để tải lên.');
+      setError(t.errNoFile);
       return;
     }
     setSubmitting(true);
@@ -73,7 +114,7 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
       }
       await applicationApi.apply(job.id, cvId, coverLetter.trim());
       await refresh();
-      toast(`Đã nộp hồ sơ vào vị trí ${job.title}`);
+      toast(t.toastApplied(job.title));
       onApplied();
     } catch (err) {
       setError((err as Error).message);
@@ -83,14 +124,14 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
   };
 
   return (
-    <Modal title={`Ứng tuyển: ${job.title}`} onClose={onClose} wide>
+    <Modal title={t.modalTitle(job.title)} onClose={onClose} wide>
       <form onSubmit={submit} className="space-y-5">
         <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-          {job.companyName} · {job.salaryFormatted}
+          {job.companyName} · {lang === 'en' ? formatSalary(job.salaryFormatted, 'en') : job.salaryFormatted}
         </p>
 
         <fieldset>
-          <legend className="text-sm font-black text-slate-900 dark:text-white mb-2">CV ứng tuyển</legend>
+          <legend className="text-sm font-black text-slate-900 dark:text-white mb-2">{t.cvLegend}</legend>
           {cvs === null ? (
             <Spinner />
           ) : (
@@ -105,8 +146,8 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm font-medium text-slate-900 truncate">{cv.title || cv.fileName}</span>
                     <span className="block text-xs text-slate-500">
-                      {cv.fileName} {cv.fileSizeBytes ? `· ${formatFileSize(cv.fileSizeBytes)}` : ''} · Tải lên {formatDate(cv.createdAt)}
-                      {cv.isDefault ? ' · Mặc định' : ''}
+                      {cv.fileName} {cv.fileSizeBytes ? `· ${formatFileSize(cv.fileSizeBytes)}` : ''}{t.uploaded}{formatDate(cv.createdAt, lang)}
+                      {cv.isDefault ? t.isDefault : ''}
                     </span>
                   </span>
                 </label>
@@ -123,11 +164,11 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
                       <span className="text-slate-500"> · {formatFileSize(file.size)}</span>
                     </>
                   ) : (
-                    <span className="text-slate-700">Tải CV mới từ máy (PDF, DOC, DOCX, tối đa 5MB)</span>
+                    <span className="text-slate-700">{t.uploadNew}</span>
                   )}
                 </span>
                 <button type="button" onClick={() => fileRef.current?.click()} className={btnSecondary}>
-                  Chọn file
+                  {t.chooseFile}
                 </button>
                 <input
                   ref={fileRef}
@@ -144,7 +185,7 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
 
         <div>
           <label htmlFor="cover" className="text-sm font-black text-slate-900 dark:text-white">
-            Thư giới thiệu <span className="font-normal text-slate-500">(không bắt buộc)</span>
+            {t.coverLetter}<span className="font-normal text-slate-500">{t.optional}</span>
           </label>
           <textarea
             id="cover"
@@ -152,7 +193,7 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
             maxLength={2000}
             value={coverLetter}
             onChange={(e) => setCoverLetter(e.target.value)}
-            placeholder="Giới thiệu ngắn gọn về bản thân và lý do bạn phù hợp với vị trí này."
+            placeholder={t.coverPlaceholder}
             className={`${inputCls} mt-2`}
           />
           <p className="text-xs text-slate-400 text-right">{coverLetter.length}/2000</p>
@@ -162,14 +203,14 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
 
         <div className="flex items-center justify-between gap-3">
           <Link to="/profile" className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
-            Quản lý CV
+            {t.manageCvs}
           </Link>
           <div className="flex gap-2">
             <button type="button" onClick={onClose} className={btnSecondary}>
-              Hủy
+              {t.cancel}
             </button>
             <button type="submit" disabled={submitting || cvs === null} className={btnPrimary}>
-              {submitting ? 'Đang nộp…' : 'Nộp hồ sơ'}
+              {submitting ? t.submitting : t.submit}
             </button>
           </div>
         </div>

@@ -16,10 +16,21 @@ public interface ApplicationService {
 
     List<ApplicationResponseDto> getApplicationsForJob(Long jobId, Long recruiterUserId, boolean isAdmin);
 
-    /** All applications across every job owned by the recruiter. */
+    /**
+     * Hiring-team view: every application of the recruiter's company (ADMIN / RECRUITER),
+     * or only applications whose interview panel includes the user (INTERVIEWER).
+     */
     List<ApplicationResponseDto> getApplicationsForRecruiter(Long recruiterUserId);
 
     ApplicationResponseDto updateApplicationStatus(Long applicationId, ApplicationStatusUpdateRequestDto request, Long recruiterUserId, boolean isAdmin);
 
     void withdrawApplication(Long applicationId, Long candidateUserId, boolean isAdmin);
+
+    /**
+     * Internal stage transition (history + candidate notification + domain event) used by other
+     * workflows such as interview scheduling. Caller is responsible for authorisation.
+     *
+     * @param sendEmail false when the triggering workflow sends its own, richer e-mail
+     */
+    void moveToStage(Long applicationId, String toStage, Long actorUserId, String note, boolean sendEmail);
 }

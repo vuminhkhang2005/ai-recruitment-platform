@@ -9,17 +9,21 @@ import { ToastProvider } from './context/ToastContext.tsx'
 import { MyApplicationsProvider } from './context/MyApplicationsContext.tsx'
 import { ThemeProvider } from './context/ThemeContext.tsx'
 
+import { RealtimeProvider } from './realtime/RealtimeContext.tsx'
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <ThemeProvider>
         <LanguageProvider>
           <AuthProvider>
-            <ToastProvider>
-              <MyApplicationsProvider>
-                <App />
-              </MyApplicationsProvider>
-            </ToastProvider>
+            <RealtimeProvider>
+              <ToastProvider>
+                <MyApplicationsProvider>
+                  <App />
+                </MyApplicationsProvider>
+              </ToastProvider>
+            </RealtimeProvider>
           </AuthProvider>
         </LanguageProvider>
       </ThemeProvider>

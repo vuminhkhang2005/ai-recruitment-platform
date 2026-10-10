@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, ChevronUp } from 'lucide-react';
-import { applicationApi } from '../lib/api';
-import type { Application } from '../lib/types';
+import { ChevronDown, ChevronUp, Calendar, MessageSquare, Video, Building, ExternalLink } from 'lucide-react';
+import { applicationApi, interviewApi } from '../lib/api';
+import type { Application, InterviewDto } from '../lib/types';
 import { STAGE_LABELS, STAGE_STYLES, WITHDRAWABLE_STAGES, formatDate, formatDateTime } from '../lib/format';
 import { useMyApplications } from '../context/MyApplicationsContext';
 import { useToast } from '../context/ToastContext';
@@ -103,8 +103,18 @@ const ApplicationRow: React.FC<{ app: Application; onWithdrawn: () => void }> = 
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [interviews, setInterviews] = useState<InterviewDto[]>([]);
   const canWithdraw = WITHDRAWABLE_STAGES.includes(app.currentStage);
   const jobClosed = app.jobStatus !== 'PUBLISHED';
+
+  useEffect(() => {
+    if (app.currentStage === 'INTERVIEW') {
+      interviewApi
+        .listForApplication(app.id)
+        .then(setInterviews)
+        .catch(() => {});
+    }
+  }, [app.id, app.currentStage]);
 
   const withdraw = async () => {
     if (!window.confirm(`Rút hồ sơ ứng tuyển vị trí "${app.jobTitle}"? Bạn có thể ứng tuyển lại sau nếu tin còn mở.`)) return;
@@ -143,6 +153,53 @@ const ApplicationRow: React.FC<{ app: Application; onWithdrawn: () => void }> = 
             {jobClosed && <span className="text-slate-400">Tin đã đóng</span>}
           </div>
           <ApplicationProgressTracker stage={app.currentStage} />
+          {interviews.length > 0 && (
+            <div className="mt-3 p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800 text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 uppercase tracking-wide">
+                  <Calendar className="w-4 h-4 text-emerald-600" />
+                  Lịch phỏng vấn: Vòng {interviews[0].roundNumber} ({interviews[0].title || 'Phỏng vấn'})
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-200/80 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100 uppercase">
+                  {interviews[0].status}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-slate-700 dark:text-slate-300">
+                <span className="flex items-center gap-1">
+                  <strong>Thời gian:</strong> {formatDateTime(interviews[0].scheduledStart)}
+                </span>
+                <span className="flex items-center gap-1">
+                  {interviews[0].format === 'ONLINE' ? (
+                    <Video className="w-3.5 h-3.5 text-emerald-600" />
+                  ) : (
+                    <Building className="w-3.5 h-3.5 text-teal-600" />
+                  )}
+                  <strong>{interviews[0].format === 'ONLINE' ? 'Trực tuyến' : 'Trực tiếp'}:</strong>{' '}
+                  {interviews[0].location ? (
+                    interviews[0].location.startsWith('http') ? (
+                      <a
+                        href={interviews[0].location}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline inline-flex items-center gap-0.5"
+                      >
+                        Vào phòng họp <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ) : (
+                      interviews[0].location
+                    )
+                  ) : (
+                    'Sẽ thông báo qua email'
+                  )}
+                </span>
+              </div>
+              {interviews[0].notesToCandidate && (
+                <p className="text-slate-600 dark:text-slate-400 italic">
+                  "{interviews[0].notesToCandidate}"
+                </p>
+              )}
+            </div>
+          )}
           {app.currentStage === 'REJECTED' && app.rejectionReason && (
             <p className="mt-3 text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2">
               <span className="font-medium">Phản hồi từ nhà tuyển dụng: </span>
@@ -154,8 +211,14 @@ const ApplicationRow: React.FC<{ app: Application; onWithdrawn: () => void }> = 
               <ErrorBox message={error} />
             </div>
           )}
-          <div className="mt-3 flex items-center gap-4">
-            <button onClick={() => setOpen((o) => !o)} className="text-sm font-bold text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-1 hover:text-emerald-800" aria-expanded={open}>
+          <div className="mt-3 flex items-center gap-4 flex-wrap">
+            <Link
+              to={`/messages?applicationId=${app.id}`}
+              className="text-sm font-bold text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-1 hover:text-emerald-800"
+            >
+              <MessageSquare className="w-4 h-4" /> Nhắn tin với NTD
+            </Link>
+            <button onClick={() => setOpen((o) => !o)} className="text-sm font-bold text-slate-600 dark:text-slate-300 inline-flex items-center gap-1 hover:text-emerald-700" aria-expanded={open}>
               Lịch sử hồ sơ {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
             {canWithdraw && (

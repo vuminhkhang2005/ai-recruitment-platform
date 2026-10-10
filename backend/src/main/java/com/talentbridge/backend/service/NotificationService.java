@@ -1,9 +1,11 @@
 package com.talentbridge.backend.service;
 
 import com.talentbridge.backend.entity.Notification;
+import com.talentbridge.backend.event.DomainEvents;
 import com.talentbridge.backend.exception.ResourceNotFoundException;
 import com.talentbridge.backend.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -17,11 +19,12 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public void notify(Long userId, String type, String title, String content, String referenceType, Long referenceId) {
         if (userId == null) return;
-        notificationRepository.save(Notification.builder()
+        Notification saved = notificationRepository.save(Notification.builder()
                 .userId(userId)
                 .type(type)
                 .title(title)
@@ -29,6 +32,17 @@ public class NotificationService {
                 .referenceType(referenceType)
                 .referenceId(referenceId)
                 .build());
+        eventPublisher.publishEvent(new DomainEvents.NotificationCreated(saved.getId()));
+    }
+
+    /** Skips creating a duplicate while an identical unread notification is still pending (e.g. chat bursts). */
+    @Transactional
+    public void notifyOnce(Long userId, String type, String title, String content, String referenceType, Long referenceId) {
+        if (userId == null) return;
+        if (notificationRepository.existsByUserIdAndTypeAndReferenceTypeAndReferenceIdAndIsReadFalse(userId, type, referenceType, referenceId)) {
+            return;
+        }
+        notify(userId, type, title, content, referenceType, referenceId);
     }
 
     @Transactional(readOnly = true)

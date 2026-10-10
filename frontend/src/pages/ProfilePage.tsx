@@ -416,6 +416,83 @@ const CvManager: React.FC = () => {
   );
 };
 
+// ------------------------------------------------------------------ password change
+
+const PasswordChangeForm: React.FC = () => {
+  const toast = useToast();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!currentPassword) return setError('Vui lòng nhập mật khẩu hiện tại.');
+    if (newPassword.length < 6) return setError('Mật khẩu mới phải có ít nhất 6 ký tự.');
+    if (newPassword !== confirmPassword) return setError('Mật khẩu xác nhận không khớp.');
+    setSaving(true);
+    try {
+      await userApi.changePassword({ currentPassword, newPassword });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      toast('Đổi mật khẩu thành công');
+    } catch (err: any) {
+      setError(err.response?.data?.message || (err as Error).message || 'Lỗi đổi mật khẩu');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-4 max-w-lg">
+      <Field label="Mật khẩu hiện tại" htmlFor="current-pw">
+        <input
+          id="current-pw"
+          type="password"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          className={inputCls}
+          placeholder="••••••••"
+          required
+        />
+      </Field>
+      <Field label="Mật khẩu mới" htmlFor="new-pw" hint="Tối thiểu 6 ký tự">
+        <input
+          id="new-pw"
+          type="password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          className={inputCls}
+          placeholder="••••••••"
+          required
+        />
+      </Field>
+      <Field label="Xác nhận mật khẩu mới" htmlFor="confirm-pw">
+        <input
+          id="confirm-pw"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className={inputCls}
+          placeholder="••••••••"
+          required
+        />
+      </Field>
+
+      {error && <ErrorBox message={error} />}
+
+      <div className="flex justify-end pt-2">
+        <button type="submit" disabled={saving} className={btnPrimary}>
+          {saving ? 'Đang cập nhật…' : 'Đổi mật khẩu'}
+        </button>
+      </div>
+    </form>
+  );
+};
+
 // ------------------------------------------------------------------ page
 
 export const ProfilePage: React.FC = () => {
@@ -541,6 +618,9 @@ export const ProfilePage: React.FC = () => {
       )}
       <Card id="info" title="Thông tin cá nhân">
         <ProfileForm profile={profile} onSaved={setProfile} candidate={isCandidate} />
+      </Card>
+      <Card id="security" title="Bảo mật & Mật khẩu" description="Cập nhật mật khẩu định kỳ để bảo vệ tài khoản của bạn.">
+        <PasswordChangeForm />
       </Card>
     </div>
   );

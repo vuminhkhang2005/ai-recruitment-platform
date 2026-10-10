@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -55,13 +56,15 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Chỉ có thể đăng ký tài khoản Ứng viên hoặc Nhà tuyển dụng.");
         }
 
-        // Recruiters must belong to a company: pick an existing one or register a new (unverified) one.
+        // Recruiters must belong to a company. Self-service registration can only create a NEW company
+        // (the creator becomes its team admin); joining an existing company requires an invitation
+        // from that company's admin, otherwise anyone could read another company's applicants.
         Long recruiterCompanyId = null;
         if ("ROLE_RECRUITER".equals(targetRoleName)) {
             if (request.getCompanyId() != null) {
-                recruiterCompanyId = companyRepository.findById(request.getCompanyId())
-                        .orElseThrow(() -> new BadRequestException("Công ty không tồn tại"))
-                        .getId();
+                companyRepository.findById(request.getCompanyId())
+                        .orElseThrow(() -> new BadRequestException("Công ty không tồn tại"));
+                throw new BadRequestException("Công ty này đã có đội tuyển dụng trên TalentBridge. Vui lòng nhờ quản trị viên công ty gửi lời mời tham gia qua email.");
             } else if (StringUtils.hasText(request.getCompanyName())) {
                 String name = request.getCompanyName().trim();
                 String slug = java.text.Normalizer.normalize(name.replaceAll("\\s+", "-"), java.text.Normalizer.Form.NFD)
@@ -98,7 +101,8 @@ public class AuthServiceImpl implements AuthService {
                     .userId(savedUser.getId())
                     .companyId(recruiterCompanyId)
                     .jobTitle("Chuyên viên tuyển dụng")
-                    .isCompanyAdmin(request.getCompanyId() == null)
+                    .teamRole("ADMIN")
+                    .isCompanyAdmin(true)
                     .build());
         } else {
             candidateProfileRepository.save(CandidateProfile.builder()
@@ -127,6 +131,8 @@ public class AuthServiceImpl implements AuthService {
             );
         } catch (BadCredentialsException ex) {
             throw new BadRequestException("Email hoặc mật khẩu không chính xác");
+        } catch (DisabledException ex) {
+            throw new BadRequestException("Tài khoản đã bị vô hiệu hoá. Vui lòng liên hệ quản trị viên.");
         }
 
         UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
@@ -160,6 +166,10 @@ public class AuthServiceImpl implements AuthService {
         userToken.setIsRevoked(true);
         userTokenRepository.save(userToken);
 
+        if (!"ACTIVE".equals(user.getStatus())) {
+            throw new BadRequestException("Tài khoản đã bị vô hiệu hoá. Vui lòng liên hệ quản trị viên.");
+        }
+
         UserPrincipal userPrincipal = UserPrincipal.create(user);
         return issueTokens(userPrincipal, user, ipAddress, userAgent);
     }
@@ -187,62 +197,39 @@ public class AuthServiceImpl implements AuthService {
         return mapToSummaryDto(user);
     }
 
+    /**
+     * Social login is intentionally disabled until real Google/LinkedIn client credentials are configured.
+     * The previous implementation trusted an e-mail sent by the browser, which allowed account takeover.
+     */
+    @Override
+    public AuthResponseDto loginWithOAuth2(OAuth2LoginRequestDto request, String ipAddress, String userAgent) {
+        throw new BadRequestException("Đăng nhập bằng " + (request.getProvider() != null ? request.getProvider() : "OAuth2")
+                + " chưa được cấu hình trên máy chủ này. Vui lòng đăng nhập bằng email và mật khẩu.");
+    }
+
     @Override
     @Transactional
-    public AuthResponseDto loginWithOAuth2(OAuth2LoginRequestDto request, String ipAddress, String userAgent) {
-        String email = request.getEmail();
-        String fullName = request.getFullName();
-        String avatarUrl = request.getAvatarUrl();
+    public AuthResponseDto issueTokensFor(User user, String ipAddress, String userAgent) {
+        return issueTokens(UserPrincipal.create(user), user, ipAddress, userAgent);
+    }
 
-        // Nếu có token Google/LinkedIn gửi lên, thử trích xuất thông tin
-        if (StringUtils.hasText(request.getToken()) && !StringUtils.hasText(email)) {
-            // Giả lập trích xuất payload từ token (hoặc parse JWT header/claims)
-            email = "user." + request.getProvider().toLowerCase() + "@talentbridge.vn";
-            fullName = "Người dùng " + request.getProvider();
+    @Override
+    @Transactional
+    public AuthResponseDto changePassword(Long userId, ChangePasswordRequestDto request, String ipAddress, String userAgent) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new BadRequestException("Mật khẩu hiện tại không đúng");
         }
-
-        if (!StringUtils.hasText(email)) {
-            email = "oauth." + UUID.randomUUID().toString().substring(0, 8) + "@talentbridge.vn";
+        if (request.getCurrentPassword().equals(request.getNewPassword())) {
+            throw new BadRequestException("Mật khẩu mới phải khác mật khẩu hiện tại");
         }
-        if (!StringUtils.hasText(fullName)) {
-            fullName = "OAuth2 " + request.getProvider() + " User";
-        }
-
-        final String userEmail = email.trim().toLowerCase();
-        final String userFullName = fullName.trim();
-        final String userAvatar = avatarUrl;
-
-        User user = userRepository.findByEmail(userEmail)
-                .orElseGet(() -> {
-                    Role role = roleRepository.findByName("ROLE_CANDIDATE")
-                            .orElseGet(() -> roleRepository.save(Role.builder()
-                                    .name("ROLE_CANDIDATE")
-                                    .description("Ứng viên mặc định từ OAuth2")
-                                    .build()));
-
-                    User newUser = User.builder()
-                            .uuid(UUID.randomUUID().toString())
-                            .email(userEmail)
-                            .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString())) // Random password
-                            .fullName(userFullName)
-                            .avatarUrl(userAvatar)
-                            .status("ACTIVE")
-                            .isEmailVerified(true)
-                            .roles(new HashSet<>(Collections.singletonList(role)))
-                            .build();
-
-                    User created = userRepository.save(newUser);
-                    candidateProfileRepository.save(CandidateProfile.builder()
-                            .uuid(UUID.randomUUID().toString())
-                            .userId(created.getId())
-                            .headline("Candidate via " + request.getProvider())
-                            .city("Toàn quốc")
-                            .build());
-                    return created;
-                });
-
-        UserPrincipal userPrincipal = UserPrincipal.create(user);
-        return issueTokens(userPrincipal, user, ipAddress, userAgent);
+        com.talentbridge.backend.service.TeamService.validatePasswordStrength(request.getNewPassword());
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        // Sign out every other device, then hand this session a fresh token pair.
+        userTokenRepository.revokeAllByUserId(userId);
+        return issueTokens(UserPrincipal.create(user), user, ipAddress, userAgent);
     }
 
     private AuthResponseDto issueTokens(UserPrincipal userPrincipal, User user, String ipAddress, String userAgent) {

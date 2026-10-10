@@ -167,3 +167,5 @@ export function toLines(text?: string | null) {
     .map((l) => l.replace(/^[-*\s]+/, '').trim())
     .filter(Boolean);
 }
+
+export const getJobStatus = (lang: 'vi' | 'en' = 'vi') => (lang === 'en' ? JOB_STATUS_EN : JOB_STATUS_VI);

@@ -50,10 +50,11 @@ public class CvController {
         boolean isAdmin = hasRole(user, "ROLE_ADMIN");
         boolean isOwner = candidateProfileRepository.findByUserId(user.getId())
                 .map(p -> p.getId().equals(cv.getCandidateProfileId())).orElse(false);
-        boolean isRecruiterOfApplication = hasRole(user, "ROLE_RECRUITER") && recruiterProfileRepository.findByUserId(user.getId())
-                .map(rp -> jobApplicationRepository.existsByCvIdAndJobRecruiterId(cv.getId(), rp.getId())).orElse(false);
+        boolean isCompanyRecruiter = hasRole(user, "ROLE_RECRUITER") && recruiterProfileRepository.findByUserId(user.getId())
+                .map(rp -> jobApplicationRepository.existsByCvIdAndJobCompanyId(cv.getId(), rp.getCompanyId())).orElse(false);
+        boolean isPanelist = hasRole(user, "ROLE_RECRUITER") && jobApplicationRepository.existsByCvIdForPanelist(cv.getId(), user.getId());
 
-        if (!isAdmin && !isOwner && !isRecruiterOfApplication) {
+        if (!isAdmin && !isOwner && !isCompanyRecruiter && !isPanelist) {
             throw new AccessDeniedException("Bạn không có quyền xem CV này");
         }
 

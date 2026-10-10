@@ -27,6 +27,11 @@ public class RecruiterProfile {
     @Column(name = "job_title", length = 100)
     private String jobTitle;
 
+    /** ADMIN, RECRUITER or INTERVIEWER — see {@link com.talentbridge.backend.service.HiringTeamService}. */
+    @Column(name = "team_role", nullable = false, length = 20)
+    @Builder.Default
+    private String teamRole = "RECRUITER";
+
     @Column(name = "is_company_admin", nullable = false)
     @Builder.Default
     private Boolean isCompanyAdmin = false;

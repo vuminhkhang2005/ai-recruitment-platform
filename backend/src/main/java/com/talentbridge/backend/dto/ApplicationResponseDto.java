@@ -85,6 +85,16 @@ public class ApplicationResponseDto {
     // ---- Timeline
     private java.util.List<StageHistoryItem> history;
 
+    // ---- Interview & messaging context
+    @Schema(description = "Next upcoming (scheduled/rescheduled) interview, if any")
+    private InterviewDtos.InterviewDto nextInterview;
+
+    @Schema(description = "Number of interview rounds created for this application")
+    private Integer interviewCount;
+
+    @Schema(description = "Unread messages in this application's thread for the current viewer")
+    private Long unreadMessages;
+
     @Data
     @Builder
     @NoArgsConstructor
@@ -93,6 +103,7 @@ public class ApplicationResponseDto {
         private String fromStage;
         private String toStage;
         private String note;
+        private String changedByName;
         private LocalDateTime createdAt;
     }
 }

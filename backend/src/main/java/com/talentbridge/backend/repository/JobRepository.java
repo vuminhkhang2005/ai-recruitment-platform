@@ -29,6 +29,8 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
 
     List<Job> findByRecruiterIdAndDeletedAtIsNullOrderByCreatedAtDesc(Long recruiterId);
 
+    List<Job> findByCompanyIdAndDeletedAtIsNullOrderByCreatedAtDesc(Long companyId);
+
     @Query("SELECT j FROM Job j JOIN FETCH j.company WHERE j.id = :id")
     Optional<Job> findByIdWithCompany(@Param("id") Long id);
 

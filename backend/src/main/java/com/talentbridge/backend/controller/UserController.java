@@ -13,6 +13,13 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import com.talentbridge.backend.dto.AuthResponseDto;
+import com.talentbridge.backend.dto.ChangePasswordRequestDto;
+import com.talentbridge.backend.security.JwtCookieHelper;
+import com.talentbridge.backend.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,6 +34,29 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final AuthService authService;
+    private final JwtCookieHelper cookieHelper;
+
+    @PostMapping("/me/password")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Đổi mật khẩu", description = "Xác nhận mật khẩu cũ và cập nhật mật khẩu mới (tối thiểu 8 ký tự gồm chữ và số)")
+    public ResponseEntity<ApiResponse<AuthResponseDto>> changePassword(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @Valid @RequestBody ChangePasswordRequestDto request,
+            HttpServletRequest httpRequest
+    ) {
+        String ipAddress = httpRequest.getRemoteAddr();
+        String userAgent = httpRequest.getHeader(HttpHeaders.USER_AGENT);
+        AuthResponseDto authResponse = authService.changePassword(userPrincipal.getId(), request, ipAddress, userAgent);
+
+        ResponseCookie accessCookie = cookieHelper.createAccessTokenCookie(authResponse.getAccessToken());
+        ResponseCookie refreshCookie = cookieHelper.createRefreshTokenCookie(authResponse.getRefreshToken());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .body(ApiResponse.ok("Đổi mật khẩu thành công", authResponse));
+    }
 
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")

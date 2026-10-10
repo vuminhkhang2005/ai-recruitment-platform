@@ -55,6 +55,7 @@ public class JobServiceImpl implements JobService {
     private final CompanyRepository companyRepository;
     private final RecruiterProfileRepository recruiterProfileRepository;
     private final SkillRepository skillRepository;
+    private final com.talentbridge.backend.service.HiringTeamService hiringTeamService;
 
     private static final Pattern NONLATIN = Pattern.compile("[^\\w-]");
     private static final Pattern WHITESPACE = Pattern.compile("[\\s]");
@@ -128,8 +129,7 @@ public class JobServiceImpl implements JobService {
     @Override
     @Transactional
     public JobResponseDto createJob(JobCreateRequestDto request, Long recruiterUserId) {
-        RecruiterProfile recruiter = recruiterProfileRepository.findByUserId(recruiterUserId)
-                .orElseThrow(() -> new BadRequestException("Tài khoản chưa liên kết với công ty nào, không thể đăng tin."));
+        RecruiterProfile recruiter = hiringTeamService.requireManager(recruiterUserId);
         final Long resolvedCompanyId = recruiter.getCompanyId();
         Company company = companyRepository.findById(resolvedCompanyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Company not found with ID: " + resolvedCompanyId));
@@ -199,12 +199,8 @@ public class JobServiceImpl implements JobService {
         Job job = jobRepository.findByIdWithCompany(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found with ID: " + id));
 
-        Long recruiterProfileId = recruiterProfileRepository.findByUserId(recruiterUserId)
-                .map(RecruiterProfile::getId)
-                .orElse(null);
-
-        if (!isAdmin && !job.getRecruiterId().equals(recruiterProfileId)) {
-            throw new AccessDeniedException("Bạn không có quyền chỉnh sửa tin tuyển dụng này");
+        if (!isAdmin) {
+            hiringTeamService.assertCanManageJob(recruiterUserId, job, "Bạn không có quyền chỉnh sửa tin tuyển dụng này");
         }
 
         if (StringUtils.hasText(request.getTitle())) {
@@ -287,12 +283,8 @@ public class JobServiceImpl implements JobService {
         Job job = jobRepository.findByIdWithCompany(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found with ID: " + id));
 
-        Long recruiterProfileId = recruiterProfileRepository.findByUserId(recruiterUserId)
-                .map(RecruiterProfile::getId)
-                .orElse(null);
-
-        if (!isAdmin && !job.getRecruiterId().equals(recruiterProfileId)) {
-            throw new AccessDeniedException("Bạn không có quyền thay đổi trạng thái tin tuyển dụng này");
+        if (!isAdmin) {
+            hiringTeamService.assertCanManageJob(recruiterUserId, job, "Bạn không có quyền thay đổi trạng thái tin tuyển dụng này");
         }
 
         String next = normalizeStatus(status);
@@ -332,12 +324,8 @@ public class JobServiceImpl implements JobService {
         Job job = jobRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found with ID: " + id));
 
-        Long recruiterProfileId = recruiterProfileRepository.findByUserId(recruiterUserId)
-                .map(RecruiterProfile::getId)
-                .orElse(null);
-
-        if (!isAdmin && !job.getRecruiterId().equals(recruiterProfileId)) {
-            throw new AccessDeniedException("Bạn không có quyền xóa tin tuyển dụng này");
+        if (!isAdmin) {
+            hiringTeamService.assertCanManageJob(recruiterUserId, job, "Bạn không có quyền xóa tin tuyển dụng này");
         }
 
         job.setStatus("CLOSED");
@@ -405,6 +393,11 @@ public class JobServiceImpl implements JobService {
     public List<JobResponseDto> getMyJobs(Long recruiterUserId) {
         RecruiterProfile rp = recruiterProfileRepository.findByUserId(recruiterUserId)
                 .orElseThrow(() -> new AccessDeniedException("Tài khoản chưa có hồ sơ nhà tuyển dụng"));
+        if (rp.getCompanyId() != null) {
+            return jobRepository.findByCompanyIdAndDeletedAtIsNullOrderByCreatedAtDesc(rp.getCompanyId()).stream()
+                    .map(this::mapToDto)
+                    .toList();
+        }
         return jobRepository.findByRecruiterIdAndDeletedAtIsNullOrderByCreatedAtDesc(rp.getId()).stream()
                 .map(this::mapToDto)
                 .toList();

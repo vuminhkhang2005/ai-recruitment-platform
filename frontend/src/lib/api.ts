@@ -13,6 +13,15 @@ import type {
   RegisterInput,
   SkillItem,
   Stage,
+  EvaluationDto,
+  InterviewDto,
+  InvitationPreview,
+  MessageDto,
+  NoteDto,
+  TeamInvitation,
+  TeamMember,
+  TeamOverview,
+  ThreadSummary,
   UserProfile,
   UserProfileUpdate,
   UserSummary,
@@ -166,6 +175,16 @@ export const authApi = {
 export const userApi = {
   getMe: () => request<UserProfile>('/users/me'),
   updateMe: (input: UserProfileUpdate) => request<UserProfile>('/users/me', { method: 'PUT', body: input }),
+  changePassword: (
+    arg: { currentPassword: string; newPassword: string } | string,
+    newPassword?: string
+  ) => {
+    const body =
+      typeof arg === 'string'
+        ? { currentPassword: arg, newPassword: newPassword! }
+        : arg;
+    return request<AuthResponse>('/users/me/password', { method: 'POST', body });
+  },
 };
 
 export const jobApi = {
@@ -183,6 +202,8 @@ export const companyApi = {
   list: () => request<Company[]>('/companies'),
   get: (id: number | string) => request<Company>(`/companies/${id}`),
   jobs: (id: number | string) => request<Job[]>(`/companies/${id}/jobs`),
+  update: (id: number | string, data: Partial<Company>) =>
+    request<Company>(`/companies/${id}`, { method: 'PUT', body: data }),
 };
 
 export const applicationApi = {
@@ -240,4 +261,76 @@ export const notificationApi = {
   unreadCount: () => request<{ count: number }>('/notifications/unread-count'),
   markRead: (id: number) => request<void>(`/notifications/${id}/read`, { method: 'PATCH' }),
   markAllRead: () => request<void>('/notifications/read-all', { method: 'PATCH' }),
+};
+
+export const teamApi = {
+  overview: () => request<TeamOverview>('/team/overview'),
+  members: () => request<TeamMember[]>('/team/members'),
+  invite: (input: { email: string; fullName?: string; jobTitle?: string; teamRole: string }) =>
+    request<TeamInvitation>('/team/invitations', { method: 'POST', body: input }),
+  resendInvitation: (id: number) => request<TeamInvitation>(`/team/invitations/${id}/resend`, { method: 'POST' }),
+  revokeInvitation: (id: number) => request<void>(`/team/invitations/${id}`, { method: 'DELETE' }),
+  updateMember: (id: number, data: { teamRole?: string; jobTitle?: string }) =>
+    request<TeamMember>(`/team/members/${id}`, { method: 'PATCH', body: data }),
+  deactivateMember: (id: number) => request<TeamMember>(`/team/members/${id}/deactivate`, { method: 'POST' }),
+  reactivateMember: (id: number) => request<TeamMember>(`/team/members/${id}/reactivate`, { method: 'POST' }),
+  previewInvitation: (token: string) => request<InvitationPreview>(`/auth/invitations/${token}`),
+  acceptInvitation: (token: string, data: { fullName: string; password: string; phone?: string }) =>
+    request<AuthResponse>(`/auth/invitations/${token}/accept`, { method: 'POST', body: data }),
+};
+
+export const interviewApi = {
+  listForApplication: (applicationId: number) =>
+    request<InterviewDto[]>(`/applications/${applicationId}/interviews`),
+  schedule: (applicationId: number, data: {
+    roundNumber?: number;
+    title?: string;
+    scheduledStart: string;
+    scheduledEnd?: string;
+    format: 'ONLINE' | 'OFFLINE';
+    location: string;
+    notesToCandidate?: string;
+    panelistUserIds?: number[];
+  }) => request<InterviewDto>(`/applications/${applicationId}/interviews`, { method: 'POST', body: data }),
+  update: (interviewId: number, data: {
+    scheduledStart?: string;
+    scheduledEnd?: string;
+    format?: 'ONLINE' | 'OFFLINE';
+    location?: string;
+    status?: 'SCHEDULED' | 'RESCHEDULED' | 'COMPLETED' | 'CANCELLED';
+    notesToCandidate?: string;
+    panelistUserIds?: number[];
+  }) => request<InterviewDto>(`/interviews/${interviewId}`, { method: 'PATCH', body: data }),
+  evaluate: (interviewId: number, data: {
+    scorecard: Record<string, number>;
+    recommendation: 'STRONG_HIRE' | 'HIRE' | 'NEUTRAL' | 'NO_HIRE' | 'STRONG_NO_HIRE';
+    notes?: string;
+  }) => request<EvaluationDto>(`/interviews/${interviewId}/evaluations`, { method: 'POST', body: data }),
+  upcoming: () => request<InterviewDto[]>('/interviews/upcoming'),
+};
+
+export const noteApi = {
+  list: (applicationId: number) => request<NoteDto[]>(`/applications/${applicationId}/notes`),
+  create: (
+    applicationId: number,
+    arg: string | { content: string; isPrivate?: boolean },
+    isPrivate = false
+  ) => {
+    const body =
+      typeof arg === 'string'
+        ? { content: arg, isPrivate }
+        : { content: arg.content, isPrivate: !!arg.isPrivate };
+    return request<NoteDto>(`/applications/${applicationId}/notes`, { method: 'POST', body });
+  },
+  delete: (noteId: number) => request<void>(`/notes/${noteId}`, { method: 'DELETE' }),
+};
+
+export const messageApi = {
+  list: (applicationId: number) => request<MessageDto[]>(`/applications/${applicationId}/messages`),
+  send: (applicationId: number, content: string) =>
+    request<MessageDto>(`/applications/${applicationId}/messages`, { method: 'POST', body: { content } }),
+  markRead: (applicationId: number) =>
+    request<{ markedRead: number }>(`/applications/${applicationId}/messages/read`, { method: 'PATCH' }),
+  threads: () => request<ThreadSummary[]>('/messages/threads'),
+  unreadCount: () => request<{ unreadCount: number }>('/messages/unread-count'),
 };

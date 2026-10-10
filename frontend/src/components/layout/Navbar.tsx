@@ -4,20 +4,24 @@ import {
   Bookmark,
   Briefcase,
   Building2,
+  Calendar,
   ChevronDown,
   FileCheck2,
   LayoutGrid,
   LogOut,
   Menu,
+  MessageSquare,
   Moon,
   PlusCircle,
   Search,
+  ShieldCheck,
   Sun,
   User,
   Users,
   Wrench,
   X,
 } from 'lucide-react';
+import { messageApi } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -158,10 +162,33 @@ export const Navbar: React.FC = () => {
     return () => document.removeEventListener('mousedown', close);
   }, [menuOpen]);
 
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let active = true;
+    const fetchUnread = () => {
+      messageApi
+        .unreadCount()
+        .then((res) => {
+          if (active) setUnreadMsgCount(res.unreadCount);
+        })
+        .catch(() => {});
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30_000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [isAuthenticated]);
+
   const links: NavItem[] = isRecruiter
     ? [
         { to: '/employer', label: language === 'vi' ? 'Tin tuyển dụng' : 'Jobs', icon: LayoutGrid, end: true },
         { to: '/employer/applicants', label: language === 'vi' ? 'Ứng viên' : 'Applicants', icon: Users },
+        { to: '/employer/interviews', label: language === 'vi' ? 'Lịch PV' : 'Interviews', icon: Calendar },
+        { to: '/employer/team', label: language === 'vi' ? 'Đội ngũ' : 'Team', icon: ShieldCheck },
         { to: '/employer/jobs/new', label: language === 'vi' ? 'Đăng tin' : 'Post Job', icon: PlusCircle },
       ]
     : [
@@ -173,12 +200,17 @@ export const Navbar: React.FC = () => {
   const accountLinks: NavItem[] = isRecruiter
     ? [
         { to: '/profile', label: language === 'vi' ? 'Tài khoản' : 'Account', icon: User },
+        { to: '/employer/company', label: language === 'vi' ? 'Hồ sơ công ty' : 'Company Profile', icon: Building2 },
         { to: '/employer', label: language === 'vi' ? 'Quản lý tin tuyển dụng' : 'Manage Jobs', icon: LayoutGrid },
+        { to: '/employer/team', label: language === 'vi' ? 'Đội ngũ tuyển dụng' : 'Hiring Team', icon: ShieldCheck },
+        { to: '/employer/interviews', label: language === 'vi' ? 'Lịch phỏng vấn' : 'Interviews', icon: Calendar },
+        { to: '/messages', label: language === 'vi' ? 'Tin nhắn' : 'Messages', icon: MessageSquare },
       ]
     : [
         { to: '/profile', label: language === 'vi' ? 'Hồ sơ & CV' : 'Profile & CV', icon: User },
         { to: '/applications', label: language === 'vi' ? 'Việc đã ứng tuyển' : 'My Applications', icon: FileCheck2 },
         { to: '/saved-jobs', label: language === 'vi' ? 'Việc đã lưu' : 'Saved Jobs', icon: Bookmark },
+        { to: '/messages', label: language === 'vi' ? 'Tin nhắn' : 'Messages', icon: MessageSquare },
       ];
 
   const onLogout = async () => {
@@ -235,6 +267,20 @@ export const Navbar: React.FC = () => {
             </>
           ) : (
             <>
+              <Link
+                to="/messages"
+                className="relative p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                aria-label={language === 'vi' ? 'Tin nhắn' : 'Messages'}
+                title={language === 'vi' ? 'Tin nhắn' : 'Messages'}
+                data-testid="navbar-messages"
+              >
+                <MessageSquare className="w-5 h-5" />
+                {unreadMsgCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-600 text-white text-[11px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-soft-xs">
+                    {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
+                  </span>
+                )}
+              </Link>
               <NotificationBell />
               <div className="relative hidden md:block" ref={menuRef}>
                 <button

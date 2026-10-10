@@ -70,4 +70,10 @@ public class UserProfileResponseDto {
 
     @Schema(description = "Job Title / Designation", example = "Talent Acquisition Lead")
     private String jobTitle;
+
+    @Schema(description = "Team Role in Company (ADMIN, RECRUITER, INTERVIEWER)", example = "ADMIN")
+    private String teamRole;
+
+    @Schema(description = "Whether the user is company administrator", example = "true")
+    private Boolean isCompanyAdmin;
 }

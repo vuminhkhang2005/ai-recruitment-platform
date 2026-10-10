@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { authApi, SESSION_EXPIRED_EVENT, tokens } from '../lib/api';
-import type { RegisterInput, UserSummary } from '../lib/types';
+import type { AuthResponse, RegisterInput, UserSummary } from '../lib/types';
 
 interface AuthContextValue {
   user: UserSummary | null;
@@ -12,6 +12,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<UserSummary>;
   register: (input: RegisterInput) => Promise<UserSummary>;
   logout: () => Promise<void>;
+  setUserSession: (res: AuthResponse) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -67,6 +68,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await authApi.logout(refreshToken);
   }, []);
 
+  const setUserSession = useCallback((res: AuthResponse) => {
+    tokens.set(res);
+    setUser(res.user);
+  }, []);
+
   const value = useMemo<AuthContextValue>(() => {
     const roles = user?.roles ?? [];
     return {
@@ -78,8 +84,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login,
       register,
       logout,
+      setUserSession,
     };
-  }, [user, initializing, login, register, logout]);
+  }, [user, initializing, login, register, logout, setUserSession]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

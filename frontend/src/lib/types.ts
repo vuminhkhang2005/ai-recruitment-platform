@@ -61,6 +61,8 @@ export interface UserProfile {
   companyName: string | null;
   companyLogo: string | null;
   jobTitle: string | null;
+  teamRole?: 'ADMIN' | 'RECRUITER' | 'INTERVIEWER' | null;
+  isCompanyAdmin?: boolean | null;
 }
 
 export type UserProfileUpdate = Partial<
@@ -245,4 +247,127 @@ export interface RegisterInput {
   role: 'ROLE_CANDIDATE' | 'ROLE_RECRUITER';
   companyId?: number;
   companyName?: string;
+}
+
+export interface TeamMember {
+  recruiterProfileId: number;
+  userId: number;
+  fullName: string | null;
+  email: string | null;
+  avatarUrl: string | null;
+  jobTitle: string | null;
+  teamRole: 'ADMIN' | 'RECRUITER' | 'INTERVIEWER';
+  status: string;
+  me: boolean;
+  joinedAt: string;
+}
+
+export interface TeamInvitation {
+  id: number;
+  email: string;
+  fullName: string | null;
+  jobTitle: string | null;
+  teamRole: 'ADMIN' | 'RECRUITER' | 'INTERVIEWER';
+  status: 'PENDING' | 'ACCEPTED' | 'REVOKED';
+  invitedByName: string | null;
+  expiresAt: string;
+  createdAt: string;
+  expired: boolean;
+}
+
+export interface TeamOverview {
+  companyId: number;
+  companyName: string;
+  companyLogo: string | null;
+  myRole: string;
+  members: TeamMember[];
+  pendingInvitations: TeamInvitation[];
+}
+
+export interface InvitationPreview {
+  companyName: string | null;
+  companyLogo: string | null;
+  email: string;
+  fullName: string | null;
+  jobTitle: string | null;
+  teamRole: string;
+  invitedByName: string | null;
+  status: string;
+  expired: boolean;
+  expiresAt: string;
+}
+
+export interface PanelistDto {
+  userId: number;
+  fullName: string;
+  jobTitle: string | null;
+  teamRole: string;
+  evaluated: boolean;
+}
+
+export interface EvaluationDto {
+  id: number;
+  authorUserId: number;
+  authorName: string;
+  authorRole: string;
+  scorecard: Record<string, number>;
+  recommendation: 'STRONG_HIRE' | 'HIRE' | 'NEUTRAL' | 'NO_HIRE' | 'STRONG_NO_HIRE';
+  notes: string | null;
+  submittedAt: string;
+}
+
+export interface InterviewDto {
+  id: number;
+  uuid: string;
+  applicationId: number;
+  roundNumber: number;
+  title: string | null;
+  scheduledStart: string;
+  scheduledEnd: string;
+  format: 'ONLINE' | 'OFFLINE';
+  location: string | null;
+  status: 'SCHEDULED' | 'RESCHEDULED' | 'COMPLETED' | 'CANCELLED';
+  notesToCandidate: string | null;
+  panelists?: PanelistDto[];
+  evaluations?: EvaluationDto[];
+  myEvaluation?: EvaluationDto | null;
+  canEvaluate?: boolean;
+}
+
+export interface NoteDto {
+  id: number;
+  applicationId: number;
+  authorUserId: number;
+  authorName: string;
+  authorRole: string;
+  content: string;
+  isPrivate: boolean;
+  mine: boolean;
+  createdAt: string;
+}
+
+export interface MessageDto {
+  id: number;
+  applicationId: number;
+  senderUserId: number;
+  senderName: string;
+  senderSide: 'CANDIDATE' | 'COMPANY';
+  content: string;
+  createdAt: string;
+  readAt: string | null;
+}
+
+export interface ThreadSummary {
+  applicationId: number;
+  jobId: number | null;
+  jobTitle: string | null;
+  companyName: string | null;
+  companyLogo: string | null;
+  candidateUserId: number | null;
+  candidateName: string | null;
+  currentStage: string;
+  lastMessage: string | null;
+  lastSenderSide: 'CANDIDATE' | 'COMPANY' | null;
+  lastMessageAt: string | null;
+  unreadCount: number;
 }

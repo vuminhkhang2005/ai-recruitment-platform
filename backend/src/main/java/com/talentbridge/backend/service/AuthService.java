@@ -16,4 +16,10 @@ public interface AuthService {
     UserSummaryDto getCurrentUser(UserPrincipal userPrincipal);
 
     AuthResponseDto loginWithOAuth2(OAuth2LoginRequestDto request, String ipAddress, String userAgent);
+
+    /** Issues an access/refresh token pair for an already-verified user (e.g. after accepting a team invitation). */
+    AuthResponseDto issueTokensFor(com.talentbridge.backend.entity.User user, String ipAddress, String userAgent);
+
+    /** Verifies the current password, stores the new one and signs out every other session. */
+    AuthResponseDto changePassword(Long userId, ChangePasswordRequestDto request, String ipAddress, String userAgent);
 }

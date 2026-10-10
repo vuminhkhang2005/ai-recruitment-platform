@@ -170,7 +170,9 @@ public class UserServiceImpl implements UserService {
 
         recruiterProfileRepository.findByUserId(user.getId()).ifPresent(rp -> {
             builder.companyId(rp.getCompanyId())
-                    .jobTitle(rp.getJobTitle());
+                    .jobTitle(rp.getJobTitle())
+                    .teamRole(rp.getTeamRole())
+                    .isCompanyAdmin(rp.getIsCompanyAdmin());
             if (rp.getCompanyId() != null) {
                 companyRepository.findById(rp.getCompanyId()).ifPresent(comp -> {
                     builder.companyName(comp.getName()).companyLogo(comp.getLogoUrl());

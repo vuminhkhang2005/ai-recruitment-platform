@@ -17,6 +17,11 @@ import { SavedJobsPage } from './pages/SavedJobsPage';
 import { EmployerDashboard } from './pages/employer/EmployerDashboard';
 import { JobFormPage } from './pages/employer/JobFormPage';
 import { ApplicantsPage } from './pages/employer/ApplicantsPage';
+import { TeamPage } from './pages/employer/TeamPage';
+import { InterviewsAgendaPage } from './pages/employer/InterviewsAgendaPage';
+import { EmployerCompanyPage } from './pages/employer/EmployerCompanyPage';
+import { AcceptInvitationPage } from './pages/AcceptInvitationPage';
+import { MessagesPage } from './pages/MessagesPage';
 import { RequireRole } from './routes/RequireRole';
 
 function ScrollToTop() {
@@ -105,6 +110,39 @@ export function App() {
           element={
             <RequireRole role="recruiter">
               <ApplicantsPage />
+            </RequireRole>
+          }
+        />
+        <Route path="invite/:token" element={<AcceptInvitationPage />} />
+        <Route
+          path="messages"
+          element={
+            <RequireRole>
+              <MessagesPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="employer/team"
+          element={
+            <RequireRole role="recruiter">
+              <TeamPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="employer/interviews"
+          element={
+            <RequireRole role="recruiter">
+              <InterviewsAgendaPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="employer/company"
+          element={
+            <RequireRole role="recruiter">
+              <EmployerCompanyPage />
             </RequireRole>
           }
         />

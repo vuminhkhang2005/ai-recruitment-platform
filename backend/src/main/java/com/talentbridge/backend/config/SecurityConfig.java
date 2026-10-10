@@ -58,6 +58,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 1. Authentication & OAuth2 Endpoints
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
 
                         // 2. Public Read-Only Endpoints
                         .requestMatchers(HttpMethod.GET, "/api/v1/jobs/**").permitAll()

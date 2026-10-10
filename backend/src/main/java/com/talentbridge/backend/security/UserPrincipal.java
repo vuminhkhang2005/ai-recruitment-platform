@@ -23,6 +23,7 @@ public class UserPrincipal implements UserDetails {
     private final String password;
     private final String fullName;
     private final Collection<? extends GrantedAuthority> authorities;
+    private final String status;
 
     public static UserPrincipal create(User user) {
         List<GrantedAuthority> authorities = user.getRoles().stream()
@@ -36,6 +37,7 @@ public class UserPrincipal implements UserDetails {
                 .password(user.getPasswordHash())
                 .fullName(user.getFullName())
                 .authorities(authorities)
+                .status(user.getStatus())
                 .build();
     }
 
@@ -61,6 +63,6 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return status == null || "ACTIVE".equalsIgnoreCase(status);
     }
 }

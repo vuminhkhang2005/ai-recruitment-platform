@@ -33,6 +33,33 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
 
+  # Existing databases (created from docs/phase-2-design DDL) are stamped as V1,
+  # then db/migration/V2+ scripts are applied incrementally.
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+    baseline-description: "Initial schema from 02_DATABASE_SCHEMA_DDL.sql"
+    locations: classpath:db/migration
+
+  # SMTP. Local default = MailDev (npx maildev -> SMTP :1025, inbox UI :1080).
+  # Production: MAIL_HOST=smtp.gmail.com MAIL_PORT=587 MAIL_USERNAME=... MAIL_PASSWORD=<app password> MAIL_STARTTLS=true
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      mail.smtp.auth: ${MAIL_SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${MAIL_STARTTLS:false}
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
+
+  thymeleaf:
+    check-template-location: false
+
 # SpringDoc OpenAPI / Swagger 3.0 Configuration
 springdoc:
   api-docs:
@@ -71,6 +98,13 @@ app:
       client-id: ${LINKEDIN_CLIENT_ID:talentbridge-linkedin-client-id}
   storage:
     dir: ${APP_STORAGE_DIR:uploads}
+  # Base URL of the React app, used to build links inside e-mails (invitations, application pages)
+  frontend-url: ${APP_FRONTEND_URL:http://localhost:5173}
+  mail:
+    enabled: ${APP_MAIL_ENABLED:true}
+    from: ${APP_MAIL_FROM:TalentBridge <no-reply@talentbridge.vn>}
+  invitations:
+    ttl-days: 7
   demo:
     # Seed data ships with placeholder (non-verifiable) BCrypt hashes. When enabled, those
     # accounts get a real hash of default-password at startup so demo logins work.

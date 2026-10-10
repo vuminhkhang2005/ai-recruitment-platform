@@ -39,6 +39,32 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- Versioned schema migrations (baseline = existing DDL, V2+ = incremental changes) -->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-mysql</artifactId>
+		</dependency>
+
+		<!-- Transactional e-mail (JavaMailSender) + HTML templates -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>
+
+		<!-- Real-time messaging (WebSocket + STOMP) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-websocket</artifactId>
+		</dependency>
+
 		<!-- Swagger / OpenAPI 3.0 UI -->
 		<dependency>
 			<groupId>org.springdoc</groupId>
