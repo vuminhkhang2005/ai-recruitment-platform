@@ -4,7 +4,7 @@
 **Nội dung thực hiện:** Xây dựng Dịch vụ Email giao dịch & Lịch phỏng vấn (.ics RFC 5545), Kênh nhắn tin thời gian thực (STOMP WebSocket), Phân quyền Đội ngũ tuyển dụng (RBAC), Bảng đánh giá Rubric Scorecard và Kiểm thử tự động toàn trình (Playwright E2E)  
 **Sinh viên thực hiện:** Vũ Minh Khang - 23110238  
 
----
+___
 
 ## 1. Mục tiêu tuần 8
 - Xây dựng dịch vụ Email giao dịch tự động tích hợp gửi tệp sự kiện lịch iCalendar (.ics) chuẩn RFC 5545 phục vụ gửi thư mời phỏng vấn và thêm sự kiện 1 chạm vào Google/Outlook Calendar.
@@ -15,7 +15,7 @@
 - Hoàn thiện các trang quản trị: Lịch phỏng vấn tổng hợp (`/employer/interviews`), Hồ sơ công ty (`/employer/company`), Đổi mật khẩu an toàn (`/profile#security`).
 - Kiểm thử tự động hóa toàn diện với Playwright E2E và JUnit 5 (đạt 100% test pass), xuất bản 4 tài liệu kỹ thuật tại `docs/phase-3-implementation/`.
 
----
+___
 
 ## 2. Các công việc đã hoàn thành
 
@@ -47,7 +47,7 @@
 - **Kiểm thử hồi quy & biên dịch**: 100% test pass trên toàn bộ 8 bộ test, TypeScript 0 lỗi (`npx tsc -b`), Backend JUnit đạt 18/18 tests passed.
 - **Tài liệu hóa**: Xuất bản 4 tài liệu kỹ thuật chi tiết tại `docs/phase-3-implementation/` (Email, STOMP WebSocket, RBAC Team, API Specification).
 
----
+___
 
 ## 3. Kết quả đạt được (Deliverables)
 - **Mã nguồn hoàn thiện**:
@@ -66,7 +66,7 @@
   - `feat`: Hoàn thiện giao diện Master-Detail 2 cột chia đôi màn hình (`24bcdaa`).
   - `feat(tracker)`: Tiến trình tuyển dụng 5 giai đoạn tương tác kèm cam kết SLA (`6b3f7cb`).
 
----
+___
 
 ## 4. Khó khăn gặp phải & Hướng giải quyết
 - **Khó khăn 1 (Tắc nghẽn I/O khi gửi email đồng bộ trong luồng xử lý HTTP)**: Gửi email qua SMTP mất 1-3 giây khiến người dùng chờ lâu và nguy cơ timeout kết nối.
@@ -78,7 +78,7 @@
 - **Khó khăn 4 (Bảo mật và phân quyền ghi chú nội bộ nhạy cảm)**: Ghi chú phỏng vấn vừa có nhận xét chuyên môn (cần chia sẻ cho hội đồng), vừa có nhận xét nhạy cảm về mức lương/tính cách (chỉ Admin hoặc người viết xem được).
   - *Giải pháp*: Bổ sung trường `is_private` vào bảng `application_notes`. Tại `NoteService`, nếu `is_private = true`, chỉ tác giả hoặc user có role `ADMIN` mới được đọc; Interviewer khác chỉ nhận danh sách Shared Notes.
 
----
+___
 
 ## 5. Kế hoạch tuần 9 (Dự kiến: Tích hợp Trí tuệ Nhân tạo AI & Hoàn thiện Thuyết minh Đồ án)
 ### 5.1. Nghiên cứu & Tích hợp Trí tuệ Nhân tạo (Phase 4 AI Integration)
@@ -89,7 +89,7 @@
 - Tổng hợp toàn bộ sơ đồ kiến trúc hệ thống, sơ đồ ERD, sơ đồ Use Case và Sequence Diagrams vào Báo cáo Thuyết minh Đồ án tốt nghiệp theo quy chuẩn Nhà trường.
 - Ghi hình video demo vận hành thực tế toàn bộ các phân hệ của TalentBridge (Cổng Ứng viên, Cổng Nhà tuyển dụng, Chat thời gian thực, Lịch phỏng vấn .ics và Đội ngũ tuyển dụng).
 
----
+___
 
 ## AI hỗ trợ
 **Google Antigravity**  
