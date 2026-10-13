@@ -1,6 +1,7 @@
 # BÁO CÁO TIẾN ĐỘ TUẦN 8
+
 **Đề tài:** Xây dựng nền tảng hỗ trợ tuyển dụng và định hướng nghề nghiệp  
-**Nội dung thực hiện:** Xây dựng Hệ thống Email giao dịch & Lịch .ics RFC 5545, Nhắn tin thời gian thực STOMP WebSocket, Phân quyền Đội ngũ Tuyển dụng RBAC, Bảng đánh giá Rubric Scorecard và Ghi chú nội bộ  
+**Nội dung thực hiện:** Xây dựng Dịch vụ Email giao dịch & Lịch phỏng vấn (.ics RFC 5545), Kênh nhắn tin thời gian thực (STOMP WebSocket), Phân quyền Đội ngũ tuyển dụng (RBAC), Bảng đánh giá Rubric Scorecard và Kiểm thử tự động toàn trình (Playwright E2E)  
 **Sinh viên thực hiện:** Vũ Minh Khang - 23110238  
 
 ---
