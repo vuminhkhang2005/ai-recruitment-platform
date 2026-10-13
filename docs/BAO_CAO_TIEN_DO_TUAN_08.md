@@ -80,14 +80,14 @@ ___
 
 ___
 
-## 5. Kế hoạch tuần 9 (Dự kiến: Tích hợp Trí tuệ Nhân tạo AI & Hoàn thiện Thuyết minh Đồ án)
+## 5. Kế hoạch tuần 9 (Dự kiến: Tích hợp Trí tuệ Nhân tạo AI & Nâng cấp Trải nghiệm Tuyển dụng)
 ### 5.1. Nghiên cứu & Tích hợp Trí tuệ Nhân tạo (Phase 4 AI Integration)
 - Tích hợp Google Gemini AI API cho tính năng AI Resume Parser: Tự động trích xuất thông tin từ file PDF/DOCX CV thành cấu trúc JSON chuẩn hóa (Kỹ năng, Kinh nghiệm, Học vấn, Dự án).
-- Xây dựng thuật toán tính điểm tương thích ATS kết hợp giữa so khớp từ khóa (Keyword Matching) và đo lường khoảng cách ngữ nghĩa (Semantic Embedding Similarity).
-- Phát triển tính năng AI Interview Copilot gợi ý câu hỏi phỏng vấn kỹ thuật chuyên sâu dựa trên sự đối chiếu giữa JD và CV ứng viên.
-### 5.2. Hoàn thiện Báo cáo Thuyết minh Đồ án & Video Demo
-- Tổng hợp toàn bộ sơ đồ kiến trúc hệ thống, sơ đồ ERD, sơ đồ Use Case và Sequence Diagrams vào Báo cáo Thuyết minh Đồ án tốt nghiệp theo quy chuẩn Nhà trường.
-- Ghi hình video demo vận hành thực tế toàn bộ các phân hệ của TalentBridge (Cổng Ứng viên, Cổng Nhà tuyển dụng, Chat thời gian thực, Lịch phỏng vấn .ics và Đội ngũ tuyển dụng).
+- Xây dựng thuật toán tính điểm tương thích ATS (ATS Match Score) và Phân tích lỗ hổng kỹ năng (Skill Gap Analysis) giữa hồ sơ ứng viên và bản mô tả công việc (JD).
+- Phát triển tính năng AI Cover Letter Generator hỗ trợ ứng viên tự động sinh thư ứng tuyển cá nhân hóa theo từng vị trí việc làm.
+### 5.2. Xây dựng Trung tâm Thông báo & Bảng Thống kê Tuyển dụng (Recruitment Analytics)
+- Xây dựng hệ thống Thông báo thời gian thực (In-App Real-time Notifications) cho các sự kiện: lời mời phỏng vấn, tin nhắn mới, cập nhật trạng thái hồ sơ.
+- Xây dựng Dashboard thống kê tuyển dụng cho Doanh nghiệp: biểu đồ phễu chuyển đổi ứng viên qua các vòng (Hiring Funnel), số lượng hồ sơ tiếp nhận theo tuần và phân tích tỷ lệ đạt yêu cầu.
 
 ___
 
