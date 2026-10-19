@@ -9,6 +9,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isCandidate: boolean;
   isRecruiter: boolean;
+  isAdmin: boolean;
   login: (email: string, password: string) => Promise<UserSummary>;
   register: (input: RegisterInput) => Promise<UserSummary>;
   logout: () => Promise<void>;
@@ -81,6 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isAuthenticated: !!user,
       isCandidate: roles.includes('ROLE_CANDIDATE'),
       isRecruiter: roles.includes('ROLE_RECRUITER'),
+      isAdmin: roles.includes('ROLE_ADMIN'),
       login,
       register,
       logout,

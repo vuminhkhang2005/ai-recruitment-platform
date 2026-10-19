@@ -20,6 +20,13 @@ import { ApplicantsPage } from './pages/employer/ApplicantsPage';
 import { TeamPage } from './pages/employer/TeamPage';
 import { InterviewsAgendaPage } from './pages/employer/InterviewsAgendaPage';
 import { EmployerCompanyPage } from './pages/employer/EmployerCompanyPage';
+import { EmployerAnalyticsPage } from './pages/employer/EmployerAnalyticsPage';
+import { TalentPoolPage } from './pages/employer/TalentPoolPage';
+import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
+import { AdminUsersPage } from './pages/admin/AdminUsersPage';
+import { AdminModerationPage } from './pages/admin/AdminModerationPage';
+import { AdminSkillsPage } from './pages/admin/AdminSkillsPage';
+import { AdminAuditLogsPage } from './pages/admin/AdminAuditLogsPage';
 import { AcceptInvitationPage } from './pages/AcceptInvitationPage';
 import { MessagesPage } from './pages/MessagesPage';
 import { RequireRole } from './routes/RequireRole';
@@ -143,6 +150,62 @@ export function App() {
           element={
             <RequireRole role="recruiter">
               <EmployerCompanyPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="employer/analytics"
+          element={
+            <RequireRole role="recruiter">
+              <EmployerAnalyticsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="employer/talent-pool"
+          element={
+            <RequireRole role="recruiter">
+              <TalentPoolPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="admin"
+          element={
+            <RequireRole role="admin">
+              <AdminDashboardPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="admin/users"
+          element={
+            <RequireRole role="admin">
+              <AdminUsersPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="admin/moderation"
+          element={
+            <RequireRole role="admin">
+              <AdminModerationPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="admin/skills"
+          element={
+            <RequireRole role="admin">
+              <AdminSkillsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="admin/audit-logs"
+          element={
+            <RequireRole role="admin">
+              <AdminAuditLogsPage />
             </RequireRole>
           }
         />

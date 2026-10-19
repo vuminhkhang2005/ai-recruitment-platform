@@ -14,6 +14,7 @@ function safeNext(next: string | null) {
 }
 
 function homeFor(user: UserSummary) {
+  if (user.roles.includes('ROLE_ADMIN')) return '/admin';
   return user.roles.includes('ROLE_RECRUITER') ? '/employer' : '/';
 }
 
@@ -62,6 +63,21 @@ export const LoginPage: React.FC = () => {
     }
   };
 
+  const quickDemoLogin = async (demoEmail: string, demoPass = 'Password@123') => {
+    setEmail(demoEmail);
+    setPassword(demoPass);
+    setError(null);
+    setLoading(true);
+    try {
+      const u = await login(demoEmail, demoPass);
+      navigate(next ?? homeFor(u), { replace: true });
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthShell
       title={isVi ? "Đăng nhập" : "Sign In"}
@@ -99,6 +115,41 @@ export const LoginPage: React.FC = () => {
         <button type="submit" disabled={loading} className={`${btnPrimary} w-full py-2.5`}>
           {loading ? (isVi ? 'Đang đăng nhập…' : 'Signing In...') : (isVi ? 'Đăng nhập' : 'Sign In')}
         </button>
+
+        <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
+            {isVi ? 'Đăng nhập nhanh tài khoản Demo (MySQL thực tế):' : 'Quick Demo Login (Real MySQL Accounts):'}
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => quickDemoLogin('an.nguyen.dev@gmail.com')}
+              className="px-2.5 py-2 rounded-xl text-xs font-bold border border-emerald-200 dark:border-emerald-800/70 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition cursor-pointer"
+              data-testid="demo-login-candidate"
+            >
+              Ứng viên
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => quickDemoLogin('hr.fpt@fpt.com.vn')}
+              className="px-2.5 py-2 rounded-xl text-xs font-bold border border-teal-200 dark:border-teal-800/70 bg-teal-50/70 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/50 transition cursor-pointer"
+              data-testid="demo-login-recruiter"
+            >
+              Nhà tuyển dụng
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => quickDemoLogin('admin@talentbridge.vn')}
+              className="px-2.5 py-2 rounded-xl text-xs font-bold border border-indigo-200 dark:border-indigo-800/70 bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition cursor-pointer"
+              data-testid="demo-login-admin"
+            >
+              Quản trị Admin
+            </button>
+          </div>
+        </div>
       </form>
     </AuthShell>
   );

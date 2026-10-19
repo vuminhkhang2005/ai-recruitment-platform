@@ -25,6 +25,22 @@ import type {
   UserProfile,
   UserProfileUpdate,
   UserSummary,
+  AiResumeParseResult,
+  CoverLetterResponse,
+  AtsMatchAnalysis,
+  RecruitmentAnalytics,
+  TalentPoolCandidate,
+  InviteCandidateRequest,
+  InviteCandidateResponse,
+  RecommendedJob,
+  PlatformOverview,
+  AdminUser,
+  AdminCompany,
+  AdminJob,
+  AdminSkill,
+  SaveSkillInput,
+  AuditLogEntry,
+  EmailLogEntry,
 } from './types';
 
 /** Same-origin base path; Vite proxies /api to the Spring Boot server. */
@@ -334,3 +350,70 @@ export const messageApi = {
   threads: () => request<ThreadSummary[]>('/messages/threads'),
   unreadCount: () => request<{ unreadCount: number }>('/messages/unread-count'),
 };
+
+export const aiApi = {
+  parseCvText: (text: string, cvId?: number) =>
+    request<AiResumeParseResult>('/ai/parse-cv-text', { method: 'POST', body: { text, cvId } }),
+  parseCvFile: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<AiResumeParseResult>('/ai/parse-cv', { method: 'POST', form });
+  },
+  syncSkills: (skills: SkillItem[], replaceExisting = false) =>
+    request<SkillItem[]>('/ai/sync-parsed-skills', {
+      method: 'POST',
+      body: { skills, replaceExisting },
+    }),
+  generateCoverLetter: (jobId: number, tone = 'PROFESSIONAL', candidateHighlights?: string) =>
+    request<CoverLetterResponse>('/ai/generate-cover-letter', {
+      method: 'POST',
+      body: { jobId, tone, candidateHighlights },
+    }),
+  matchAnalysis: (jobId: number) =>
+    request<AtsMatchAnalysis>('/ai/match-analysis', { query: { jobId } }),
+  getRecommendedJobs: (limit = 6) =>
+    request<RecommendedJob[]>('/ai/recommended-jobs', { query: { limit } }),
+};
+
+export const analyticsApi = {
+  getAnalytics: () => request<RecruitmentAnalytics>('/employer/analytics'),
+};
+
+export const talentPoolApi = {
+  search: (params?: { keyword?: string; city?: string; jobId?: number }) =>
+    request<TalentPoolCandidate[]>('/employer/talent-pool', { query: params }),
+  invite: (data: InviteCandidateRequest) =>
+    request<InviteCandidateResponse>('/employer/talent-pool/invite', { method: 'POST', body: data }),
+};
+
+export const adminApi = {
+  getOverview: () => request<PlatformOverview>('/admin/overview'),
+  getUsers: (params?: { keyword?: string; role?: string; status?: string }) =>
+    request<AdminUser[]>('/admin/users', { query: params }),
+  updateUserStatus: (id: number, status: string, reason?: string) =>
+    request<AdminUser>(`/admin/users/${id}/status`, { method: 'PATCH', body: { status, reason } }),
+  updateUserRoles: (id: number, roles: string[]) =>
+    request<AdminUser>(`/admin/users/${id}/roles`, { method: 'PUT', body: { roles } }),
+  getCompanies: (params?: { keyword?: string; verificationStatus?: string }) =>
+    request<AdminCompany[]>('/admin/companies', { query: params }),
+  verifyCompany: (id: number, verificationStatus: string, note?: string) =>
+    request<AdminCompany>(`/admin/companies/${id}/verify`, { method: 'PATCH', body: { verificationStatus, note } }),
+  getJobs: (params?: { keyword?: string; status?: string; companyId?: number }) =>
+    request<AdminJob[]>('/admin/jobs', { query: params }),
+  moderateJob: (id: number, status: string, reason?: string) =>
+    request<AdminJob>(`/admin/jobs/${id}/moderate`, { method: 'PATCH', body: { status, reason } }),
+  getSkills: (params?: { keyword?: string; category?: string; activeOnly?: boolean }) =>
+    request<AdminSkill[]>('/admin/skills', { query: params }),
+  createSkill: (data: SaveSkillInput) =>
+    request<AdminSkill>('/admin/skills', { method: 'POST', body: data }),
+  updateSkill: (id: number, data: SaveSkillInput) =>
+    request<AdminSkill>(`/admin/skills/${id}`, { method: 'PUT', body: data }),
+  toggleSkill: (id: number) =>
+    request<AdminSkill>(`/admin/skills/${id}`, { method: 'DELETE' }),
+  getAuditLogs: (params?: { action?: string; entityName?: string; keyword?: string; limit?: number }) =>
+    request<AuditLogEntry[]>('/admin/audit-logs', { query: params }),
+  getEmailLogs: (params?: { status?: string; limit?: number }) =>
+    request<EmailLogEntry[]>('/admin/email-logs', { query: params }),
+};
+
+

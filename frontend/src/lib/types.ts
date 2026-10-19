@@ -371,3 +371,344 @@ export interface ThreadSummary {
   lastMessageAt: string | null;
   unreadCount: number;
 }
+
+// ------------------------------------------------------------------ AI & Analytics Types
+
+export interface ExtractedSkillItem {
+  name: string;
+  proficiency: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
+  yearsExperience: number;
+  confidenceScore?: number;
+  isCore?: boolean;
+}
+
+export interface ExtractedExperienceItem {
+  role: string;
+  company: string;
+  period: string;
+  location?: string;
+  highlights: string[];
+}
+
+export interface ExtractedEducationItem {
+  school: string;
+  degree: string;
+  year: string;
+  details?: string;
+}
+
+export interface AiResumeParseResult {
+  fullName: string;
+  email: string;
+  phone: string;
+  city: string;
+  headline: string;
+  summary: string;
+  skills: ExtractedSkillItem[];
+  experiences: ExtractedExperienceItem[];
+  educations: ExtractedEducationItem[];
+  suggestedJobRoles: string[];
+  overallQualityScore: number;
+}
+
+export interface CoverLetterResponse {
+  jobId: number;
+  jobTitle: string;
+  companyName: string;
+  tone: string;
+  subject: string;
+  coverLetter: string;
+  highlightedSkills: string[];
+}
+
+export interface AtsSkillBreakdown {
+  name: string;
+  requiredYears: number;
+  candidateYears: number;
+  isMatched: boolean;
+  isRequired: boolean;
+  recommendation: string;
+}
+
+export interface AtsMatchAnalysis {
+  jobId: number;
+  jobTitle: string;
+  companyName: string;
+  matchScore: number;
+  matchRating: string;
+  ratingColor: string;
+  matchedSkills: AtsSkillBreakdown[];
+  missingSkills: AtsSkillBreakdown[];
+  keyStrengths: string[];
+  preparationTips: string[];
+  summaryComment: string;
+}
+
+export interface FunnelMetrics {
+  appliedCount: number;
+  screeningCount: number;
+  interviewCount: number;
+  offeredCount: number;
+  hiredCount: number;
+  rejectedCount: number;
+  screeningRate: number;
+  interviewRate: number;
+  offerRate: number;
+  hireRate: number;
+  overallHireRate: number;
+}
+
+export interface KpiMetrics {
+  totalJobs: number;
+  activeJobs: number;
+  totalApplications: number;
+  freshApplications: number;
+  scheduledInterviews: number;
+  avgDaysToReview: number;
+  avgDaysToHire: number;
+}
+
+export interface QualityDistribution {
+  highMatchCount: number;
+  mediumMatchCount: number;
+  lowMatchCount: number;
+  highMatchPct: number;
+  mediumMatchPct: number;
+  lowMatchPct: number;
+}
+
+export interface TopJobMetric {
+  jobId: number;
+  jobTitle: string;
+  status: string;
+  viewsCount: number;
+  applicationsCount: number;
+  interviewCount: number;
+  hiredCount: number;
+  avgMatchScore: number;
+}
+
+export interface TimelinePoint {
+  periodLabel: string;
+  applicationsCount: number;
+  interviewsCount: number;
+  hiresCount: number;
+}
+
+export interface RecruitmentAnalytics {
+  companyId: number;
+  companyName: string;
+  kpis: KpiMetrics;
+  funnel: FunnelMetrics;
+  quality: QualityDistribution;
+  topJobs: TopJobMetric[];
+  weeklyTrend: TimelinePoint[];
+}
+
+export interface CandidateSkillSummary {
+  name: string;
+  proficiency: string;
+  yearsExperience: number;
+}
+
+export interface TalentPoolCandidate {
+  candidateProfileId: number;
+  userId: number;
+  fullName: string;
+  email: string;
+  phone?: string;
+  avatarUrl?: string;
+  headline?: string;
+  city?: string;
+  bio?: string;
+  expectedSalaryMin?: number;
+  expectedSalaryMax?: number;
+  isOpenToWork: boolean;
+  skills: CandidateSkillSummary[];
+  matchScore?: number;
+  matchRating?: string;
+  matchedSkills?: string[];
+}
+
+export interface InviteCandidateRequest {
+  candidateUserId: number;
+  jobId: number;
+  customMessage?: string;
+}
+
+export interface InviteCandidateResponse {
+  candidateUserId: number;
+  jobId: number;
+  jobTitle: string;
+  candidateName: string;
+  status: string;
+  message: string;
+}
+
+export interface RecommendedJob {
+  job: Job;
+  matchScore: number;
+  matchRating: string;
+  ratingColor: string;
+  matchedSkills: string[];
+  missingSkills: string[];
+  recommendationReason: string;
+}
+
+export interface StageCountMetric {
+  stage: string;
+  label: string;
+  count: number;
+  percentage: number;
+}
+
+export interface TopCompanyMetric {
+  companyId: number;
+  companyName: string;
+  logoUrl?: string;
+  industry?: string;
+  verificationStatus: string;
+  jobCount: number;
+  applicationCount: number;
+}
+
+export interface TopSkillMetric {
+  skillId: number;
+  skillName: string;
+  category: string;
+  jobCount: number;
+  candidateCount: number;
+}
+
+export interface AiSystemMetrics {
+  activeModelName: string;
+  totalScoredApplications: number;
+  averageAtsScore: number;
+  highMatchCount: number;
+  openToWorkCandidates: number;
+  averageLatencyMs: number;
+  uptimePercentage: number;
+}
+
+export interface PlatformOverview {
+  totalUsers: number;
+  activeUsers: number;
+  suspendedOrBannedUsers: number;
+  totalCandidates: number;
+  totalRecruiters: number;
+  totalCompanies: number;
+  verifiedCompanies: number;
+  pendingCompanies: number;
+  totalJobs: number;
+  publishedJobs: number;
+  pendingOrDraftJobs: number;
+  totalApplications: number;
+  totalInterviews: number;
+  totalSkills: number;
+  overallHireRate: number;
+  averagePlatformMatchScore: number;
+  applicationsByStage: StageCountMetric[];
+  topCompanies: TopCompanyMetric[];
+  topSkills: TopSkillMetric[];
+  aiMetrics: AiSystemMetrics;
+}
+
+export interface AdminUser {
+  id: number;
+  uuid: string;
+  email: string;
+  fullName: string;
+  phone?: string;
+  avatarUrl?: string;
+  status: 'ACTIVE' | 'PENDING_VERIFY' | 'SUSPENDED' | 'BANNED' | string;
+  isEmailVerified: boolean;
+  roles: string[];
+  companyName?: string;
+  candidateHeadline?: string;
+  createdAt?: string;
+}
+
+export interface AdminCompany {
+  id: number;
+  uuid: string;
+  name: string;
+  slug: string;
+  logoUrl?: string;
+  website?: string;
+  industry?: string;
+  companySize?: string;
+  taxCode?: string;
+  city?: string;
+  verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED' | string;
+  jobCount: number;
+  recruiterCount: number;
+  createdAt?: string;
+}
+
+export interface AdminJob {
+  id: number;
+  uuid: string;
+  title: string;
+  slug: string;
+  companyId?: number;
+  companyName: string;
+  companyLogo?: string;
+  jobType: string;
+  expLevel: string;
+  locationCity: string;
+  minSalary?: number;
+  maxSalary?: number;
+  currency: string;
+  status: 'DRAFT' | 'PENDING_APPROVAL' | 'PUBLISHED' | 'PAUSED' | 'CLOSED' | 'EXPIRED' | string;
+  viewsCount: number;
+  applicationsCount: number;
+  publishedAt?: string;
+  createdAt?: string;
+}
+
+export interface AdminSkill {
+  id: number;
+  name: string;
+  slug: string;
+  category: string;
+  description?: string;
+  isActive: boolean;
+  jobCount: number;
+  candidateCount: number;
+  createdAt?: string;
+}
+
+export interface SaveSkillInput {
+  name: string;
+  category: string;
+  description?: string;
+  isActive?: boolean;
+}
+
+export interface AuditLogEntry {
+  id: number;
+  userId?: number;
+  actorName: string;
+  actorEmail: string;
+  action: string;
+  entityName: string;
+  entityId: string;
+  oldValues?: string;
+  newValues?: string;
+  ipAddress?: string;
+  createdAt: string;
+}
+
+export interface EmailLogEntry {
+  id: number;
+  toEmail: string;
+  subject: string;
+  template: string;
+  status: string;
+  errorMessage?: string;
+  referenceType?: string;
+  referenceId?: number;
+  createdAt: string;
+}
+
+

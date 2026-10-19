@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
+  BarChart3,
   Bookmark,
   Briefcase,
   Building2,
@@ -15,6 +16,7 @@ import {
   PlusCircle,
   Search,
   ShieldCheck,
+  Sparkles,
   Sun,
   User,
   Users,
@@ -140,7 +142,7 @@ export const LanguageSwitch: React.FC<{ compact?: boolean }> = ({ compact = fals
 };
 
 export const Navbar: React.FC = () => {
-  const { user, isAuthenticated, isRecruiter, logout } = useAuth();
+  const { user, isAuthenticated, isRecruiter, isAdmin, logout } = useAuth();
   const { language } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
@@ -183,10 +185,20 @@ export const Navbar: React.FC = () => {
     };
   }, [isAuthenticated]);
 
-  const links: NavItem[] = isRecruiter
+  const links: NavItem[] = isAdmin
+    ? [
+        { to: '/admin', label: language === 'vi' ? 'Tổng quan & AI' : 'Overview & AI', icon: BarChart3, end: true },
+        { to: '/admin/users', label: language === 'vi' ? 'Người dùng & RBAC' : 'Users & RBAC', icon: Users },
+        { to: '/admin/moderation', label: language === 'vi' ? 'Kiểm duyệt' : 'Moderation', icon: ShieldCheck },
+        { to: '/admin/skills', label: language === 'vi' ? 'Từ điển Kỹ năng' : 'Skills', icon: Sparkles },
+        { to: '/admin/audit-logs', label: language === 'vi' ? 'Nhật ký Audit' : 'Audit Logs', icon: FileCheck2 },
+      ]
+    : isRecruiter
     ? [
         { to: '/employer', label: language === 'vi' ? 'Tin tuyển dụng' : 'Jobs', icon: LayoutGrid, end: true },
         { to: '/employer/applicants', label: language === 'vi' ? 'Ứng viên' : 'Applicants', icon: Users },
+        { to: '/employer/talent-pool', label: language === 'vi' ? 'Săn ứng viên' : 'Talent Pool', icon: Sparkles },
+        { to: '/employer/analytics', label: language === 'vi' ? 'Thống kê' : 'Analytics', icon: BarChart3 },
         { to: '/employer/interviews', label: language === 'vi' ? 'Lịch PV' : 'Interviews', icon: Calendar },
         { to: '/employer/team', label: language === 'vi' ? 'Đội ngũ' : 'Team', icon: ShieldCheck },
         { to: '/employer/jobs/new', label: language === 'vi' ? 'Đăng tin' : 'Post Job', icon: PlusCircle },
@@ -197,11 +209,22 @@ export const Navbar: React.FC = () => {
         { to: '/tools', label: language === 'vi' ? 'Công cụ' : 'Tools', icon: Wrench },
       ];
 
-  const accountLinks: NavItem[] = isRecruiter
+  const accountLinks: NavItem[] = isAdmin
+    ? [
+        { to: '/admin', label: language === 'vi' ? 'Bảng điều khiển Admin' : 'Admin Dashboard', icon: BarChart3 },
+        { to: '/admin/users', label: language === 'vi' ? 'Quản lý Người dùng & RBAC' : 'Users & RBAC', icon: Users },
+        { to: '/admin/moderation', label: language === 'vi' ? 'Kiểm duyệt Công ty & Tin đăng' : 'Moderation Center', icon: ShieldCheck },
+        { to: '/admin/skills', label: language === 'vi' ? 'Từ điển Kỹ năng AI' : 'Skill Taxonomy', icon: Sparkles },
+        { to: '/admin/audit-logs', label: language === 'vi' ? 'Nhật ký Audit & Email' : 'Audit & Email Logs', icon: FileCheck2 },
+        { to: '/profile', label: language === 'vi' ? 'Tài khoản cá nhân' : 'My Account', icon: User },
+      ]
+    : isRecruiter
     ? [
         { to: '/profile', label: language === 'vi' ? 'Tài khoản' : 'Account', icon: User },
         { to: '/employer/company', label: language === 'vi' ? 'Hồ sơ công ty' : 'Company Profile', icon: Building2 },
         { to: '/employer', label: language === 'vi' ? 'Quản lý tin tuyển dụng' : 'Manage Jobs', icon: LayoutGrid },
+        { to: '/employer/talent-pool', label: language === 'vi' ? 'Săn nhân tài (Talent Pool)' : 'Talent Pool Sourcing', icon: Sparkles },
+        { to: '/employer/analytics', label: language === 'vi' ? 'Thống kê & Phễu tuyển' : 'Analytics & Funnel', icon: BarChart3 },
         { to: '/employer/team', label: language === 'vi' ? 'Đội ngũ tuyển dụng' : 'Hiring Team', icon: ShieldCheck },
         { to: '/employer/interviews', label: language === 'vi' ? 'Lịch phỏng vấn' : 'Interviews', icon: Calendar },
         { to: '/messages', label: language === 'vi' ? 'Tin nhắn' : 'Messages', icon: MessageSquare },
@@ -219,14 +242,16 @@ export const Navbar: React.FC = () => {
   };
 
   const loginHref = `/login?next=${encodeURIComponent(location.pathname + location.search)}`;
-  const roleLabel = isRecruiter
+  const roleLabel = isAdmin
+    ? (language === 'vi' ? 'Quản trị viên' : 'System Admin')
+    : isRecruiter
     ? (language === 'vi' ? 'Nhà tuyển dụng' : 'Recruiter')
     : (language === 'vi' ? 'Ứng viên' : 'Candidate');
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/90 transition-colors duration-300 shadow-soft-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center gap-4 lg:gap-8">
-        <Logo to={isRecruiter ? '/employer' : '/'} />
+        <Logo to={isAdmin ? '/admin' : isRecruiter ? '/employer' : '/'} />
 
         <nav className="hidden md:flex items-center gap-1" aria-label="Điều hướng chính">
           {links.map((l) => (
