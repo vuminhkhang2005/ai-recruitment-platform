@@ -21,6 +21,8 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
 
     List<Job> findTop6ByStatusOrderByCreatedAtDesc(String status);
 
+    List<Job> findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(String status);
+
     long countByCompanyId(Long companyId);
 
     List<Job> findByCompanyId(Long companyId);

@@ -64,6 +64,7 @@ export const NotificationBell: React.FC = () => {
     }
     setOpen(false);
     if (n.referenceType === 'APPLICATION') navigate(isRecruiter ? '/employer/applicants' : '/applications');
+    if (n.referenceType === 'JOB' && n.referenceId) navigate(`/jobs/${n.referenceId}`);
   };
 
   const markAll = async () => {

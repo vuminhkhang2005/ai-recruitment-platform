@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { BarChart3, Plus, Sparkles } from 'lucide-react';
 import { applicationApi, jobApi, userApi } from '../../lib/api';
 import type { Application, Job, UserProfile } from '../../lib/types';
 import { JOB_STATUS, daysLeft, formatDate, label } from '../../lib/format';
 import { useToast } from '../../context/ToastContext';
-import { EmptyState, ErrorBox, PageLoader, btnPrimary } from '../../components/ui/primitives';
+import { EmptyState, ErrorBox, PageLoader, btnPrimary, btnSecondary } from '../../components/ui/primitives';
 import { usePageTitle } from '../../lib/usePageTitle';
 
 const STATUS_STYLE: Record<string, string> = {
@@ -118,9 +118,17 @@ export const EmployerDashboard: React.FC = () => {
             </p>
           )}
         </div>
-        <Link to="/employer/jobs/new" className={btnPrimary}>
-          <Plus className="w-4 h-4" /> Đăng tin mới
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link to="/employer/talent-pool" className={`${btnSecondary} text-xs sm:text-sm font-bold text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800`} data-testid="btn-employer-talent-pool">
+            <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> Săn ứng viên
+          </Link>
+          <Link to="/employer/analytics" className={`${btnSecondary} text-xs sm:text-sm font-bold`} data-testid="btn-employer-analytics">
+            <BarChart3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Thống kê tuyển dụng
+          </Link>
+          <Link to="/employer/jobs/new" className={btnPrimary}>
+            <Plus className="w-4 h-4" /> Đăng tin mới
+          </Link>
+        </div>
       </div>
 
       <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">

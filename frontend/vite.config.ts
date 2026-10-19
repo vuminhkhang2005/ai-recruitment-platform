@@ -8,11 +8,21 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
-        changeOrigin: true
+        changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('error', (_err) => {
+            // Suppress transient proxy errors
+          });
+        }
       },
       '/ws': {
         target: 'ws://localhost:8080',
-        ws: true
+        ws: true,
+        configure: (proxy) => {
+          proxy.on('error', (_err) => {
+            // Suppress transient socket resets
+          });
+        }
       }
     }
   }

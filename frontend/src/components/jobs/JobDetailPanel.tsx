@@ -1,19 +1,24 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Briefcase,
   CalendarClock,
   Check,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Clock,
   ExternalLink,
+  HelpCircle,
+  Lightbulb,
   MapPin,
   Send,
   Share2,
   Sparkles,
   Users,
 } from 'lucide-react';
-import type { Company, Job, MatchScore } from '../../lib/types';
+import { aiApi } from '../../lib/api';
+import type { AtsMatchAnalysis, Company, Job, MatchScore } from '../../lib/types';
 import { EXP_LEVELS, JOB_TYPES, daysLeft, formatDate, formatSalary, getExpLevels, getJobTypes, label, timeAgo, toLines } from '../../lib/format';
 import { useAuth } from '../../context/AuthContext';
 import { useMyApplications } from '../../context/MyApplicationsContext';
@@ -71,6 +76,19 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
   const { appliedJobIds, applications } = useMyApplications();
   const [applyOpen, setApplyOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [atsData, setAtsData] = useState<AtsMatchAnalysis | null>(null);
+  const [showTips, setShowTips] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated && isCandidate && job?.id) {
+      aiApi
+        .matchAnalysis(job.id)
+        .then(setAtsData)
+        .catch(() => {});
+    } else {
+      setAtsData(null);
+    }
+  }, [isAuthenticated, isCandidate, job.id]);
 
   const left = daysLeft(job.deadline);
   const isOpen = job.status === 'PUBLISHED' && (left === null || left >= 0);
@@ -275,8 +293,145 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
           </div>
         </dl>
 
-        {/* AI Match Panel */}
-        {match && match.score !== null && (
+        {/* Advanced ATS Match & Interview Prep Panel */}
+        {atsData ? (
+          <div
+            className="rounded-2xl p-4 sm:p-5 border border-indigo-200/90 dark:border-indigo-800/60 bg-gradient-to-br from-indigo-50/70 via-purple-50/40 to-white dark:from-indigo-950/40 dark:via-slate-900 dark:to-slate-900 shadow-soft-xs space-y-3.5"
+            data-testid="ats-match-panel"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-black text-sm shadow-md shrink-0">
+                  {atsData.matchScore}%
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    {language === 'vi' ? 'Độ phù hợp hồ sơ ATS' : 'ATS Profile Match Score'}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {language === 'vi' ? 'Đánh giá mức độ: ' : 'Rating level: '}
+                    <span className="font-bold text-indigo-600 dark:text-indigo-400 uppercase">
+                      {atsData.matchRating === 'HIGH' ? (language === 'vi' ? 'Rất cao (Ưu tiên phỏng vấn)' : 'High (Interview Priority)') :
+                       atsData.matchRating === 'MEDIUM' ? (language === 'vi' ? 'Tiềm năng' : 'Medium / Potential') :
+                       (language === 'vi' ? 'Cần bổ sung kỹ năng' : 'Needs Skill Growth')}
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <span className={`text-[11px] font-black px-2.5 py-1 rounded-full ${
+                atsData.matchScore >= 75 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' :
+                atsData.matchScore >= 50 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' :
+                'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+              }`}>
+                {atsData.matchScore >= 75 ? 'Top Candidate' : atsData.matchScore >= 50 ? 'Good Match' : 'Skill Gap'}
+              </span>
+            </div>
+
+            {/* Progress bar */}
+            <div className="h-2 rounded-full bg-indigo-100 dark:bg-indigo-950 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 transition-all duration-500"
+                style={{ width: `${atsData.matchScore}%` }}
+              />
+            </div>
+
+            {/* Matched vs Missing Skills */}
+            <div className="grid sm:grid-cols-2 gap-2 text-xs">
+              <div className="rounded-xl bg-white/90 dark:bg-slate-900/80 border border-emerald-200/80 dark:border-emerald-900/60 p-3">
+                <p className="text-emerald-700 dark:text-emerald-400 font-bold mb-1.5 flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" />
+                  {language === 'vi' ? `Kỹ năng đã khớp (${atsData.matchedSkills.length})` : `Matched Skills (${atsData.matchedSkills.length})`}
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {atsData.matchedSkills.length > 0 ? (
+                    atsData.matchedSkills.map((s) => (
+                      <span key={s.name} className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-medium text-[11px]">
+                        {s.name}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-slate-400 italic">{language === 'vi' ? 'Chưa khớp kỹ năng nào' : 'No matched skills'}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-white/90 dark:bg-slate-900/80 border border-amber-200/80 dark:border-amber-900/60 p-3">
+                <p className="text-amber-700 dark:text-amber-400 font-bold mb-1.5 flex items-center gap-1">
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  {language === 'vi' ? `Kỹ năng còn thiếu (${atsData.missingSkills.length})` : `Skill Gap (${atsData.missingSkills.length})`}
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {atsData.missingSkills.length > 0 ? (
+                    atsData.missingSkills.map((s) => (
+                      <span key={s.name} className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-medium text-[11px]">
+                        + {s.name}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium text-[11px]">
+                      {language === 'vi' ? '✓ Bạn đáp ứng đầy đủ yêu cầu!' : '✓ All skills matched!'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* AI Strengths */}
+            {atsData.keyStrengths && atsData.keyStrengths.length > 0 && (
+              <div className="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50">
+                <p className="text-xs font-bold text-indigo-900 dark:text-indigo-200 mb-1 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  {language === 'vi' ? 'Điểm mạnh nổi bật của bạn đối với vị trí này:' : 'Your key strengths for this position:'}
+                </p>
+                <ul className="space-y-1 text-xs text-slate-700 dark:text-slate-300">
+                  {atsData.keyStrengths.map((str: string, i: number) => (
+                    <li key={i} className="flex items-start gap-1.5">
+                      <span className="text-indigo-500 font-bold mt-0.5">•</span>
+                      <span>{str}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* AI Interview Prep Accordion */}
+            {atsData.preparationTips && atsData.preparationTips.length > 0 && (
+              <div className="border border-purple-200/80 dark:border-purple-900/60 rounded-xl overflow-hidden bg-purple-50/40 dark:bg-purple-950/20">
+                <button
+                  type="button"
+                  onClick={() => setShowTips(!showTips)}
+                  data-testid="btn-toggle-interview-tips"
+                  className="w-full p-2.5 flex items-center justify-between text-xs font-bold text-purple-900 dark:text-purple-200 hover:bg-purple-100/50 dark:hover:bg-purple-900/30 transition-colors"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Lightbulb className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    {language === 'vi' ? '💡 Gợi ý chuẩn bị phỏng vấn từ AI' : '💡 AI Interview Preparation Tips'}
+                  </span>
+                  {showTips ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+                {showTips && (
+                  <div className="p-3 pt-1 space-y-2 text-xs border-t border-purple-100 dark:border-purple-900/50 bg-white/70 dark:bg-slate-900/60">
+                    {atsData.preparationTips.map((tip: string, idx: number) => (
+                      <div key={idx} className="flex items-start gap-2 p-2 rounded-lg bg-purple-50/60 dark:bg-purple-950/40 border border-purple-100/80 dark:border-purple-900/40 text-slate-700 dark:text-slate-300">
+                        <span className="w-5 h-5 rounded-full bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <p className="flex-1 leading-relaxed">{tip}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-1">
+              <Link to="/profile#skills" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
+                {language === 'vi' ? 'Quét lại CV & Cập nhật kỹ năng →' : 'Scan CV & Update skills →'}
+              </Link>
+            </div>
+          </div>
+        ) : match && match.score !== null ? (
           <div
             className="rounded-2xl p-4 border border-emerald-200/90 dark:border-emerald-800/60 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/40 dark:to-slate-900 shadow-soft-xs"
             data-testid="match-panel"
@@ -313,7 +468,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
               {language === 'vi' ? 'Cập nhật kỹ năng →' : 'Update your skills →'}
             </Link>
           </div>
-        )}
+        ) : null}
 
         {/* Structured Job Description Content */}
         <div className={`${cardCls} p-4 sm:p-5 job-description-content`}>

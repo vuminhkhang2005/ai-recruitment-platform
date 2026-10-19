@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Bookmark, Building2, CalendarCheck, FileCheck2, FileText, Gauge, Mail, MapPin, Star, Trash2, Upload, X } from 'lucide-react';
+import { Bookmark, Building2, CalendarCheck, FileCheck2, FileText, Gauge, Mail, MapPin, Sparkles, Star, Trash2, Upload, X } from 'lucide-react';
 import { candidateApi, openCvFile, userApi } from '../lib/api';
 import type { CvItem, SkillItem, UserProfile } from '../lib/types';
 import { CITIES, formatDate, formatFileSize } from '../lib/format';
@@ -12,6 +12,7 @@ import { ErrorBox, PageLoader, Spinner, btnPrimary, btnSecondary, inputCls } fro
 import { validateCvFile } from '../components/jobs/ApplyModal';
 import { Avatar } from '../components/layout/Navbar';
 import { usePageTitle } from '../lib/usePageTitle';
+import { AiResumeParserModal } from '../components/career/AiResumeParserModal';
 
 const Card: React.FC<{ id?: string; title: string; description?: string; children: React.ReactNode }> = ({ id, title, description, children }) => (
   <section id={id} className="bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-soft-xs scroll-mt-24">
@@ -181,6 +182,8 @@ const SkillsEditor: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [aiParserOpen, setAiParserOpen] = useState(false);
+
   useEffect(() => {
     candidateApi
       .getSkills()
@@ -275,6 +278,15 @@ const SkillsEditor: React.FC = () => {
         <button type="submit" className={btnSecondary}>
           Thêm
         </button>
+        <button
+          type="button"
+          data-testid="btn-open-ai-parser-skills"
+          onClick={() => setAiParserOpen(true)}
+          className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold shadow-soft flex items-center gap-1.5 cursor-pointer hover:from-emerald-700 hover:to-teal-700 transition-all active:scale-95"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Bóc tách CV bằng AI</span>
+        </button>
       </form>
 
       {error && (
@@ -287,6 +299,13 @@ const SkillsEditor: React.FC = () => {
           {saving ? 'Đang lưu…' : 'Lưu kỹ năng'}
         </button>
       </div>
+
+      {aiParserOpen && (
+        <AiResumeParserModal
+          onClose={() => setAiParserOpen(false)}
+          onSkillsSynced={(newSkills) => setSkills(newSkills)}
+        />
+      )}
     </div>
   );
 };
@@ -298,6 +317,7 @@ const CvManager: React.FC = () => {
   const [cvs, setCvs] = useState<CvItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [aiParserOpen, setAiParserOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = () =>
@@ -405,13 +425,35 @@ const CvManager: React.FC = () => {
           <ErrorBox message={error} />
         </div>
       )}
-      <div className="mt-4 flex items-center justify-between gap-3">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-slate-500">PDF, DOC, DOCX · tối đa 5MB</p>
-        <button onClick={() => fileRef.current?.click()} disabled={busy} className={btnSecondary}>
-          <Upload className="w-4 h-4" /> {busy ? 'Đang xử lý…' : 'Tải CV lên'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            data-testid="btn-open-ai-parser-cv"
+            onClick={() => setAiParserOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold shadow-soft flex items-center gap-1.5 cursor-pointer hover:from-emerald-700 hover:to-teal-700 transition-all active:scale-95"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Bóc tách CV bằng AI</span>
+          </button>
+          <button onClick={() => fileRef.current?.click()} disabled={busy} className={btnSecondary}>
+            <Upload className="w-4 h-4" /> {busy ? 'Đang xử lý…' : 'Tải CV lên'}
+          </button>
+        </div>
         <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" className="hidden" data-testid="cv-upload-input" onChange={(e) => onFile(e.target.files?.[0])} />
       </div>
+
+      {aiParserOpen && (
+        <AiResumeParserModal
+          onClose={() => setAiParserOpen(false)}
+          existingCvs={cvs || []}
+          onSkillsSynced={() => {
+            void load();
+            toast('Đã cập nhật kỹ năng vào hồ sơ thành công!');
+          }}
+        />
+      )}
     </div>
   );
 };

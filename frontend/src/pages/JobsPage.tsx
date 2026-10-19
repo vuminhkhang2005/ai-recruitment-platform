@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Flame, Sparkles } from 'lucide-react';
-import { ApiError, companyApi, jobApi } from '../lib/api';
-import type { Company, Job, Page } from '../lib/types';
+import { ApiError, companyApi, jobApi, aiApi } from '../lib/api';
+import type { Company, Job, Page, RecommendedJob } from '../lib/types';
 import { EXP_LEVELS, JOB_TYPES, getExpLevels, getJobTypes } from '../lib/format';
 import { SearchBar } from '../components/jobs/SearchBar';
 import { JobCard } from '../components/jobs/JobCard';
@@ -10,6 +10,7 @@ import { JobDetailPanel } from '../components/jobs/JobDetailPanel';
 import { EmptyState, ErrorBox, Pagination, Spinner } from '../components/ui/primitives';
 import { useMatchScores } from '../lib/useMatchScores';
 import { useMyApplications } from '../context/MyApplicationsContext';
+import { useAuth } from '../context/AuthContext';
 import { usePageTitle } from '../lib/usePageTitle';
 import { useLanguage } from '../i18n/LanguageContext';
 import { NotFoundPage } from './NotFoundPage';
@@ -58,6 +59,22 @@ export const JobsPage: React.FC = () => {
   const [detailError, setDetailError] = useState<{ status: number; message: string } | null>(null);
 
   const [reload, setReload] = useState(0);
+
+  const { isAuthenticated, isRecruiter } = useAuth();
+  const [showAiRecommendations, setShowAiRecommendations] = useState(false);
+  const [recommendedJobs, setRecommendedJobs] = useState<RecommendedJob[]>([]);
+  const [loadingAiRecs, setLoadingAiRecs] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated && !isRecruiter) {
+      setLoadingAiRecs(true);
+      aiApi
+        .getRecommendedJobs(10)
+        .then((recs) => setRecommendedJobs(recs))
+        .catch(() => {})
+        .finally(() => setLoadingAiRecs(false));
+    }
+  }, [isAuthenticated, isRecruiter]);
 
   const activeJobId = routeJobId ? Number(routeJobId) : selectedJobId;
 
@@ -348,26 +365,109 @@ export const JobsPage: React.FC = () => {
                   </span>
                 </div>
 
+                {/* AI Recommendation Banner for Candidate */}
+                {isAuthenticated && !isRecruiter && (
+                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/40 dark:to-purple-950/30 border border-indigo-200 dark:border-indigo-800/60 rounded-2xl p-3 flex items-center justify-between gap-3 shadow-soft-xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                        <Sparkles className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                            {isVi ? 'Gợi ý việc làm theo hồ sơ' : 'AI Job Recommendations'}
+                          </h4>
+                          <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
+                            AI
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                          {isVi
+                            ? `${recommendedJobs.length} việc làm phù hợp với kỹ năng của bạn`
+                            : `${recommendedJobs.length} jobs matched with your profile`}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowAiRecommendations(!showAiRecommendations)}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 shadow-sm shrink-0 cursor-pointer ${
+                        showAiRecommendations
+                          ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                          : 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-50'
+                      }`}
+                      data-testid="toggle-ai-recommendations"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      {showAiRecommendations
+                        ? (isVi ? 'Tất cả việc làm' : 'Show All')
+                        : (isVi ? `Xem gợi ý (${recommendedJobs.length})` : `AI Matches (${recommendedJobs.length})`)}
+                    </button>
+                  </div>
+                )}
+
                 {/* Scrollable Master Job List */}
                 <div className="lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto pr-1.5 space-y-3 custom-scrollbar">
-                  {result?.items.map((j) => {
-                    const isSelected = activeJobId === j.id;
-                    return (
-                      <JobCard
-                        key={j.id}
-                        job={j}
-                        match={scores[j.id]}
-                        applied={appliedJobIds.has(j.id)}
-                        selected={isSelected}
-                        compact
-                        preserveSearch
-                        onClick={() => {
-                          setSelectedJobId(j.id);
-                          setSelectedJob(j);
-                        }}
-                      />
-                    );
-                  })}
+                  {showAiRecommendations ? (
+                    recommendedJobs.length === 0 ? (
+                      <div className="p-6 text-center text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl">
+                        {isVi ? 'Chưa có gợi ý việc làm. Hãy cập nhật kỹ năng trong hồ sơ để AI gợi ý chính xác hơn!' : 'No AI recommendations yet. Update your skills in your profile to get matched!'}
+                      </div>
+                    ) : (
+                      recommendedJobs.map((rec) => {
+                        const j = rec.job;
+                        const isSelected = activeJobId === j.id;
+                        return (
+                          <div key={j.id} className="space-y-1.5">
+                            <JobCard
+                              job={j}
+                              match={{
+                                jobId: j.id,
+                                score: rec.matchScore,
+                                matchedSkills: rec.matchedSkills,
+                                missingSkills: rec.missingSkills,
+                              }}
+                              applied={appliedJobIds.has(j.id)}
+                              selected={isSelected}
+                              compact
+                              preserveSearch
+                              onClick={() => {
+                                setSelectedJobId(j.id);
+                                setSelectedJob(j);
+                              }}
+                            />
+                            {/* AI Match Callout */}
+                            <div className="mx-1 px-3 py-1.5 bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded-xl text-[11px] flex items-center justify-between text-indigo-700 dark:text-indigo-300">
+                              <span className="truncate mr-2 font-medium">💡 {rec.recommendationReason}</span>
+                              <span className="shrink-0 font-bold px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/80 text-[10px]">
+                                {rec.matchRating}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )
+                  ) : (
+                    result?.items.map((j) => {
+                      const isSelected = activeJobId === j.id;
+                      return (
+                        <JobCard
+                          key={j.id}
+                          job={j}
+                          match={scores[j.id]}
+                          applied={appliedJobIds.has(j.id)}
+                          selected={isSelected}
+                          compact
+                          preserveSearch
+                          onClick={() => {
+                            setSelectedJobId(j.id);
+                            setSelectedJob(j);
+                          }}
+                        />
+                      );
+                    })
+                  )}
                 </div>
 
                 {/* Pagination Controls */}

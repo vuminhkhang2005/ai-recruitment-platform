@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Upload } from 'lucide-react';
-import { applicationApi, candidateApi } from '../../lib/api';
-import type { CvItem, Job } from '../../lib/types';
+import { Check, CheckCircle2, Cpu, FileText, Sparkles, Upload, Zap } from 'lucide-react';
+import { aiApi, applicationApi, candidateApi } from '../../lib/api';
+import type { AtsMatchAnalysis, CvItem, Job } from '../../lib/types';
 import { formatDate, formatFileSize, formatSalary } from '../../lib/format';
 import { ErrorBox, Modal, Spinner, btnPrimary, btnSecondary, inputCls } from '../ui/primitives';
 import { useToast } from '../../context/ToastContext';
@@ -36,6 +36,14 @@ const TEXT = {
     cancel: 'Hủy',
     submitting: 'Đang nộp…',
     submit: 'Nộp hồ sơ',
+    generateAiCover: '✨ Sinh thư bằng AI',
+    generating: 'Đang tạo thư...',
+    toneLabel: 'Giọng điệu:',
+    toneProfessional: 'Chuyên nghiệp',
+    toneConfident: 'Tự tin',
+    toneEnthusiastic: 'Nhiệt huyết',
+    toneConcise: 'Ngắn gọn',
+    atsScoreTitle: 'Độ phù hợp hồ sơ ATS:',
   },
   en: {
     errNoFile: 'Please choose a CV file to upload.',
@@ -53,6 +61,14 @@ const TEXT = {
     cancel: 'Cancel',
     submitting: 'Submitting…',
     submit: 'Submit application',
+    generateAiCover: '✨ Generate with AI',
+    generating: 'Generating letter...',
+    toneLabel: 'Tone:',
+    toneProfessional: 'Professional',
+    toneConfident: 'Confident',
+    toneEnthusiastic: 'Enthusiastic',
+    toneConcise: 'Concise',
+    atsScoreTitle: 'ATS Profile Match:',
   },
 };
 
@@ -66,6 +82,10 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
   const [selected, setSelected] = useState<number | 'new' | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [coverLetter, setCoverLetter] = useState('');
+  const [tone, setTone] = useState<'PROFESSIONAL' | 'CONFIDENT' | 'ENTHUSIASTIC' | 'CONCISE'>('PROFESSIONAL');
+  const [generatingCover, setGeneratingCover] = useState(false);
+  const [atsAnalysis, setAtsAnalysis] = useState<AtsMatchAnalysis | null>(null);
+  const [highlightedSkills, setHighlightedSkills] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -83,7 +103,28 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
         setSelected('new');
         setError(e.message);
       });
-  }, []);
+
+    // Load ATS Match Analysis
+    aiApi
+      .matchAnalysis(job.id)
+      .then(setAtsAnalysis)
+      .catch(() => {});
+  }, [job.id]);
+
+  const handleGenerateCover = async () => {
+    setGeneratingCover(true);
+    setError(null);
+    try {
+      const res = await aiApi.generateCoverLetter(job.id, tone);
+      setCoverLetter(res.coverLetter);
+      setHighlightedSkills(res.highlightedSkills);
+      toast(lang === 'en' ? 'AI Cover Letter generated!' : 'Đã tạo thư giới thiệu bằng AI thành công!');
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setGeneratingCover(false);
+    }
+  };
 
   const pickFile = (f: File | undefined) => {
     if (!f) return;
@@ -183,10 +224,72 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
           )}
         </fieldset>
 
+        {atsAnalysis && (
+          <div className="p-3.5 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 bg-gradient-to-r from-indigo-50/80 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-sm">
+                {atsAnalysis.matchScore}%
+              </div>
+              <div>
+                <p className="text-xs font-bold text-indigo-900 dark:text-indigo-300">
+                  {t.atsScoreTitle} <span className="uppercase text-indigo-700 dark:text-indigo-400 font-black">{atsAnalysis.matchRating}</span>
+                </p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  {lang === 'en'
+                    ? `${atsAnalysis.matchedSkills.length} matched skills · ${atsAnalysis.missingSkills.length} missing`
+                    : `${atsAnalysis.matchedSkills.length} kỹ năng khớp · ${atsAnalysis.missingSkills.length} kỹ năng còn thiếu`}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {atsAnalysis.matchedSkills.slice(0, 3).map((sk) => (
+                <span key={sk.name} className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                  ✓ {sk.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div>
-          <label htmlFor="cover" className="text-sm font-black text-slate-900 dark:text-white">
-            {t.coverLetter}<span className="font-normal text-slate-500">{t.optional}</span>
-          </label>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <label htmlFor="cover" className="text-sm font-black text-slate-900 dark:text-white">
+              {t.coverLetter}<span className="font-normal text-slate-500">{t.optional}</span>
+            </label>
+            <div className="flex items-center gap-1.5">
+              <select
+                aria-label={t.toneLabel}
+                value={tone}
+                onChange={(e) => setTone(e.target.value as any)}
+                className="text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+              >
+                <option value="PROFESSIONAL">{t.toneProfessional}</option>
+                <option value="CONFIDENT">{t.toneConfident}</option>
+                <option value="ENTHUSIASTIC">{t.toneEnthusiastic}</option>
+                <option value="CONCISE">{t.toneConcise}</option>
+              </select>
+              <button
+                type="button"
+                onClick={handleGenerateCover}
+                disabled={generatingCover}
+                data-testid="btn-generate-ai-cover"
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-sm transition-all disabled:opacity-50"
+              >
+                <Sparkles className={`w-3.5 h-3.5 ${generatingCover ? 'animate-spin' : ''}`} />
+                {generatingCover ? t.generating : t.generateAiCover}
+              </button>
+            </div>
+          </div>
+          {highlightedSkills.length > 0 && (
+            <div className="mb-2 p-2 rounded-xl bg-purple-50 dark:bg-purple-950/30 text-xs text-purple-800 dark:text-purple-300 flex items-center gap-1.5 flex-wrap">
+              <span className="font-bold">{lang === 'en' ? 'Highlighted in letter:' : 'Đã nhấn mạnh trong thư:'}</span>
+              {highlightedSkills.map((s) => (
+                <span key={s} className="px-1.5 py-0.5 rounded bg-white dark:bg-purple-900/60 font-semibold border border-purple-200 dark:border-purple-800">
+                  {s}
+                </span>
+              ))}
+            </div>
+          )}
           <textarea
             id="cover"
             rows={5}
@@ -194,7 +297,7 @@ export const ApplyModal: React.FC<{ job: Job; onClose: () => void; onApplied: ()
             value={coverLetter}
             onChange={(e) => setCoverLetter(e.target.value)}
             placeholder={t.coverPlaceholder}
-            className={`${inputCls} mt-2`}
+            className={`${inputCls} mt-1`}
           />
           <p className="text-xs text-slate-400 text-right">{coverLetter.length}/2000</p>
         </div>
