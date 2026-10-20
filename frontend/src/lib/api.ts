@@ -183,6 +183,20 @@ export const authApi = {
   login: (email: string, password: string) =>
     request<AuthResponse>('/auth/login', { method: 'POST', body: { email, password } }),
   register: (input: RegisterInput) => request<AuthResponse>('/auth/register', { method: 'POST', body: input }),
+  oauth2: (
+    provider: 'google' | 'linkedin',
+    payload?: { email?: string; fullName?: string; avatarUrl?: string; token?: string }
+  ) =>
+    request<AuthResponse>(`/auth/oauth2/${provider}`, {
+      method: 'POST',
+      body: {
+        provider: provider.toUpperCase(),
+        email: payload?.email,
+        fullName: payload?.fullName,
+        avatarUrl: payload?.avatarUrl,
+        token: payload?.token ?? `oauth2_${provider}_token_${Date.now()}`,
+      },
+    }),
   me: () => request<UserSummary>('/auth/me'),
   logout: (refreshToken: string | null) =>
     request<void>('/auth/logout', { method: 'POST', body: { refreshToken } }).catch(() => undefined),

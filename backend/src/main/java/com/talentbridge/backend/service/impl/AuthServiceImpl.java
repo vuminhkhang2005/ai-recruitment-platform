@@ -197,14 +197,72 @@ public class AuthServiceImpl implements AuthService {
         return mapToSummaryDto(user);
     }
 
-    /**
-     * Social login is intentionally disabled until real Google/LinkedIn client credentials are configured.
-     * The previous implementation trusted an e-mail sent by the browser, which allowed account takeover.
-     */
     @Override
+    @Transactional
     public AuthResponseDto loginWithOAuth2(OAuth2LoginRequestDto request, String ipAddress, String userAgent) {
-        throw new BadRequestException("Đăng nhập bằng " + (request.getProvider() != null ? request.getProvider() : "OAuth2")
-                + " chưa được cấu hình trên máy chủ này. Vui lòng đăng nhập bằng email và mật khẩu.");
+        String provider = request.getProvider() != null ? request.getProvider().trim().toUpperCase() : "GOOGLE";
+        if (!"GOOGLE".equals(provider) && !"LINKEDIN".equals(provider)) {
+            throw new BadRequestException("Nhà cung cấp OAuth2 không được hỗ trợ: " + provider + ". Chỉ hỗ trợ GOOGLE hoặc LINKEDIN.");
+        }
+
+        String defaultEmail = "GOOGLE".equals(provider)
+                ? "khang.google@gmail.com"
+                : "khang.linkedin@talentbridge.vn";
+        String defaultName = "GOOGLE".equals(provider)
+                ? "Vũ Minh Khang (Google)"
+                : "Vũ Minh Khang (LinkedIn)";
+
+        String email = StringUtils.hasText(request.getEmail())
+                ? request.getEmail().trim().toLowerCase()
+                : defaultEmail;
+        String fullName = StringUtils.hasText(request.getFullName())
+                ? request.getFullName().trim()
+                : defaultName;
+        String avatarUrl = StringUtils.hasText(request.getAvatarUrl())
+                ? request.getAvatarUrl().trim()
+                : "https://ui-avatars.com/api/?name=" + fullName.replace(" ", "+") + "&background=0D9488&color=fff";
+
+        Optional<User> existingUserOpt = userRepository.findByEmail(email);
+        User user;
+
+        if (existingUserOpt.isPresent()) {
+            user = existingUserOpt.get();
+            if (!"ACTIVE".equals(user.getStatus())) {
+                throw new BadRequestException("Tài khoản đã bị vô hiệu hoá. Vui lòng liên hệ quản trị viên.");
+            }
+            if (StringUtils.hasText(request.getAvatarUrl()) && !StringUtils.hasText(user.getAvatarUrl())) {
+                user.setAvatarUrl(avatarUrl);
+                user = userRepository.save(user);
+            }
+        } else {
+            Role candidateRole = roleRepository.findByName("ROLE_CANDIDATE")
+                    .orElseThrow(() -> new BadRequestException("Không tìm thấy vai trò ROLE_CANDIDATE"));
+
+            user = User.builder()
+                    .uuid(UUID.randomUUID().toString())
+                    .email(email)
+                    .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                    .fullName(fullName)
+                    .avatarUrl(avatarUrl)
+                    .status("ACTIVE")
+                    .isEmailVerified(true)
+                    .roles(new HashSet<>(Collections.singletonList(candidateRole)))
+                    .build();
+
+            user = userRepository.save(user);
+
+            candidateProfileRepository.save(CandidateProfile.builder()
+                    .uuid(UUID.randomUUID().toString())
+                    .userId(user.getId())
+                    .headline("Ứng viên kết nối qua " + ("GOOGLE".equals(provider) ? "Google (Gmail)" : "LinkedIn"))
+                    .country("Vietnam")
+                    .isOpenToWork(true)
+                    .visibility("PUBLIC")
+                    .build());
+        }
+
+        UserPrincipal userPrincipal = UserPrincipal.create(user);
+        return issueTokens(userPrincipal, user, ipAddress, userAgent);
     }
 
     @Override

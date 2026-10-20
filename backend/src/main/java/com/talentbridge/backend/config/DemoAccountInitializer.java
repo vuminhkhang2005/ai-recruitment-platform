@@ -28,6 +28,20 @@ public class DemoAccountInitializer implements ApplicationRunner {
 
     static final String SEED_PLACEHOLDER_PREFIX = "$2a$12$e8M9KzD4s";
 
+    /**
+     * Core demo accounts displayed on the Login page quick-access panel.
+     * Always guarantee these accounts are ACTIVE and match {@code app.demo.default-password}.
+     */
+    private static final List<String> CORE_DEMO_EMAILS = List.of(
+            "admin@talentbridge.vn",
+            "recruiter.fpt@fpt.com",
+            "recruiter.vng@vng.com.vn",
+            "nguyenvanan.it@gmail.com",
+            "tranminhtuan.ai@gmail.com",
+            "khang.candidate@talentbridge.vn",
+            "khang.recruiter@talentbridge.vn"
+    );
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -37,15 +51,33 @@ public class DemoAccountInitializer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        List<User> placeholders = userRepository.findAll().stream()
-                .filter(u -> u.getPasswordHash() != null && u.getPasswordHash().startsWith(SEED_PLACEHOLDER_PREFIX))
+        String hash = passwordEncoder.encode(defaultPassword);
+        List<User> toUpdate = userRepository.findAll().stream()
+                .filter(u -> {
+                    boolean hasPlaceholder = u.getPasswordHash() != null
+                            && u.getPasswordHash().startsWith(SEED_PLACEHOLDER_PREFIX);
+                    boolean isCoreDemo = u.getEmail() != null
+                            && CORE_DEMO_EMAILS.contains(u.getEmail().trim().toLowerCase());
+                    if (isCoreDemo) {
+                        boolean passwordMatches = u.getPasswordHash() != null
+                                && passwordEncoder.matches(defaultPassword, u.getPasswordHash());
+                        boolean isActive = "ACTIVE".equals(u.getStatus());
+                        return !passwordMatches || !isActive;
+                    }
+                    return hasPlaceholder;
+                })
                 .toList();
-        if (placeholders.isEmpty()) {
+
+        if (toUpdate.isEmpty()) {
             return;
         }
-        String hash = passwordEncoder.encode(defaultPassword);
-        placeholders.forEach(u -> u.setPasswordHash(hash));
-        userRepository.saveAll(placeholders);
-        log.info("Demo accounts: set default password for {} seeded users with placeholder hashes", placeholders.size());
+        toUpdate.forEach(u -> {
+            u.setPasswordHash(hash);
+            if (u.getEmail() != null && CORE_DEMO_EMAILS.contains(u.getEmail().trim().toLowerCase())) {
+                u.setStatus("ACTIVE");
+            }
+        });
+        userRepository.saveAll(toUpdate);
+        log.info("Demo accounts: synchronized default password (Password@123) for {} seeded/demo users", toUpdate.size());
     }
 }

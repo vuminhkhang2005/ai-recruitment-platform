@@ -12,6 +12,10 @@ interface AuthContextValue {
   isAdmin: boolean;
   login: (email: string, password: string) => Promise<UserSummary>;
   register: (input: RegisterInput) => Promise<UserSummary>;
+  loginWithOAuth2: (
+    provider: 'google' | 'linkedin',
+    payload?: { email?: string; fullName?: string; avatarUrl?: string }
+  ) => Promise<UserSummary>;
   logout: () => Promise<void>;
   setUserSession: (res: AuthResponse) => void;
 }
@@ -62,6 +66,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return res.user;
   }, []);
 
+  const loginWithOAuth2 = useCallback(
+    async (
+      provider: 'google' | 'linkedin',
+      payload?: { email?: string; fullName?: string; avatarUrl?: string }
+    ) => {
+      const res = await authApi.oauth2(provider, payload);
+      tokens.set(res);
+      setUser(res.user);
+      return res.user;
+    },
+    []
+  );
+
   const logout = useCallback(async () => {
     const refreshToken = tokens.refresh;
     tokens.clear();
@@ -85,10 +102,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isAdmin: roles.includes('ROLE_ADMIN'),
       login,
       register,
+      loginWithOAuth2,
       logout,
       setUserSession,
     };
-  }, [user, initializing, login, register, logout, setUserSession]);
+  }, [user, initializing, login, register, loginWithOAuth2, logout, setUserSession]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

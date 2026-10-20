@@ -3,6 +3,7 @@ package com.talentbridge.backend.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.talentbridge.backend.dto.AuthResponseDto;
 import com.talentbridge.backend.dto.LoginRequestDto;
+import com.talentbridge.backend.dto.OAuth2LoginRequestDto;
 import com.talentbridge.backend.dto.RegisterRequestDto;
 import com.talentbridge.backend.dto.UserSummaryDto;
 import com.talentbridge.backend.security.CustomAccessDeniedHandler;
@@ -167,6 +168,45 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Đăng xuất thành công"))
+                .andExpect(header().exists(HttpHeaders.SET_COOKIE));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/oauth2/google - Should return 200 OK and authenticate via Google OAuth2")
+    void testLoginOAuth2_Google_Success() throws Exception {
+        OAuth2LoginRequestDto request = OAuth2LoginRequestDto.builder()
+                .provider("GOOGLE")
+                .email("khang.google@gmail.com")
+                .fullName("Vũ Minh Khang (Google)")
+                .token("mock-google-id-token")
+                .build();
+
+        AuthResponseDto responseDto = AuthResponseDto.builder()
+                .accessToken("mock-google-access-token")
+                .refreshToken("mock-google-refresh-token")
+                .tokenType("Bearer")
+                .expiresIn(1800L)
+                .user(UserSummaryDto.builder()
+                        .id(20L)
+                        .email("khang.google@gmail.com")
+                        .fullName("Vũ Minh Khang (Google)")
+                        .roles(List.of("ROLE_CANDIDATE"))
+                        .build())
+                .build();
+
+        ResponseCookie accessCookie = ResponseCookie.from("accessToken", "mock-google-access-token").httpOnly(true).path("/").build();
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", "mock-google-refresh-token").httpOnly(true).path("/").build();
+
+        when(authService.loginWithOAuth2(any(OAuth2LoginRequestDto.class), any(), any())).thenReturn(responseDto);
+        when(jwtCookieHelper.createAccessTokenCookie(eq("mock-google-access-token"))).thenReturn(accessCookie);
+        when(jwtCookieHelper.createRefreshTokenCookie(eq("mock-google-refresh-token"))).thenReturn(refreshCookie);
+
+        mockMvc.perform(post("/api/v1/auth/oauth2/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.user.email").value("khang.google@gmail.com"))
                 .andExpect(header().exists(HttpHeaders.SET_COOKIE));
     }
 }
