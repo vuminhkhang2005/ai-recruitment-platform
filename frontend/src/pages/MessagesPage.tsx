@@ -31,20 +31,20 @@ import type { MessageDto, ReadReceiptDto, ThreadSummary } from '../lib/types';
 import { formatDate, formatDateTime, timeAgo } from '../lib/format';
 import { Avatar } from '../components/layout/Navbar';
 
-type ThreadFilter = 'all' | 'unread' | 'active' | 'interview';
+type ThreadFilter = 'all' | 'unread' | 'interview';
 
 const STAGE_META: Record<
   string,
   { vi: string; en: string; cls: string; step: number }
 > = {
   APPLIED: {
-    vi: 'Đã nộp hồ sơ',
+    vi: 'Đã nộp',
     en: 'Applied',
     cls: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
     step: 1,
   },
   SCREENING: {
-    vi: 'Sơ loại CV',
+    vi: 'Sơ loại',
     en: 'Screening',
     cls: 'bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200 dark:border-sky-800',
     step: 2,
@@ -56,19 +56,19 @@ const STAGE_META: Record<
     step: 3,
   },
   OFFERED: {
-    vi: 'Đề nghị (Offer)',
+    vi: 'Offer',
     en: 'Offered',
     cls: 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200 dark:border-purple-800',
     step: 4,
   },
   HIRED: {
-    vi: 'Đã tuyển dụng',
+    vi: 'Đã tuyển',
     en: 'Hired',
     cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
     step: 5,
   },
   REJECTED: {
-    vi: 'Chưa phù hợp',
+    vi: 'Từ chối',
     en: 'Rejected',
     cls: 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800',
     step: 0,
@@ -76,14 +76,39 @@ const STAGE_META: Record<
 };
 
 const PIPELINE_STEPS = [
-  { key: 'APPLIED', vi: 'Đã nộp', en: 'Applied' },
-  { key: 'SCREENING', vi: 'Sơ loại', en: 'Screening' },
+  { key: 'APPLIED', vi: 'Đã nộp hồ sơ', en: 'Applied' },
+  { key: 'SCREENING', vi: 'Sơ loại CV', en: 'Screening' },
   { key: 'INTERVIEW', vi: 'Phỏng vấn', en: 'Interview' },
-  { key: 'OFFERED', vi: 'Offer', en: 'Offer' },
+  { key: 'OFFERED', vi: 'Đề nghị (Offer)', en: 'Offer' },
   { key: 'HIRED', vi: 'Tuyển dụng', en: 'Hired' },
 ];
 
 const QUICK_EMOJIS = ['👍', '🎉', '😊', '🙏', '🤝', '📅', '✅', '🔥', '💼', '⭐'];
+
+/** Renders Company logos with object-contain on white background so SVG logos (FPT, VNG) never crop. */
+const CounterpartAvatar: React.FC<{
+  name: string;
+  url?: string | null;
+  isCompany?: boolean;
+  size?: string;
+}> = ({ name, url, isCompany = false, size = 'w-10 h-10' }) => {
+  const [broken, setBroken] = useState(false);
+  if (url && !broken && isCompany) {
+    return (
+      <div
+        className={`${size} rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 p-1.5 flex items-center justify-center shrink-0 shadow-2xs`}
+      >
+        <img
+          src={url}
+          alt={name}
+          className="w-full h-full object-contain"
+          onError={() => setBroken(true)}
+        />
+      </div>
+    );
+  }
+  return <Avatar name={name} url={url} size={size} />;
+};
 
 function formatClockTime(iso: string | null | undefined): string {
   if (!iso) return '';
@@ -114,9 +139,7 @@ function formatDayLabel(iso: string, lang: 'vi' | 'en'): string {
 }
 
 function isSameDay(a: string, b: string): boolean {
-  const da = new Date(a);
-  const db = new Date(b);
-  return da.toDateString() === db.toDateString();
+  return new Date(a).toDateString() === new Date(b).toDateString();
 }
 
 function isGroupedWithPrev(prev: MessageDto | undefined, curr: MessageDto): boolean {
@@ -124,7 +147,7 @@ function isGroupedWithPrev(prev: MessageDto | undefined, curr: MessageDto): bool
   if (prev.senderUserId !== curr.senderUserId) return false;
   if (!isSameDay(prev.createdAt, curr.createdAt)) return false;
   const diffMs = Math.abs(new Date(curr.createdAt).getTime() - new Date(prev.createdAt).getTime());
-  return diffMs <= 5 * 60 * 1000; // 5 minutes
+  return diffMs <= 5 * 60 * 1000;
 }
 
 function renderMessageContentWithLinks(text: string, isMe: boolean): React.ReactNode {
@@ -176,7 +199,7 @@ export const MessagesPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<ThreadFilter>('all');
   const [showContextDrawer, setShowContextDrawer] = useState(true);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(true);
+  const [showTemplatePopover, setShowTemplatePopover] = useState(false);
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -186,15 +209,15 @@ export const MessagesPage: React.FC = () => {
       return isVi
         ? [
             {
-              label: '👋 Xác nhận nhận CV',
+              label: '👋 Xác nhận đã nhận CV',
               text: 'Chào bạn, bộ phận Tuyển dụng (HR) đã nhận được CV ứng tuyển của bạn và đang tiến hành đánh giá hồ sơ. Chúng tôi sẽ phản hồi kết quả sớm nhất nhé!',
             },
             {
-              label: '📅 Mời phỏng vấn',
+              label: '📅 Mời tham gia phỏng vấn',
               text: 'Chào bạn, hồ sơ của bạn rất phù hợp với vị trí đang tuyển. Bạn có thể sắp xếp tham gia buổi phỏng vấn trực tuyến qua Google Meet trong tuần này không?',
             },
             {
-              label: '📋 Xin thêm Portfolio/GitHub',
+              label: '📋 Xin thêm Portfolio / GitHub',
               text: 'Chào bạn, hội đồng chuyên môn muốn xem thêm một số dự án thực tế hoặc link GitHub/Portfolio của bạn. Bạn gửi giúp HR qua khung chat này nhé!',
             },
             {
@@ -212,7 +235,7 @@ export const MessagesPage: React.FC = () => {
               text: 'Hello! Your profile is a strong match for this role. Would you be available for a 45-minute online interview via Google Meet this week?',
             },
             {
-              label: '📋 Request Portfolio/GitHub',
+              label: '📋 Request Portfolio / GitHub',
               text: 'Could you share a link to your latest GitHub repositories or portfolio projects for our technical panel to review?',
             },
             {
@@ -224,11 +247,11 @@ export const MessagesPage: React.FC = () => {
     return isVi
       ? [
           {
-            label: '👋 Chào HR & giới thiệu',
+            label: '👋 Chào HR & giới thiệu bản thân',
             text: 'Em chào anh/chị bộ phận Tuyển dụng ạ! Em vừa nộp hồ sơ ứng tuyển vị trí này và rất mong có cơ hội được trao đổi thêm cùng quý công ty ạ.',
           },
           {
-            label: '📅 Xác nhận lịch phỏng vấn',
+            label: '📅 Xác nhận tham gia phỏng vấn',
             text: 'Dạ em đã nhận được thư mời phỏng vấn và xin xác nhận sẽ tham gia đúng giờ ạ. Em cảm ơn anh/chị HR!',
           },
           {
@@ -293,7 +316,6 @@ export const MessagesPage: React.FC = () => {
     };
   }, [threads, selectedAppId, isVi]);
 
-  // Load thread list
   const loadThreads = useCallback(async () => {
     try {
       const data = await messageApi.threads();
@@ -347,7 +369,6 @@ export const MessagesPage: React.FC = () => {
     loadThreads();
   }, []);
 
-  // Update selectedAppId when URL query changes
   useEffect(() => {
     const raw = searchParams.get('applicationId');
     if (raw) {
@@ -355,7 +376,6 @@ export const MessagesPage: React.FC = () => {
     }
   }, [searchParams]);
 
-  // Load messages when selectedAppId changes
   useEffect(() => {
     if (!selectedAppId) {
       setMessages([]);
@@ -390,7 +410,6 @@ export const MessagesPage: React.FC = () => {
     };
   }, [selectedAppId]);
 
-  // Handle incoming message on active thread or any user thread
   const handleIncomingRealtimeMessage = useCallback(
     (newMsg: MessageDto) => {
       const isCurrentThread = newMsg.applicationId === selectedAppId;
@@ -398,7 +417,6 @@ export const MessagesPage: React.FC = () => {
 
       if (isCurrentThread) {
         setMessages((prev) => {
-          // Replace optimistic message if present or deduplicate by id
           if (prev.some((m) => m.id === newMsg.id)) return prev;
           const withoutMatchingOptimistic = prev.filter(
             (m) => !(m.optimistic && m.senderUserId === newMsg.senderUserId && m.content === newMsg.content)
@@ -441,7 +459,6 @@ export const MessagesPage: React.FC = () => {
     [selectedAppId, user?.id, loadThreads, sortThreads]
   );
 
-  // Handle real-time read receipt
   const handleRealtimeReadReceipt = useCallback(
     (receipt: ReadReceiptDto) => {
       if (receipt.applicationId === selectedAppId) {
@@ -470,13 +487,11 @@ export const MessagesPage: React.FC = () => {
     [selectedAppId]
   );
 
-  // Subscribe to active thread topic
   useEffect(() => {
     if (!selectedAppId) return;
     return subscribeToThread(selectedAppId, handleIncomingRealtimeMessage, handleRealtimeReadReceipt);
   }, [selectedAppId, subscribeToThread, handleIncomingRealtimeMessage, handleRealtimeReadReceipt]);
 
-  // Subscribe to global user queue for messages across ALL threads
   useEffect(() => {
     return subscribeToUserMessages(handleIncomingRealtimeMessage, handleRealtimeReadReceipt);
   }, [subscribeToUserMessages, handleIncomingRealtimeMessage, handleRealtimeReadReceipt]);
@@ -491,18 +506,18 @@ export const MessagesPage: React.FC = () => {
     });
   }, [messages.length, selectedAppId]);
 
-  // Auto-resize textarea height
   const adjustTextareaHeight = () => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 112)}px`;
   };
 
   const handleSelectThread = (appId: number) => {
     setSelectedAppId(appId);
     setSearchParams({ applicationId: String(appId) });
     setShowEmojiPicker(false);
+    setShowTemplatePopover(false);
   };
 
   const sendTextMessage = async (rawText: string) => {
@@ -528,6 +543,7 @@ export const MessagesPage: React.FC = () => {
       textareaRef.current.style.height = 'auto';
     }
     setShowEmojiPicker(false);
+    setShowTemplatePopover(false);
     setMessages((prev) => [...prev, optimisticMsg]);
     setSending(true);
 
@@ -535,7 +551,6 @@ export const MessagesPage: React.FC = () => {
       const saved = await messageApi.send(selectedAppId, text);
       setMessages((prev) => {
         const replaced = prev.map((m) => (m.id === tempId ? saved : m));
-        // Deduplicate in case STOMP broadcast arrived slightly before HTTP response
         const seen = new Set<number>();
         return replaced.filter((m) => {
           if (seen.has(m.id)) return false;
@@ -563,7 +578,6 @@ export const MessagesPage: React.FC = () => {
 
       textareaRef.current?.focus();
     } catch (err: any) {
-      // Remove optimistic message and restore text on error
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       setContent(text);
       alert(err?.message || (isVi ? 'Lỗi gửi tin nhắn' : 'Failed to send message'));
@@ -592,7 +606,6 @@ export const MessagesPage: React.FC = () => {
   const filteredThreads = useMemo(() => {
     return threads.filter((t) => {
       if (activeFilter === 'unread' && t.unreadCount === 0) return false;
-      if (activeFilter === 'active' && !t.lastMessage) return false;
       if (
         activeFilter === 'interview' &&
         !['INTERVIEW', 'OFFERED', 'HIRED'].includes(t.currentStage)
@@ -612,7 +625,6 @@ export const MessagesPage: React.FC = () => {
     });
   }, [threads, activeFilter, filterQuery]);
 
-  // Identify the last outgoing message id so we show delivery/read status cleanly like Messenger/LinkedIn
   const lastMyMessageId = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].senderUserId === user?.id) {
@@ -627,60 +639,47 @@ export const MessagesPage: React.FC = () => {
     : STAGE_META.APPLIED;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 h-[calc(100vh-80px)] min-h-[620px] flex flex-col">
-      {/* Top Bar */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-soft-xs">
-            <MessageSquare className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-              {isVi ? 'Trung tâm Tin nhắn Tuyển dụng' : 'Recruitment Messaging Center'}
-              {totalUnreadThreads > 0 && (
-                <span className="px-2 py-0.5 text-[11px] font-extrabold rounded-full bg-emerald-600 text-white">
-                  {totalUnreadThreads} {isVi ? 'chưa đọc' : 'unread'}
-                </span>
-              )}
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {isVi
-                ? 'Kênh trao đổi thời gian thực giữa Ứng viên và Hội đồng tuyển dụng (HR / Hiring Manager)'
-                : 'Real-time communication channel between Candidates and Hiring Teams'}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700 text-xs">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                connected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
-              }`}
-            />
-            <span className="text-slate-600 dark:text-slate-300 font-semibold">
-              {connected
-                ? isVi
-                  ? 'Trực tuyến (WebSocket)'
-                  : 'Realtime Connected'
-                : isVi
-                ? 'Đang đồng bộ...'
-                : 'Syncing...'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3-Column Enterprise Messenger Layout */}
-      <div className="flex-1 mt-3 flex bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-soft-sm overflow-hidden min-h-0">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 h-[calc(100vh-4.25rem)] flex flex-col">
+      {/* Main Unified Messenger Card (Full-Height, Zero Outer Page Scroll) */}
+      <div className="flex-1 flex bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-soft-sm overflow-hidden min-h-0">
         {/* COLUMN 1: Left Conversation Inbox Sidebar */}
         <div
-          className={`w-full md:w-[330px] lg:w-[360px] shrink-0 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full bg-slate-50/40 dark:bg-slate-900/50 ${
+          className={`w-full md:w-[310px] lg:w-[330px] shrink-0 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full bg-white dark:bg-slate-900 ${
             selectedAppId ? 'hidden md:flex' : 'flex'
           }`}
         >
-          {/* Search + Filter Tabs */}
-          <div className="p-3 border-b border-slate-200 dark:border-slate-800 space-y-2.5 shrink-0 bg-white dark:bg-slate-900">
+          {/* Sidebar Header + Search + Symmetrical 3-Tab Filter */}
+          <div className="p-3.5 border-b border-slate-200/80 dark:border-slate-800 space-y-3 shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-2xs">
+                  <MessageSquare className="w-4 h-4" />
+                </span>
+                <div>
+                  <h1 className="text-sm font-black text-slate-900 dark:text-white leading-tight flex items-center gap-1.5">
+                    {isVi ? 'Tin nhắn Tuyển dụng' : 'Messages'}
+                    {totalUnreadThreads > 0 && (
+                      <span className="px-1.5 py-0.2 text-[10px] font-extrabold rounded-full bg-emerald-600 text-white">
+                        {totalUnreadThreads}
+                      </span>
+                    )}
+                  </h1>
+                </div>
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50/80 dark:bg-emerald-950/50 border border-emerald-200/70 dark:border-emerald-800/70 text-[11px]">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    connected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+                  }`}
+                />
+                <span className="text-emerald-700 dark:text-emerald-300 font-bold">
+                  {connected ? 'Live' : '...'}
+                </span>
+              </div>
+            </div>
+
+            {/* Search Input */}
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
@@ -690,15 +689,15 @@ export const MessagesPage: React.FC = () => {
                 data-testid="thread-search-input"
                 placeholder={
                   isVi
-                    ? 'Tìm ứng viên, công ty, vị trí, nội dung...'
-                    : 'Search people, companies, roles, messages...'
+                    ? 'Tìm công ty, ứng viên, vị trí...'
+                    : 'Search company, candidate, role...'
                 }
-                className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-slate-100 placeholder-slate-400"
+                className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-slate-100 placeholder-slate-400"
               />
             </div>
 
-            {/* Filter Pills (LinkedIn Messaging style) */}
-            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+            {/* Symmetrical 3-Tab Segmented Control (No Scrollbar!) */}
+            <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 dark:bg-slate-800/90 rounded-xl">
               {(
                 [
                   { id: 'all', vi: `Tất cả (${threads.length})`, en: `All (${threads.length})` },
@@ -707,8 +706,7 @@ export const MessagesPage: React.FC = () => {
                     vi: `Chưa đọc${totalUnreadThreads ? ` (${totalUnreadThreads})` : ''}`,
                     en: `Unread${totalUnreadThreads ? ` (${totalUnreadThreads})` : ''}`,
                   },
-                  { id: 'active', vi: 'Đang trao đổi', en: 'Active' },
-                  { id: 'interview', vi: 'Phỏng vấn / Offer', en: 'Interview' },
+                  { id: 'interview', vi: 'Phỏng vấn', en: 'Interview' },
                 ] as { id: ThreadFilter; vi: string; en: string }[]
               ).map((tab) => {
                 const active = activeFilter === tab.id;
@@ -718,10 +716,10 @@ export const MessagesPage: React.FC = () => {
                     type="button"
                     onClick={() => setActiveFilter(tab.id)}
                     data-testid={`thread-filter-${tab.id}`}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    className={`py-1.5 px-2 rounded-lg text-[11px] font-bold text-center transition-all cursor-pointer truncate ${
                       active
-                        ? 'bg-emerald-600 text-white shadow-soft-xs'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200/70 dark:hover:bg-slate-700'
+                        ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-2xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     {isVi ? tab.vi : tab.en}
@@ -739,14 +737,14 @@ export const MessagesPage: React.FC = () => {
               </div>
             ) : filteredThreads.length === 0 ? (
               <div className="p-8 text-center text-slate-400">
-                <MessageSquare className="w-9 h-9 mx-auto mb-2 opacity-30 text-emerald-500" />
+                <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-30 text-emerald-500" />
                 <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  {isVi ? 'Không tìm thấy cuộc trò chuyện phù hợp' : 'No matching conversations'}
+                  {isVi ? 'Không có cuộc trò chuyện phù hợp' : 'No matching conversations'}
                 </p>
                 <p className="text-[11px] mt-1 text-slate-500">
                   {isVi
-                    ? 'Hãy thử chuyển bộ lọc sang "Tất cả" hoặc ứng tuyển việc làm để bắt đầu kết nối.'
-                    : 'Switch filter to "All" or apply to a job to start chatting.'}
+                    ? 'Chuyển bộ lọc sang "Tất cả" để xem toàn bộ kênh trao đổi.'
+                    : 'Switch filter to "All" to view all threads.'}
                 </p>
               </div>
             ) : (
@@ -768,18 +766,22 @@ export const MessagesPage: React.FC = () => {
                     type="button"
                     data-testid={`thread-item-${thread.applicationId}`}
                     onClick={() => handleSelectThread(thread.applicationId)}
-                    className={`w-full text-left p-3.5 flex items-start gap-3 transition-all cursor-pointer relative ${
+                    className={`w-full text-left p-3 flex items-start gap-3 transition-all cursor-pointer relative ${
                       isSelected
                         ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-l-4 border-emerald-600 dark:border-emerald-500'
                         : hasUnread
-                        ? 'bg-emerald-50/30 dark:bg-emerald-950/15 hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
-                        : 'hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
+                        ? 'bg-emerald-50/25 dark:bg-emerald-950/15 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
                     }`}
                   >
-                    {/* Avatar with online indicator */}
                     <div className="relative shrink-0 mt-0.5">
-                      <Avatar name={counterpartName} url={counterpartAvatar} size="w-11 h-11" />
-                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
+                      <CounterpartAvatar
+                        name={counterpartName}
+                        url={counterpartAvatar}
+                        isCompany={!isRecruiter}
+                        size="w-11 h-11"
+                      />
+                      <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -808,8 +810,7 @@ export const MessagesPage: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Role / Job title + Stage pill */}
-                      <div className="flex items-center gap-1.5 mt-0.5">
+                      <div className="flex items-center justify-between gap-1.5 mt-0.5">
                         <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 truncate">
                           {thread.jobTitle}
                         </p>
@@ -820,7 +821,6 @@ export const MessagesPage: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Last message preview with checkmarks */}
                       <div className="mt-1 flex items-center justify-between gap-1.5">
                         {thread.lastMessage ? (
                           <p
@@ -845,16 +845,14 @@ export const MessagesPage: React.FC = () => {
                             </span>
                           </p>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-600 dark:text-teal-400">
-                            <Sparkles className="w-3 h-3" />
-                            {isVi
-                              ? 'Hồ sơ mới • Bắt đầu trò chuyện'
-                              : 'New application • Start chatting'}
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 dark:text-slate-500 truncate">
+                            <Sparkles className="w-3 h-3 text-emerald-500 shrink-0" />
+                            {isVi ? 'Bắt đầu cuộc trò chuyện' : 'Start conversation'}
                           </span>
                         )}
 
                         {hasUnread && (
-                          <span className="shrink-0 min-w-[18px] h-[18px] px-1.5 rounded-full text-[10px] font-extrabold bg-emerald-600 text-white flex items-center justify-center shadow-soft-xs">
+                          <span className="shrink-0 min-w-[18px] h-[18px] px-1.5 rounded-full text-[10px] font-extrabold bg-emerald-600 text-white flex items-center justify-center shadow-2xs">
                             {thread.unreadCount}
                           </span>
                         )}
@@ -867,7 +865,7 @@ export const MessagesPage: React.FC = () => {
           </div>
         </div>
 
-        {/* COLUMN 2: Active Conversation Stream */}
+        {/* COLUMN 2: Center Active Conversation Stream */}
         <div
           className={`flex-1 flex flex-col h-full min-w-0 ${
             !selectedAppId ? 'hidden md:flex' : 'flex'
@@ -876,7 +874,7 @@ export const MessagesPage: React.FC = () => {
           {activeThread ? (
             <>
               {/* Conversation Header */}
-              <div className="p-3.5 px-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 shrink-0">
+              <div className="h-16 px-4 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3 bg-white dark:bg-slate-900 shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
                   <button
                     type="button"
@@ -887,7 +885,7 @@ export const MessagesPage: React.FC = () => {
                   </button>
 
                   <div className="relative shrink-0">
-                    <Avatar
+                    <CounterpartAvatar
                       name={
                         isRecruiter
                           ? activeThread.candidateName || 'Candidate'
@@ -898,6 +896,7 @@ export const MessagesPage: React.FC = () => {
                           ? activeThread.candidateAvatar ?? null
                           : activeThread.companyLogo ?? null
                       }
+                      isCompany={!isRecruiter}
                       size="w-10 h-10"
                     />
                     <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
@@ -911,25 +910,15 @@ export const MessagesPage: React.FC = () => {
                           : activeThread.companyName || (isVi ? 'Nhà tuyển dụng' : 'Employer')}
                       </p>
                       <span
-                        className={`text-[10px] px-2 py-0.5 rounded-full border font-bold uppercase tracking-wide ${activeStageMeta.cls}`}
+                        className={`shrink-0 text-[10px] px-2 py-0.5 rounded-full border font-bold uppercase ${activeStageMeta.cls}`}
                       >
                         {isVi ? activeStageMeta.vi : activeStageMeta.en}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                      <span className="font-semibold text-emerald-600 dark:text-emerald-400 truncate">
-                        {activeThread.jobTitle}
-                      </span>
-                      {isRecruiter && activeThread.candidateHeadline && (
-                        <>
-                          <span>•</span>
-                          <span className="truncate hidden sm:inline">
-                            {activeThread.candidateHeadline}
-                          </span>
-                        </>
-                      )}
-                    </div>
+                    <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 truncate mt-0.5">
+                      {activeThread.jobTitle}
+                    </p>
                   </div>
                 </div>
 
@@ -937,16 +926,16 @@ export const MessagesPage: React.FC = () => {
                 <div className="flex items-center gap-2 shrink-0">
                   <Link
                     to={isRecruiter ? `/employer/applicants` : `/jobs/${activeThread.jobId}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors whitespace-nowrap"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" />
+                    <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                     <span className="hidden sm:inline">
                       {isRecruiter
                         ? isVi
-                          ? 'Mở ATS Hồ sơ'
-                          : 'Open ATS'
+                          ? 'Hồ sơ ATS'
+                          : 'ATS View'
                         : isVi
-                        ? 'Xem Tin tuyển dụng'
+                        ? 'Xem việc làm'
                         : 'View Job'}
                     </span>
                   </Link>
@@ -955,7 +944,7 @@ export const MessagesPage: React.FC = () => {
                     type="button"
                     onClick={() => setShowContextDrawer((v) => !v)}
                     title={isVi ? 'Đóng/mở thông tin hồ sơ' : 'Toggle application dossier'}
-                    className={`hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-xl border transition-colors cursor-pointer ${
+                    className={`hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-xl border transition-colors cursor-pointer whitespace-nowrap ${
                       showContextDrawer
                         ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                         : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
@@ -966,7 +955,7 @@ export const MessagesPage: React.FC = () => {
                     ) : (
                       <PanelRightOpen className="w-4 h-4" />
                     )}
-                    <span>{isVi ? 'Hồ sơ' : 'Info'}</span>
+                    <span>{isVi ? 'Thông tin' : 'Info'}</span>
                   </button>
                 </div>
               </div>
@@ -974,16 +963,16 @@ export const MessagesPage: React.FC = () => {
               {/* Message Stream */}
               <div
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto px-4 py-4 bg-slate-50/40 dark:bg-slate-950/30"
+                className="flex-1 overflow-y-auto px-5 py-4 bg-slate-50/50 dark:bg-slate-950/30"
               >
                 {loadingMessages ? (
                   <div className="flex items-center justify-center h-full text-xs text-slate-400">
                     {isVi ? 'Đang tải lịch sử trò chuyện...' : 'Loading conversation history...'}
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center p-6 max-w-md mx-auto">
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3 shadow-soft-xs">
-                      <Sparkles className="w-7 h-7" />
+                  <div className="flex flex-col items-center justify-center h-full text-center p-4 max-w-lg mx-auto">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3 shadow-2xs">
+                      <Sparkles className="w-6 h-6" />
                     </div>
                     <p className="text-sm font-black text-slate-900 dark:text-white">
                       {isVi
@@ -994,11 +983,31 @@ export const MessagesPage: React.FC = () => {
                             isRecruiter ? activeThread.candidateName : activeThread.companyName
                           }`}
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">
                       {isVi
-                        ? 'Chọn một mẫu câu trả lời nhanh bên dưới hoặc nhập nội dung để trao đổi trực tiếp về lịch phỏng vấn, JD và tiến độ tuyển dụng.'
-                        : 'Pick a quick template below or type a message to discuss interview schedules, role expectations, and application progress.'}
+                        ? 'Chọn nhanh một mẫu câu gợi ý bên dưới hoặc nhập tin nhắn trực tiếp:'
+                        : 'Choose a quick conversation starter below or type your message:'}
                     </p>
+
+                    {/* Clean 2x2 Grid of Quick Starters (Zero Horizontal Scrollbar!) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                      {quickTemplates.map((tpl, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => {
+                            setContent(tpl.text);
+                            setTimeout(() => {
+                              adjustTextareaHeight();
+                              textareaRef.current?.focus();
+                            }, 10);
+                          }}
+                          className="p-2.5 rounded-xl text-left text-xs font-bold bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-300 border border-slate-200/90 dark:border-slate-700 hover:border-emerald-300 transition cursor-pointer shadow-2xs flex items-center gap-2"
+                        >
+                          <span className="truncate">{tpl.label}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-1">
@@ -1013,10 +1022,9 @@ export const MessagesPage: React.FC = () => {
 
                       return (
                         <React.Fragment key={msg.id}>
-                          {/* Calendar Day Divider */}
                           {showDateDivider && (
                             <div className="flex items-center justify-center my-4">
-                              <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shadow-2xs">
+                              <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                                 {formatDayLabel(msg.createdAt, language)}
                               </span>
                             </div>
@@ -1027,7 +1035,6 @@ export const MessagesPage: React.FC = () => {
                               isMe ? 'justify-end' : 'justify-start'
                             } ${groupedWithPrev ? 'mt-1' : 'mt-3.5'}`}
                           >
-                            {/* Counterpart Avatar (only on last message of group) */}
                             {!isMe && (
                               <div className="w-7 shrink-0">
                                 {!groupedWithNext ? (
@@ -1045,7 +1052,6 @@ export const MessagesPage: React.FC = () => {
                                 isMe ? 'items-end' : 'items-start'
                               }`}
                             >
-                              {/* Sender Name & Role Header (only on first message of group) */}
                               {!groupedWithPrev && (
                                 <div
                                   className={`flex items-center gap-1.5 mb-1 px-1 ${
@@ -1073,10 +1079,9 @@ export const MessagesPage: React.FC = () => {
                                 </div>
                               )}
 
-                              {/* Message Bubble */}
                               <div
                                 title={formatDateTime(msg.createdAt, language)}
-                                className={`px-3.5 py-2.5 text-xs sm:text-sm whitespace-pre-wrap leading-relaxed shadow-soft-xs transition-opacity ${
+                                className={`px-3.5 py-2.5 text-xs sm:text-sm whitespace-pre-wrap leading-relaxed shadow-2xs transition-opacity ${
                                   msg.optimistic ? 'opacity-75' : 'opacity-100'
                                 } ${
                                   isMe
@@ -1098,7 +1103,6 @@ export const MessagesPage: React.FC = () => {
                                 </div>
                               </div>
 
-                              {/* Delivery / Read Status Indicator (shown cleanly on the latest outgoing message) */}
                               {isLastMyMessage && (
                                 <div className="flex items-center gap-1 mt-1 px-1 text-[11px] font-semibold">
                                   {msg.optimistic ? (
@@ -1136,36 +1140,10 @@ export const MessagesPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Smart Quick Replies / Templates Bar */}
-              {showTemplates && (
-                <div className="px-3.5 py-2 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/90 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-                  <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1 shrink-0 mr-1">
-                    <Zap className="w-3.5 h-3.5" />
-                    {isVi ? 'Mẫu câu nhanh:' : 'Quick replies:'}
-                  </span>
-                  {quickTemplates.map((tpl, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => {
-                        setContent(tpl.text);
-                        setTimeout(() => {
-                          adjustTextareaHeight();
-                          textareaRef.current?.focus();
-                        }, 10);
-                      }}
-                      className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-300 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 transition whitespace-nowrap cursor-pointer shadow-2xs"
-                    >
-                      {tpl.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
               {/* Composer Bar */}
               <form
                 onSubmit={handleSendMessage}
-                className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-end gap-2 shrink-0 relative"
+                className="p-3 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-2 shrink-0 relative"
               >
                 {/* Emoji Picker Popover */}
                 {showEmojiPicker && (
@@ -1187,10 +1165,40 @@ export const MessagesPage: React.FC = () => {
                   </div>
                 )}
 
+                {/* Quick Reply Templates Popover (Clean Floating Menu — Zero Horizontal Scrollbar!) */}
+                {showTemplatePopover && (
+                  <div className="absolute bottom-16 left-12 z-20 w-80 p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl space-y-1">
+                    <div className="px-2 py-1 text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5" />
+                      {isVi ? 'Mẫu câu trả lời nhanh' : 'Quick Reply Templates'}
+                    </div>
+                    {quickTemplates.map((tpl, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          setContent(tpl.text);
+                          setShowTemplatePopover(false);
+                          setTimeout(() => {
+                            adjustTextareaHeight();
+                            textareaRef.current?.focus();
+                          }, 10);
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700 dark:hover:text-emerald-300 transition cursor-pointer"
+                      >
+                        {tpl.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <button
                   type="button"
-                  onClick={() => setShowEmojiPicker((v) => !v)}
-                  title={isVi ? 'Chèn biểu tượng cảm xúc' : 'Insert emoji'}
+                  onClick={() => {
+                    setShowEmojiPicker((v) => !v);
+                    setShowTemplatePopover(false);
+                  }}
+                  title={isVi ? 'Biểu tượng cảm xúc' : 'Insert emoji'}
                   className="p-2 rounded-xl text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer shrink-0"
                 >
                   <Smile className="w-5 h-5" />
@@ -1198,12 +1206,15 @@ export const MessagesPage: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => setShowTemplates((v) => !v)}
-                  title={isVi ? 'Ẩn/hiện mẫu trả lời nhanh' : 'Toggle quick reply templates'}
+                  onClick={() => {
+                    setShowTemplatePopover((v) => !v);
+                    setShowEmojiPicker(false);
+                  }}
+                  title={isVi ? 'Mẫu câu trả lời nhanh' : 'Quick reply templates'}
                   className={`p-2 rounded-xl transition cursor-pointer shrink-0 ${
-                    showTemplates
+                    showTemplatePopover
                       ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50'
-                      : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      : 'text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
                   <Zap className="w-5 h-5" />
@@ -1222,10 +1233,10 @@ export const MessagesPage: React.FC = () => {
                     onKeyDown={handleKeyDown}
                     placeholder={
                       isVi
-                        ? 'Nhập tin nhắn... (Nhấn Enter để gửi, Shift + Enter để xuống dòng)'
-                        : 'Write a message... (Press Enter to send, Shift + Enter for new line)'
+                        ? 'Nhập tin nhắn... (Nhấn Enter để gửi)'
+                        : 'Write a message... (Press Enter to send)'
                     }
-                    className="w-full px-3.5 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-slate-100 placeholder-slate-400 resize-none max-h-32 leading-relaxed"
+                    className="w-full px-3.5 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-slate-100 placeholder-slate-400 resize-none overflow-hidden max-h-28 leading-normal"
                   />
                 </div>
 
@@ -1233,7 +1244,7 @@ export const MessagesPage: React.FC = () => {
                   type="submit"
                   data-testid="send-message-btn"
                   disabled={!content.trim() || sending}
-                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-soft disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-soft disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0"
                 >
                   <Send className="w-4 h-4" />
                   <span className="hidden sm:inline">{isVi ? 'Gửi' : 'Send'}</span>
@@ -1257,13 +1268,13 @@ export const MessagesPage: React.FC = () => {
           )}
         </div>
 
-        {/* COLUMN 3: Right Context Drawer (Recruitment Dossier — LinkedIn Recruiter / TopCV Style) */}
+        {/* COLUMN 3: Right Context Drawer (Recruitment Dossier) */}
         {activeThread && showContextDrawer && (
-          <aside className="hidden lg:flex w-[300px] xl:w-[320px] shrink-0 border-l border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 flex-col h-full overflow-y-auto p-4 space-y-4">
+          <aside className="hidden lg:flex w-[280px] xl:w-[300px] shrink-0 border-l border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/50 flex-col h-full overflow-y-auto p-4 space-y-3.5">
             {/* Counterpart Summary Card */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 text-center shadow-2xs">
               <div className="inline-flex relative">
-                <Avatar
+                <CounterpartAvatar
                   name={
                     isRecruiter
                       ? activeThread.candidateName || 'Candidate'
@@ -1274,9 +1285,10 @@ export const MessagesPage: React.FC = () => {
                       ? activeThread.candidateAvatar ?? null
                       : activeThread.companyLogo ?? null
                   }
-                  size="w-16 h-16 text-lg"
+                  isCompany={!isRecruiter}
+                  size="w-14 h-14 text-base"
                 />
-                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
+                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
               </div>
 
               <h3 className="mt-2.5 text-sm font-black text-slate-900 dark:text-white">
@@ -1292,7 +1304,6 @@ export const MessagesPage: React.FC = () => {
                   : 'Verified Employer & HR Team'}
               </p>
 
-              {/* Contact Details for Recruiter */}
               {isRecruiter && (
                 <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-left space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
                   {activeThread.candidateEmail && (
@@ -1323,7 +1334,7 @@ export const MessagesPage: React.FC = () => {
             {/* Recruitment Pipeline Progress */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 shadow-2xs space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   {isVi ? 'Tiến độ Tuyển dụng' : 'Pipeline Stage'}
                 </span>
                 <span
@@ -1340,7 +1351,7 @@ export const MessagesPage: React.FC = () => {
                     : 'This application is currently marked as not selected.'}
                 </div>
               ) : (
-                <div className="space-y-2 pt-1">
+                <div className="space-y-2 pt-0.5">
                   {PIPELINE_STEPS.map((st, idx) => {
                     const currentStepNum = activeStageMeta.step;
                     const stepNum = idx + 1;
@@ -1377,7 +1388,7 @@ export const MessagesPage: React.FC = () => {
 
             {/* Job Context Card */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 shadow-2xs space-y-3">
-              <div className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                 <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
                 {isVi ? 'Vị trí Ứng tuyển' : 'Target Position'}
               </div>
@@ -1419,37 +1430,21 @@ export const MessagesPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-2 flex flex-col gap-2">
+              <div className="pt-1 flex flex-col gap-1.5">
                 {isRecruiter ? (
-                  <>
-                    <Link
-                      to="/employer/applicants"
-                      className="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold text-center transition"
-                    >
-                      {isVi ? 'Đánh giá & Chuyển vòng CV' : 'Review & Move Stage'}
-                    </Link>
-                    <Link
-                      to="/employer/interviews"
-                      className="w-full py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold text-center transition"
-                    >
-                      {isVi ? 'Quản lý Lịch phỏng vấn' : 'Manage Interviews'}
-                    </Link>
-                  </>
+                  <Link
+                    to="/employer/applicants"
+                    className="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold text-center transition"
+                  >
+                    {isVi ? 'Đánh giá & Chuyển vòng CV' : 'Review & Move Stage'}
+                  </Link>
                 ) : (
-                  <>
-                    <Link
-                      to={`/jobs/${activeThread.jobId}`}
-                      className="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold text-center transition"
-                    >
-                      {isVi ? 'Xem chi tiết Tin tuyển dụng' : 'View Job Posting'}
-                    </Link>
-                    <Link
-                      to="/applications"
-                      className="w-full py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold text-center transition"
-                    >
-                      {isVi ? 'Theo dõi Tiến độ Hồ sơ' : 'Track Application Status'}
-                    </Link>
-                  </>
+                  <Link
+                    to={`/jobs/${activeThread.jobId}`}
+                    className="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold text-center transition"
+                  >
+                    {isVi ? 'Xem chi tiết Tin tuyển dụng' : 'View Job Posting'}
+                  </Link>
                 )}
               </div>
             </div>
