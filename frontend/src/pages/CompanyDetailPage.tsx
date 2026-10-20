@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { ExternalLink, MapPin, Users, Building2 } from 'lucide-react';
+import { ExternalLink, MapPin, Users, Building2, BadgeCheck } from 'lucide-react';
 import { ApiError, companyApi } from '../lib/api';
 import type { Company, Job } from '../lib/types';
-import { CompanyAvatar, EmptyState, ErrorBox, PageLoader } from '../components/ui/primitives';
+import { CompanyAvatar, EmptyState, ErrorBox, PageLoader, resolveCompanyBanner } from '../components/ui/primitives';
 import { JobCard } from '../components/jobs/JobCard';
 import { useMatchScores } from '../lib/useMatchScores';
 import { useMyApplications } from '../context/MyApplicationsContext';
@@ -18,6 +18,7 @@ export const CompanyDetailPage: React.FC = () => {
   const [company, setCompany] = useState<Company | null>(null);
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
+  const [bannerFailed, setBannerFailed] = useState(false);
   const scores = useMatchScores(jobs?.map((j) => j.id) ?? []);
   const { appliedJobIds } = useMyApplications();
   usePageTitle(company?.name ?? (isVi ? 'Công ty' : 'Company'));
@@ -26,12 +27,13 @@ export const CompanyDetailPage: React.FC = () => {
     setCompany(null);
     setJobs(null);
     setError(null);
+    setBannerFailed(false);
     companyApi.get(id!).then(setCompany).catch(setError);
     companyApi.jobs(id!).then(setJobs).catch(() => setJobs([]));
   }, [id]);
 
   if (error && (error.status === 404 || error.status === 400)) {
-    return <NotFoundPage message={isVi ? "Công ty không tồn tại." : "Company not found."} />;
+    return <NotFoundPage message={isVi ? 'Công ty không tồn tại.' : 'Company not found.'} />;
   }
   if (error)
     return (
@@ -41,85 +43,140 @@ export const CompanyDetailPage: React.FC = () => {
     );
   if (!company) return <PageLoader />;
 
+  const bannerSrc = !bannerFailed ? resolveCompanyBanner(company.name, company.bannerUrl) : undefined;
+
   return (
     <>
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-8">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8">
         <div className="bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-[2rem] overflow-hidden shadow-soft-sm">
-          <div className="relative h-28 sm:h-36 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700">
-            <div className="absolute inset-0 opacity-25 [background-image:radial-gradient(rgba(255,255,255,0.6)_1px,transparent_1px)] [background-size:14px_14px]" />
+          {/* Tall Cover Banner with Real Company Photo */}
+          <div className="relative h-56 sm:h-72 lg:h-80 overflow-hidden bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700">
+            {bannerSrc ? (
+              <img
+                src={bannerSrc}
+                alt={`${company.name} cover`}
+                className="w-full h-full object-cover object-center"
+                onError={() => setBannerFailed(true)}
+              />
+            ) : (
+              <div className="absolute inset-0 opacity-25 [background-image:radial-gradient(rgba(255,255,255,0.6)_1px,transparent_1px)] [background-size:14px_14px]" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-slate-950/15 to-transparent" />
           </div>
-          <div className="relative px-5 sm:px-8 pb-6 flex flex-col sm:flex-row sm:items-end gap-4 -mt-12">
-            <div className="p-1.5 bg-white dark:bg-slate-900 rounded-[1.4rem] shadow-soft w-fit shrink-0">
-              <CompanyAvatar name={company.name} logoUrl={company.logoUrl} size="xl" />
-            </div>
-            <div className="min-w-0 sm:pb-1">
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">{company.name}</h1>
-              <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
-                {company.city && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-emerald-500" />
-                    {company.city}
-                  </span>
-                )}
-                {company.industry && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Building2 className="w-4 h-4 text-emerald-500" />
-                    {company.industry}
-                  </span>
-                )}
-                {company.companySize && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Users className="w-4 h-4 text-emerald-500" />
-                    {company.companySize} {isVi ? 'nhân viên' : 'employees'}
-                  </span>
-                )}
+
+          {/* Company Header + Integrated About Company Section */}
+          <div className="relative px-5 sm:px-8 pb-7">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
+              <div className="-mt-12 sm:-mt-14 p-1.5 bg-white dark:bg-slate-900 rounded-[1.4rem] shadow-soft-md ring-4 ring-white dark:ring-slate-900 w-fit shrink-0">
+                <CompanyAvatar name={company.name} logoUrl={company.logoUrl} size="xl" />
               </div>
+              <div className="min-w-0 flex-1 pt-1 sm:pt-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                    {company.name}
+                  </h1>
+                  {company.verificationStatus === 'VERIFIED' && (
+                    <BadgeCheck className="w-6 h-6 text-emerald-500 shrink-0" />
+                  )}
+                </div>
+                <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
+                  {company.city && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <MapPin className="w-4 h-4 text-emerald-500" />
+                      {company.city}
+                    </span>
+                  )}
+                  {company.industry && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Building2 className="w-4 h-4 text-emerald-500" />
+                      {company.industry}
+                    </span>
+                  )}
+                  {company.companySize && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-emerald-500" />
+                      {company.companySize} {isVi ? 'nhân viên' : 'employees'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Integrated About Company directly below metadata */}
+            <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-800">
+              <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                <span className="w-1.5 h-4 rounded-full bg-gradient-to-b from-emerald-500 to-teal-500" />
+                {isVi ? 'Giới thiệu công ty' : 'About Company'}
+              </h2>
+              <p className="mt-2 text-sm text-slate-700 dark:text-slate-300 leading-relaxed selectable-text">
+                {company.description ||
+                  (isVi
+                    ? 'Công ty chưa cập nhật phần giới thiệu.'
+                    : 'No company introduction provided yet.')}
+              </p>
+
+              {(company.address || company.website) && (
+                <div className="mt-3.5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-600 dark:text-slate-400">
+                  {company.address && (
+                    <p className="inline-flex items-center gap-1.5">
+                      <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        {isVi ? 'Địa chỉ:' : 'Address:'}
+                      </span>
+                      <span>
+                        {company.address}
+                        {company.city && !company.address.includes(company.city)
+                          ? `, ${company.city}`
+                          : ''}
+                      </span>
+                    </p>
+                  )}
+                  {company.website && (
+                    <a
+                      href={company.website}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                    >
+                      {company.website.replace(/^https?:\/\//, '')}
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 grid gap-6 lg:grid-cols-[1fr_340px]">
-        <div className="min-w-0 order-2 lg:order-1">
-          <h2 className="text-xl font-black text-slate-900 dark:text-white mb-5">
-            {jobs
-              ? (isVi ? `${jobs.length} việc làm đang tuyển` : `${jobs.length} open jobs hiring`)
-              : (isVi ? 'Việc làm đang tuyển' : 'Open jobs')}
-          </h2>
-          {!jobs ? (
-            <PageLoader />
-          ) : jobs.length === 0 ? (
-            <EmptyState title={isVi ? "Công ty hiện chưa có tin tuyển dụng nào đang mở." : "No open job listings for this company at the moment."} />
-          ) : (
-            <div className="grid gap-5 md:grid-cols-2">
-              {jobs.map((j) => (
-                <JobCard key={j.id} job={j} match={scores[j.id]} applied={appliedJobIds.has(j.id)} />
-              ))}
-            </div>
-          )}
-        </div>
-
-        <aside className="order-1 lg:order-2 bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 h-fit shadow-soft-xs">
-          <h2 className="flex items-center gap-2.5 font-black text-slate-900 dark:text-white">
-            <span className="w-1.5 h-5 rounded-full bg-gradient-to-b from-emerald-500 to-teal-500" />
-            {isVi ? 'Giới thiệu công ty' : 'About Company'}
-          </h2>
-          <p className="mt-2 text-sm text-slate-700 dark:text-slate-300 leading-relaxed selectable-text">
-            {company.description || (isVi ? 'Công ty chưa cập nhật phần giới thiệu.' : 'No company introduction provided yet.')}
-          </p>
-          {company.address && (
-            <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
-              <span className="font-medium text-slate-800 dark:text-slate-200">{isVi ? 'Địa chỉ: ' : 'Address: '}</span>
-              {company.address}
-              {company.city ? `, ${company.city}` : ''}
-            </p>
-          )}
-          {company.website && (
-            <a href={company.website} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
-              {company.website.replace(/^https?:\/\//, '')} <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          )}
-        </aside>
+      {/* Full-width 3-Column Open Jobs Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <h2 className="text-xl font-black text-slate-900 dark:text-white mb-5">
+          {jobs
+            ? isVi
+              ? `${jobs.length} việc làm đang tuyển`
+              : `${jobs.length} open jobs hiring`
+            : isVi
+            ? 'Việc làm đang tuyển'
+            : 'Open jobs'}
+        </h2>
+        {!jobs ? (
+          <PageLoader />
+        ) : jobs.length === 0 ? (
+          <EmptyState
+            title={
+              isVi
+                ? 'Công ty hiện chưa có tin tuyển dụng nào đang mở.'
+                : 'No open job listings for this company at the moment.'
+            }
+          />
+        ) : (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {jobs.map((j) => (
+              <JobCard key={j.id} job={j} match={scores[j.id]} applied={appliedJobIds.has(j.id)} />
+            ))}
+          </div>
+        )}
       </div>
     </>
   );

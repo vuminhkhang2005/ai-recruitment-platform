@@ -20,6 +20,28 @@ const BRAND_LOGOS: { match: string[]; src: string; pad?: string }[] = [
   { match: ['axon'], src: '/logos/axon.svg', pad: 'p-1' },
 ];
 
+/** Official real headquarters/office cover photos shipped in /public/companies. */
+const BRAND_BANNERS: { match: string[]; src: string }[] = [
+  { match: ['vng'], src: '/companies/vng-campus.jpg' },
+  { match: ['fpt'], src: '/companies/fpt-campus.png' },
+  { match: ['viettel'], src: '/companies/viettel-hq.jpg' },
+  { match: ['onemount', 'one mount', 'vinid'], src: '/companies/onemount-og.webp' },
+  { match: ['momo'], src: '/companies/momo-hq.jpg' },
+  { match: ['nab', 'national australia bank'], src: '/companies/nab-hq.jpg' },
+  { match: ['tiki'], src: '/companies/tiki-hq.jpg' },
+  { match: ['kms'], src: '/companies/kms-hq.jpg' },
+  { match: ['nashtech', 'nash tech', 'harvey nash'], src: '/companies/nashtech-hq.jpg' },
+  { match: ['axon'], src: '/companies/axon-hq.jpg' },
+  { match: ['vinai', 'vingroup', 'vinfast'], src: '/companies/landmark81-vinai.jpg' },
+  { match: ['techcombank', 'tcb'], src: '/companies/techcombank-hq.jpg' },
+];
+
+export function resolveCompanyBanner(name: string, bannerUrl?: string | null): string | undefined {
+  if (bannerUrl && bannerUrl.trim().length > 0) return bannerUrl;
+  const lower = (name || '').toLowerCase();
+  return BRAND_BANNERS.find((b) => b.match.some((m) => lower.includes(m)))?.src;
+}
+
 /** Soft tints for companies that have no logo yet (picked deterministically from the name). */
 const INITIAL_TINTS = [
   'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60',

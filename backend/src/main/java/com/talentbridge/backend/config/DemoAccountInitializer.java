@@ -2,11 +2,13 @@ package com.talentbridge.backend.config;
 
 import com.talentbridge.backend.entity.ApplicationMessage;
 import com.talentbridge.backend.entity.CandidateProfile;
+import com.talentbridge.backend.entity.Company;
 import com.talentbridge.backend.entity.JobApplication;
 import com.talentbridge.backend.entity.RecruiterProfile;
 import com.talentbridge.backend.entity.User;
 import com.talentbridge.backend.repository.ApplicationMessageRepository;
 import com.talentbridge.backend.repository.CandidateProfileRepository;
+import com.talentbridge.backend.repository.CompanyRepository;
 import com.talentbridge.backend.repository.JobApplicationRepository;
 import com.talentbridge.backend.repository.RecruiterProfileRepository;
 import com.talentbridge.backend.repository.UserRepository;
@@ -57,6 +59,7 @@ public class DemoAccountInitializer implements ApplicationRunner {
     private final ApplicationMessageRepository messageRepository;
     private final CandidateProfileRepository candidateProfileRepository;
     private final RecruiterProfileRepository recruiterProfileRepository;
+    private final CompanyRepository companyRepository;
 
     @Value("${app.demo.default-password:Password@123}")
     private String defaultPassword;
@@ -92,7 +95,41 @@ public class DemoAccountInitializer implements ApplicationRunner {
             log.info("Demo accounts: synchronized default password (Password@123) for {} seeded/demo users", toUpdate.size());
         }
 
+        seedCompanyBannersIfNeeded();
         seedDemoConversationsIfNeeded();
+    }
+
+    private void seedCompanyBannersIfNeeded() {
+        try {
+            List<Company> companies = companyRepository.findAll();
+            int updated = 0;
+            for (Company c : companies) {
+                if (c.getBannerUrl() == null || c.getBannerUrl().isBlank()) {
+                    String nameLower = c.getName() != null ? c.getName().toLowerCase() : "";
+                    String resolved = null;
+                    if (nameLower.contains("nab")) resolved = "/companies/nab-hq.jpg";
+                    else if (nameLower.contains("tiki")) resolved = "/companies/tiki-hq.jpg";
+                    else if (nameLower.contains("kms")) resolved = "/companies/kms-hq.jpg";
+                    else if (nameLower.contains("nashtech")) resolved = "/companies/nashtech-hq.jpg";
+                    else if (nameLower.contains("axon")) resolved = "/companies/axon-hq.jpg";
+                    else if (nameLower.contains("fpt")) resolved = "/companies/fpt-campus.png";
+                    else if (nameLower.contains("vng")) resolved = "/companies/vng-campus.jpg";
+                    else if (nameLower.contains("viettel")) resolved = "/companies/viettel-hq.jpg";
+                    else if (nameLower.contains("onemount") || nameLower.contains("one mount")) resolved = "/companies/onemount-og.webp";
+                    else if (nameLower.contains("momo")) resolved = "/companies/momo-hq.jpg";
+                    if (resolved != null) {
+                        c.setBannerUrl(resolved);
+                        updated++;
+                    }
+                }
+            }
+            if (updated > 0) {
+                companyRepository.saveAll(companies);
+                log.info("Demo companies: populated missing bannerUrl for {} companies", updated);
+            }
+        } catch (Exception e) {
+            log.warn("Could not seed company banners: {}", e.getMessage());
+        }
     }
 
     private void seedDemoConversationsIfNeeded() {

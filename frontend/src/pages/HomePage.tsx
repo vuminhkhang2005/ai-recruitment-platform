@@ -35,7 +35,7 @@ import { companyApi, jobApi } from '../lib/api';
 import type { Company, Job } from '../lib/types';
 import { SearchBar } from '../components/jobs/SearchBar';
 import { JobCard } from '../components/jobs/JobCard';
-import { CompanyAvatar, EmptyState, ErrorBox, Spinner } from '../components/ui/primitives';
+import { CompanyAvatar, EmptyState, ErrorBox, Spinner, resolveCompanyBanner } from '../components/ui/primitives';
 import { useMatchScores } from '../lib/useMatchScores';
 import { useMyApplications } from '../context/MyApplicationsContext';
 import { useAuth } from '../context/AuthContext';
@@ -681,9 +681,9 @@ export const HomePage: React.FC = () => {
                 >
                   <div className="relative">
                     <div className="h-36 relative overflow-hidden rounded-t-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700">
-                      {c.bannerUrl ? (
+                      {resolveCompanyBanner(c.name, c.bannerUrl) ? (
                         <img
-                          src={c.bannerUrl}
+                          src={resolveCompanyBanner(c.name, c.bannerUrl)}
                           alt={`${c.name} banner`}
                           loading="lazy"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
