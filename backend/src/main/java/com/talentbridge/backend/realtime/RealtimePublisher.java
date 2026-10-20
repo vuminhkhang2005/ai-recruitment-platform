@@ -38,9 +38,39 @@ public class RealtimePublisher {
             MessageDtos.MessageDto dto = messageService.loadDto(event.messageId());
             if (dto != null) {
                 messagingTemplate.convertAndSend("/topic/applications/" + dto.getApplicationId(), dto);
+                if (event.recipientUserIds() != null) {
+                    for (Long uid : event.recipientUserIds()) {
+                        if (uid != null) {
+                            messagingTemplate.convertAndSendToUser(String.valueOf(uid), "/queue/messages", dto);
+                        }
+                    }
+                }
             }
         } catch (Exception ex) {
             log.warn("Realtime message push failed: {}", ex.getMessage());
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onMessagesRead(DomainEvents.MessagesRead event) {
+        try {
+            MessageDtos.ReadReceiptDto receipt = MessageDtos.ReadReceiptDto.builder()
+                    .applicationId(event.applicationId())
+                    .readerSide(event.readerSide())
+                    .readAt(event.readAt())
+                    .count(event.count())
+                    .recipientUserIds(event.recipientUserIds())
+                    .build();
+            messagingTemplate.convertAndSend("/topic/applications/" + event.applicationId() + "/read", receipt);
+            if (event.recipientUserIds() != null) {
+                for (Long uid : event.recipientUserIds()) {
+                    if (uid != null) {
+                        messagingTemplate.convertAndSendToUser(String.valueOf(uid), "/queue/messages-read", receipt);
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("Realtime read-receipt push failed: {}", ex.getMessage());
         }
     }
 }

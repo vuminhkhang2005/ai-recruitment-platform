@@ -19,6 +19,8 @@ public interface ApplicationMessageRepository extends JpaRepository<ApplicationM
 
     Optional<ApplicationMessage> findFirstByApplicationIdOrderByCreatedAtDescIdDesc(Long applicationId);
 
+    long countByApplicationId(Long applicationId);
+
     /** Unread messages written by the other side of the thread. */
     long countByApplicationIdAndSenderSideNotAndReadAtIsNull(Long applicationId, String viewerSide);
 

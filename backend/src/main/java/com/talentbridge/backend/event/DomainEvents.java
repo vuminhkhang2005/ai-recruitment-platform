@@ -26,6 +26,18 @@ public final class DomainEvents {
     public record NotificationCreated(Long notificationId) {
     }
 
-    public record MessageCreated(Long messageId) {
+    public record MessageCreated(Long messageId, java.util.List<Long> recipientUserIds) {
+        public MessageCreated(Long messageId) {
+            this(messageId, java.util.List.of());
+        }
+    }
+
+    public record MessagesRead(
+            Long applicationId,
+            String readerSide,
+            java.time.LocalDateTime readAt,
+            int count,
+            java.util.List<Long> recipientUserIds
+    ) {
     }
 }

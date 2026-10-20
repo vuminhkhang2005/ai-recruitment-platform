@@ -27,6 +27,7 @@ import { messageApi } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useRealtime } from '../../realtime/RealtimeContext';
 import { NotificationBell } from './NotificationBell';
 
 interface NavItem {
@@ -144,6 +145,7 @@ export const LanguageSwitch: React.FC<{ compact?: boolean }> = ({ compact = fals
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated, isRecruiter, isAdmin, logout } = useAuth();
   const { language } = useLanguage();
+  const { subscribeToUserMessages } = useRealtime();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -178,12 +180,19 @@ export const Navbar: React.FC = () => {
         .catch(() => {});
     };
     fetchUnread();
+    const unsubWs = subscribeToUserMessages(
+      () => fetchUnread(),
+      () => fetchUnread()
+    );
+    window.addEventListener('messages-unread-changed', fetchUnread);
     const interval = setInterval(fetchUnread, 30_000);
     return () => {
       active = false;
+      unsubWs();
+      window.removeEventListener('messages-unread-changed', fetchUnread);
       clearInterval(interval);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, subscribeToUserMessages, location.pathname]);
 
   const links: NavItem[] = isAdmin
     ? [

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Briefcase, CalendarClock, CheckCircle2, Clock, ExternalLink, MapPin, Send, Sparkles, Users } from 'lucide-react';
+import { Briefcase, CalendarClock, CheckCircle2, Clock, ExternalLink, MapPin, MessageSquare, Send, Sparkles, Users } from 'lucide-react';
 import { ApiError, companyApi, jobApi } from '../lib/api';
 import type { Company, Job } from '../lib/types';
 import { EXP_LEVELS, JOB_TYPES, daysLeft, formatDate, formatSalary, getExpLevels, getJobTypes, label, timeAgo, toLines } from '../lib/format';

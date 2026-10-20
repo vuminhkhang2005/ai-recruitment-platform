@@ -56,15 +56,16 @@ public class MessageService {
     /** CANDIDATE, COMPANY, or null when the user may not take part in this thread. */
     @Transactional(readOnly = true)
     public String sideOf(Long userId, JobApplication app) {
+        RecruiterProfile rp = hiringTeamService.findMember(userId).orElse(null);
+        if (rp != null && rp.getCompanyId() != null
+                && rp.getCompanyId().equals(HiringTeamService.companyIdOf(app.getJob()))) {
+            return COMPANY;
+        }
         boolean isCandidate = candidateProfileRepository.findByUserId(userId)
                 .map(p -> p.getId().equals(app.getCandidateProfileId()))
                 .orElse(false);
         if (isCandidate) {
             return CANDIDATE;
-        }
-        RecruiterProfile rp = hiringTeamService.findMember(userId).orElse(null);
-        if (HiringTeamService.isManager(rp) && rp.getCompanyId().equals(HiringTeamService.companyIdOf(app.getJob()))) {
-            return COMPANY;
         }
         return null;
     }
@@ -94,15 +95,21 @@ public class MessageService {
         JobApplication app = findApp(applicationId);
         requireSide(userId, app);
         List<ApplicationMessage> messages = messageRepository.findByApplicationIdOrderByCreatedAtAscIdAsc(applicationId);
-        Map<Long, String> names = names(messages.stream().map(ApplicationMessage::getSenderUserId).collect(Collectors.toSet()));
-        return messages.stream().map(m -> toDto(m, names)).toList();
+        Map<Long, User> usersById = usersMap(messages.stream().map(ApplicationMessage::getSenderUserId).collect(Collectors.toSet()));
+        return messages.stream().map(m -> toDto(m, usersById)).toList();
     }
 
     @Transactional
     public int markRead(Long applicationId, Long userId) {
         JobApplication app = findApp(applicationId);
         String side = requireSide(userId, app);
-        return messageRepository.markRead(applicationId, side, LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        int updated = messageRepository.markRead(applicationId, side, now);
+        if (updated > 0) {
+            List<Long> recipients = resolveCounterpartUserIds(app, side);
+            eventPublisher.publishEvent(new DomainEvents.MessagesRead(applicationId, side, now, updated, recipients));
+        }
+        return updated;
     }
 
     @Transactional(readOnly = true)
@@ -111,35 +118,65 @@ public class MessageService {
         if (ctx == null || ctx.applications.isEmpty()) {
             return List.of();
         }
-        Set<Long> ids = ctx.applications.stream().map(JobApplication::getId).collect(Collectors.toSet());
-        Set<Long> withMessages = new LinkedHashSet<>(messageRepository.findApplicationIdsWithMessages(ids));
 
-        Map<Long, String> candidateNames = candidateNames(ctx.applications.stream()
-                .filter(a -> withMessages.contains(a.getId())).toList());
+        Set<Long> cpIds = ctx.applications.stream()
+                .map(JobApplication::getCandidateProfileId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, CandidateProfile> profilesById = candidateProfileRepository.findAllById(cpIds).stream()
+                .collect(Collectors.toMap(CandidateProfile::getId, p -> p, (a, b) -> a));
+
+        Set<Long> candidateUserIds = profilesById.values().stream()
+                .map(CandidateProfile::getUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, User> usersById = usersMap(candidateUserIds);
 
         return ctx.applications.stream()
-                .filter(a -> withMessages.contains(a.getId()))
                 .map(a -> {
                     ApplicationMessage last = messageRepository.findFirstByApplicationIdOrderByCreatedAtDescIdDesc(a.getId()).orElse(null);
+                    long totalMsgs = messageRepository.countByApplicationId(a.getId());
                     Company company = a.getJob() != null ? a.getJob().getCompany() : null;
-                    CandidateProfile cp = candidateProfileRepository.findById(a.getCandidateProfileId()).orElse(null);
+                    CandidateProfile cp = profilesById.get(a.getCandidateProfileId());
+                    User candUser = cp != null ? usersById.get(cp.getUserId()) : null;
+                    String lastSenderName = null;
+                    if (last != null) {
+                        User lastSender = usersById.containsKey(last.getSenderUserId())
+                                ? usersById.get(last.getSenderUserId())
+                                : userRepository.findById(last.getSenderUserId()).orElse(null);
+                        if (lastSender != null) {
+                            lastSenderName = lastSender.getFullName();
+                        }
+                    }
                     return MessageDtos.ThreadSummary.builder()
                             .applicationId(a.getId())
                             .jobId(a.getJob() != null ? a.getJob().getId() : null)
                             .jobTitle(a.getJob() != null ? a.getJob().getTitle() : null)
+                            .jobLocation(a.getJob() != null ? a.getJob().getLocationCity() : null)
+                            .companyId(company != null ? company.getId() : null)
                             .companyName(company != null ? company.getName() : null)
                             .companyLogo(company != null ? company.getLogoUrl() : null)
                             .candidateUserId(cp != null ? cp.getUserId() : null)
-                            .candidateName(candidateNames.get(a.getId()))
+                            .candidateName(candUser != null ? candUser.getFullName() : "")
+                            .candidateAvatar(candUser != null ? candUser.getAvatarUrl() : null)
+                            .candidateHeadline(cp != null ? cp.getHeadline() : null)
+                            .candidateEmail(candUser != null ? candUser.getEmail() : null)
+                            .candidatePhone(candUser != null ? candUser.getPhone() : null)
+                            .candidateCity(cp != null ? cp.getCity() : null)
                             .currentStage(a.getCurrentStage())
+                            .appliedAt(a.getAppliedAt())
                             .lastMessage(last != null ? preview(last.getContent(), 140) : null)
                             .lastSenderSide(last != null ? last.getSenderSide() : null)
+                            .lastSenderName(lastSenderName)
                             .lastMessageAt(last != null ? last.getCreatedAt() : null)
+                            .lastMessageReadAt(last != null ? last.getReadAt() : null)
                             .unreadCount(messageRepository.countByApplicationIdAndSenderSideNotAndReadAtIsNull(a.getId(), ctx.side))
+                            .totalMessages(totalMsgs)
                             .build();
                 })
-                .sorted(Comparator.comparing(MessageDtos.ThreadSummary::getLastMessageAt,
-                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .sorted(Comparator
+                        .comparing(MessageDtos.ThreadSummary::getLastMessageAt, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(MessageDtos.ThreadSummary::getAppliedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
     }
 
@@ -160,7 +197,7 @@ public class MessageService {
     @Transactional(readOnly = true)
     public MessageDtos.MessageDto loadDto(Long messageId) {
         return messageRepository.findById(messageId)
-                .map(m -> toDto(m, names(Set.of(m.getSenderUserId()))))
+                .map(m -> toDto(m, usersMap(Set.of(m.getSenderUserId()))))
                 .orElse(null);
     }
 
@@ -186,33 +223,49 @@ public class MessageService {
                 .createdAt(LocalDateTime.now())
                 .build());
 
-        notifyCounterpart(app, side, userId, content);
-        eventPublisher.publishEvent(new DomainEvents.MessageCreated(saved.getId()));
-        return toDto(saved, names(Set.of(userId)));
+        List<Long> recipientIds = resolveCounterpartUserIds(app, side);
+        notifyCounterpart(app, side, userId, content, recipientIds);
+        eventPublisher.publishEvent(new DomainEvents.MessageCreated(saved.getId(), recipientIds));
+        return toDto(saved, usersMap(Set.of(userId)));
     }
 
-    private void notifyCounterpart(JobApplication app, String side, Long senderUserId, String content) {
-        String jobTitle = app.getJob() != null ? app.getJob().getTitle() : "";
-        String senderName = userRepository.findById(senderUserId).map(User::getFullName).orElse("");
-        if (COMPANY.equals(side)) {
-            candidateProfileRepository.findById(app.getCandidateProfileId()).ifPresent(cp -> {
-                String company = app.getJob() != null && app.getJob().getCompany() != null ? app.getJob().getCompany().getName() : "Nhà tuyển dụng";
-                notificationService.notifyOnce(cp.getUserId(), "NEW_MESSAGE",
-                        "Tin nhắn mới từ " + company,
-                        senderName + " (" + jobTitle + "): " + preview(content, 120),
-                        "APPLICATION", app.getId());
-            });
+    private List<Long> resolveCounterpartUserIds(JobApplication app, String senderSide) {
+        if (COMPANY.equals(senderSide)) {
+            return candidateProfileRepository.findById(app.getCandidateProfileId())
+                    .map(cp -> List.of(cp.getUserId()))
+                    .orElse(List.of());
         } else {
-            // job owner + every team member who already took part in the thread
             Set<Long> recipients = new LinkedHashSet<>();
             if (app.getJob() != null) {
-                recruiterProfileRepository.findById(app.getJob().getRecruiterId()).map(RecruiterProfile::getUserId).ifPresent(recipients::add);
+                recruiterProfileRepository.findById(app.getJob().getRecruiterId())
+                        .map(RecruiterProfile::getUserId)
+                        .ifPresent(recipients::add);
+                Long companyId = HiringTeamService.companyIdOf(app.getJob());
+                if (companyId != null) {
+                    recipients.addAll(hiringTeamService.managerUserIds(companyId));
+                }
             }
             messageRepository.findByApplicationIdOrderByCreatedAtAscIdAsc(app.getId()).stream()
                     .filter(m -> COMPANY.equals(m.getSenderSide()))
                     .map(ApplicationMessage::getSenderUserId)
                     .forEach(recipients::add);
-            for (Long recipient : recipients) {
+            return List.copyOf(recipients);
+        }
+    }
+
+    private void notifyCounterpart(JobApplication app, String side, Long senderUserId, String content, List<Long> recipientIds) {
+        String jobTitle = app.getJob() != null ? app.getJob().getTitle() : "";
+        String senderName = userRepository.findById(senderUserId).map(User::getFullName).orElse("");
+        if (COMPANY.equals(side)) {
+            String company = app.getJob() != null && app.getJob().getCompany() != null ? app.getJob().getCompany().getName() : "Nhà tuyển dụng";
+            for (Long recipient : recipientIds) {
+                notificationService.notifyOnce(recipient, "NEW_MESSAGE",
+                        "Tin nhắn mới từ " + company,
+                        senderName + " (" + jobTitle + "): " + preview(content, 120),
+                        "APPLICATION", app.getId());
+            }
+        } else {
+            for (Long recipient : recipientIds) {
                 notificationService.notifyOnce(recipient, "NEW_MESSAGE",
                         "Tin nhắn mới từ ứng viên " + senderName,
                         jobTitle + ": " + preview(content, 120),
@@ -227,37 +280,36 @@ public class MessageService {
     }
 
     private Context context(Long userId) {
+        User u = userRepository.findById(userId).orElse(null);
+        boolean isRecruiterUser = u != null && u.getRoles().stream().anyMatch(r -> "ROLE_RECRUITER".equals(r.getName()));
+        RecruiterProfile rp = hiringTeamService.findMember(userId).orElse(null);
+        if (isRecruiterUser && rp != null && rp.getCompanyId() != null) {
+            return new Context(COMPANY, applicationRepository.findAllForCompany(rp.getCompanyId()));
+        }
         CandidateProfile cp = candidateProfileRepository.findByUserId(userId).orElse(null);
         if (cp != null) {
             return new Context(CANDIDATE, applicationRepository.findByCandidateProfileId(cp.getId()));
         }
-        RecruiterProfile rp = hiringTeamService.findMember(userId).orElse(null);
-        if (HiringTeamService.isManager(rp)) {
+        if (rp != null && rp.getCompanyId() != null) {
             return new Context(COMPANY, applicationRepository.findAllForCompany(rp.getCompanyId()));
         }
         return null;
     }
 
-    private Map<Long, String> names(Set<Long> userIds) {
+    private Map<Long, User> usersMap(Set<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) return Map.of();
         return userRepository.findAllById(userIds).stream()
-                .collect(Collectors.toMap(User::getId, User::getFullName, (a, b) -> a));
+                .collect(Collectors.toMap(User::getId, u -> u, (a, b) -> a));
     }
 
-    private Map<Long, String> candidateNames(List<JobApplication> apps) {
-        Map<Long, Long> appToUser = apps.stream()
-                .map(a -> Map.entry(a.getId(), candidateProfileRepository.findById(a.getCandidateProfileId()).map(CandidateProfile::getUserId).orElse(-1L)))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        Map<Long, String> userNames = names(appToUser.values().stream().filter(Objects::nonNull).collect(Collectors.toSet()));
-        return appToUser.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> userNames.getOrDefault(e.getValue(), "")));
-    }
-
-    private MessageDtos.MessageDto toDto(ApplicationMessage m, Map<Long, String> names) {
+    private MessageDtos.MessageDto toDto(ApplicationMessage m, Map<Long, User> usersById) {
+        User sender = usersById.get(m.getSenderUserId());
         return MessageDtos.MessageDto.builder()
                 .id(m.getId())
                 .applicationId(m.getApplicationId())
                 .senderUserId(m.getSenderUserId())
-                .senderName(names.getOrDefault(m.getSenderUserId(), ""))
+                .senderName(sender != null ? sender.getFullName() : "")
+                .senderAvatar(sender != null ? sender.getAvatarUrl() : null)
                 .senderSide(m.getSenderSide())
                 .content(m.getContent())
                 .readAt(m.getReadAt())

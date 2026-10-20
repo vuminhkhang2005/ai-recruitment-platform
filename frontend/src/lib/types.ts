@@ -351,25 +351,45 @@ export interface MessageDto {
   applicationId: number;
   senderUserId: number;
   senderName: string;
+  senderAvatar?: string | null;
   senderSide: 'CANDIDATE' | 'COMPANY';
   content: string;
   createdAt: string;
   readAt: string | null;
+  optimistic?: boolean;
+}
+
+export interface ReadReceiptDto {
+  applicationId: number;
+  readerSide: 'CANDIDATE' | 'COMPANY';
+  readAt: string;
+  count: number;
 }
 
 export interface ThreadSummary {
   applicationId: number;
   jobId: number | null;
   jobTitle: string | null;
+  jobLocation?: string | null;
+  companyId?: number | null;
   companyName: string | null;
   companyLogo: string | null;
   candidateUserId: number | null;
   candidateName: string | null;
+  candidateAvatar?: string | null;
+  candidateHeadline?: string | null;
+  candidateEmail?: string | null;
+  candidatePhone?: string | null;
+  candidateCity?: string | null;
   currentStage: string;
+  appliedAt?: string | null;
   lastMessage: string | null;
   lastSenderSide: 'CANDIDATE' | 'COMPANY' | null;
+  lastSenderName?: string | null;
   lastMessageAt: string | null;
+  lastMessageReadAt?: string | null;
   unreadCount: number;
+  totalMessages?: number;
 }
 
 // ------------------------------------------------------------------ AI & Analytics Types
