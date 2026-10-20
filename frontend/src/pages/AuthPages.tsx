@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Briefcase, CheckCircle2, ChevronDown, Lock, ShieldCheck, UserPlus, X } from 'lucide-react';
+import { Briefcase, ChevronDown, Lock, UserPlus, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { authApi, companyApi, type OAuth2LoginPayload } from '../lib/api';
 import type { Company, UserSummary } from '../lib/types';
@@ -49,7 +49,6 @@ interface OAuth2Account {
   email: string;
   fullName: string;
   role: 'ROLE_CANDIDATE' | 'ROLE_RECRUITER';
-  title: string;
   avatarBg: string;
 }
 
@@ -58,21 +57,18 @@ const GOOGLE_ACCOUNTS: OAuth2Account[] = [
     email: 'vuminhkhang2005@gmail.com',
     fullName: 'Vũ Minh Khang',
     role: 'ROLE_CANDIDATE',
-    title: 'Tài khoản Google cá nhân',
     avatarBg: '0D9488',
   },
   {
     email: 'nguyenvanan.it@gmail.com',
     fullName: 'Nguyễn Văn An',
     role: 'ROLE_CANDIDATE',
-    title: 'Senior Backend Engineer',
     avatarBg: '059669',
   },
   {
     email: 'recruiter.fpt@fpt.com',
     fullName: 'Lê Thu Hà',
     role: 'ROLE_RECRUITER',
-    title: 'HR Manager · FPT Software',
     avatarBg: '0284C7',
   },
 ];
@@ -82,21 +78,18 @@ const LINKEDIN_ACCOUNTS: OAuth2Account[] = [
     email: 'khang.linkedin@talentbridge.vn',
     fullName: 'Vũ Minh Khang',
     role: 'ROLE_CANDIDATE',
-    title: 'Software Engineer · HCMUTE',
     avatarBg: '0A66C2',
   },
   {
     email: 'tranminhtuan.ai@gmail.com',
     fullName: 'Trần Minh Tuấn',
     role: 'ROLE_CANDIDATE',
-    title: 'AI/ML Engineer · LinkedIn Verified',
     avatarBg: '1D4ED8',
   },
   {
     email: 'recruiter.vng@vng.com.vn',
     fullName: 'Phạm Hoàng Nam',
     role: 'ROLE_RECRUITER',
-    title: 'Talent Acquisition Lead · VNG Corp',
     avatarBg: '0369A1',
   },
 ];
@@ -110,6 +103,15 @@ function initialsOf(name: string) {
     .join('');
 }
 
+function formatNameFromEmail(email: string) {
+  const local = email.split('@')[0] || 'User';
+  return local
+    .replace(/[0-9]+/g, '')
+    .replace(/[._-]+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase()) || local;
+}
+
 interface OAuth2FlowModalProps {
   provider: 'google' | 'linkedin' | null;
   onClose: () => void;
@@ -119,10 +121,11 @@ interface OAuth2FlowModalProps {
 }
 
 /**
- * Complete end-to-end OAuth 2.0 Authorization Code & OpenID Connect Flow:
- * Step 1 ('choose'): Choose a signed-in Google/LinkedIn account OR click "Use another account"
- * Step 2 ('signin'): Enter custom Gmail / LinkedIn email, password & profile name
- * Step 3 ('consent'): Official OAuth 2.0 Consent Screen (scopes: openid, email, profile) -> Issues single-use Authorization Code & exchanges for JWT + HttpOnly cookies
+ * Authentic Google / LinkedIn OAuth 2.0 Sign-In Dialog:
+ * - Clicking a signed-in account logs in immediately via OAuth2 Authorization Code exchange.
+ * - Clicking "Use another account":
+ *   - Google: Step 1 (Email only -> Next) -> Step 2 (Password only -> Sign in)
+ *   - LinkedIn: Email + Password -> Sign in
  */
 const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
   provider,
@@ -131,85 +134,40 @@ const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
   defaultRole = 'ROLE_CANDIDATE',
   isVi,
 }) => {
-  const [step, setStep] = useState<'choose' | 'signin' | 'consent'>('choose');
-  const [selectedAccount, setSelectedAccount] = useState<OAuth2Account | null>(null);
+  const [step, setStep] = useState<'choose' | 'email' | 'password'>('choose');
   const [customEmail, setCustomEmail] = useState('');
   const [customPassword, setCustomPassword] = useState('');
-  const [customName, setCustomName] = useState('');
-  const [customRole, setCustomRole] = useState<'ROLE_CANDIDATE' | 'ROLE_RECRUITER'>(defaultRole);
   const [submitting, setSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!provider) return;
     setStep('choose');
-    setSelectedAccount(null);
     setCustomEmail('');
     setCustomPassword('');
-    setCustomName('');
-    setCustomRole(defaultRole);
     setModalError(null);
-  }, [provider, defaultRole]);
+  }, [provider]);
 
   if (!provider) return null;
 
   const isGoogle = provider === 'google';
   const accounts = isGoogle ? GOOGLE_ACCOUNTS : LINKEDIN_ACCOUNTS;
 
-  const handlePickAccount = (acc: OAuth2Account) => {
-    setModalError(null);
-    setSelectedAccount(acc);
-    setStep('consent');
-  };
-
-  const handleCustomAccountContinue = (e: React.FormEvent) => {
-    e.preventDefault();
-    const email = customEmail.trim().toLowerCase();
-    if (!email || !email.includes('@')) {
-      setModalError(isVi ? 'Vui lòng nhập địa chỉ email hợp lệ.' : 'Please enter a valid email address.');
-      return;
-    }
-    if (customPassword.length < 4) {
-      setModalError(isVi ? 'Vui lòng nhập mật khẩu xác thực tài khoản.' : 'Please enter your account password.');
-      return;
-    }
-    const derivedName =
-      customName.trim() ||
-      email
-        .split('@')[0]
-        .replace(/[._-]+/g, ' ')
-        .replace(/\b\w/g, (c) => c.toUpperCase());
-
-    setModalError(null);
-    setSelectedAccount({
-      email,
-      fullName: derivedName,
-      role: customRole,
-      title: customRole === 'ROLE_RECRUITER' ? 'Nhà tuyển dụng' : 'Ứng viên',
-      avatarBg: isGoogle ? '0D9488' : '0A66C2',
-    });
-    setStep('consent');
-  };
-
-  const handleGrantConsent = async () => {
-    if (!selectedAccount) return;
+  const completeOAuth2SignIn = async (email: string, fullName: string, role: 'ROLE_CANDIDATE' | 'ROLE_RECRUITER', avatarBg: string) => {
     setModalError(null);
     setSubmitting(true);
     try {
-      // Step 1: Request single-use OAuth 2.0 Authorization Code (RFC 6749) from Authorization Endpoint
       const grant = await authApi.oauth2Authorize(provider, {
-        email: selectedAccount.email,
-        fullName: selectedAccount.fullName,
-        role: selectedAccount.role,
-        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedAccount.fullName)}&background=${selectedAccount.avatarBg}&color=fff`,
+        email,
+        fullName,
+        role,
+        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=${avatarBg}&color=fff`,
         redirectUri: `${window.location.origin}/login`,
       });
-
-      // Step 2: Exchange single-use Authorization Code at Token Endpoint for JWT Access/Refresh tokens + HttpOnly cookies
       await onExchangeAuthCode(provider, {
         authCode: grant.code,
         redirectUri: grant.redirectUri,
-        role: selectedAccount.role,
+        role,
       });
       onClose();
     } catch (err) {
@@ -219,6 +177,28 @@ const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
     }
   };
 
+  const handleEmailNext = (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = customEmail.trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      setModalError(isVi ? 'Nhập một địa chỉ email hoặc số điện thoại hợp lệ' : 'Enter a valid email or phone number');
+      return;
+    }
+    setModalError(null);
+    setStep('password');
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customPassword) {
+      setModalError(isVi ? 'Nhập mật khẩu' : 'Enter a password');
+      return;
+    }
+    const email = customEmail.trim().toLowerCase();
+    const fullName = formatNameFromEmail(email);
+    await completeOAuth2SignIn(email, fullName, defaultRole, isGoogle ? '0D9488' : '0A66C2');
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
@@ -226,17 +206,15 @@ const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden"
+        className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-[420px] border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Browser-Style OAuth2 Bar */}
-        <div className="px-5 py-3 bg-slate-100 dark:bg-slate-800/90 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+        {/* Top Browser Bar */}
+        <div className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800/90 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 font-medium truncate">
             <Lock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
             <span className="font-mono text-[11px] truncate">
-              {isGoogle
-                ? 'https://accounts.google.com/o/oauth2/v2/auth?client_id=talentbridge...'
-                : 'https://www.linkedin.com/oauth/v2/authorization?client_id=talentbridge...'}
+              {isGoogle ? 'accounts.google.com' : 'linkedin.com/oauth/v2'}
             </span>
           </div>
           <button
@@ -249,65 +227,52 @@ const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
           </button>
         </div>
 
-        <div className="p-6 sm:p-7">
-          {/* Provider Identity Header */}
-          <div className="text-center pb-5 border-b border-slate-200/70 dark:border-slate-800">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 mb-3 shadow-xs">
-              {isGoogle ? <GoogleIcon className="w-6 h-6" /> : <LinkedInIcon className="w-6 h-6" />}
+        <div className="p-7 sm:p-8">
+          {/* Header */}
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center mb-3">
+              {isGoogle ? <GoogleIcon className="w-7 h-7" /> : <LinkedInIcon className="w-8 h-8" />}
             </div>
 
             {step === 'choose' && (
               <>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                <h3 className="text-xl font-semibold text-slate-900 dark:text-white">
                   {isVi ? 'Chọn một tài khoản' : 'Choose an account'}
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                   {isVi ? 'để tiếp tục tới ' : 'to continue to '}
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">TalentBridge</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">TalentBridge</span>
                 </p>
               </>
             )}
 
-            {step === 'signin' && (
+            {step === 'email' && (
               <>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                  {isGoogle
-                    ? isVi
-                      ? 'Đăng nhập bằng Google'
-                      : 'Sign in with Google'
-                    : isVi
-                      ? 'Đăng nhập vào LinkedIn'
-                      : 'Sign in to LinkedIn'}
+                <h3 className="text-xl font-semibold text-slate-900 dark:text-white">
+                  {isVi ? 'Đăng nhập' : 'Sign in'}
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  {isVi ? 'Sử dụng tài khoản ' : 'Use your '}
-                  {isGoogle ? 'Google (Gmail)' : 'LinkedIn'}
-                  {isVi ? ' của bạn để kết nối với TalentBridge' : ' account to connect with TalentBridge'}
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  {isVi ? 'Tiếp tục tới ' : 'Continue to '}
+                  <span className="font-semibold text-slate-900 dark:text-white">TalentBridge</span>
                 </p>
               </>
             )}
 
-            {step === 'consent' && selectedAccount && (
+            {step === 'password' && (
               <>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-snug">
-                  <span className="text-emerald-600 dark:text-emerald-400">TalentBridge</span>
-                  {isVi
-                    ? ` muốn truy cập vào Tài khoản ${isGoogle ? 'Google' : 'LinkedIn'} của bạn`
-                    : ` wants to access your ${isGoogle ? 'Google' : 'LinkedIn'} Account`}
+                <h3 className="text-xl font-semibold text-slate-900 dark:text-white">
+                  {isVi ? 'Chào mừng' : 'Welcome'}
                 </h3>
                 <button
                   type="button"
-                  onClick={() => setStep('choose')}
-                  className="mt-2.5 inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 transition cursor-pointer"
+                  onClick={() => setStep('email')}
+                  className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-300 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
                 >
-                  <span
-                    style={{ backgroundColor: `#${selectedAccount.avatarBg}` }}
-                    className="w-5 h-5 rounded-full text-[10px] font-black text-white flex items-center justify-center"
-                  >
-                    {initialsOf(selectedAccount.fullName)}
+                  <span className="w-4 h-4 rounded-full bg-teal-600 text-[9px] font-bold text-white flex items-center justify-center">
+                    {customEmail.trim()[0]?.toUpperCase() || 'U'}
                   </span>
-                  <span>{selectedAccount.email}</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  <span>{customEmail.trim().toLowerCase()}</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
                 </button>
               </>
             )}
@@ -319,161 +284,85 @@ const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
             </div>
           )}
 
-          {/* STEP 1: Account Chooser */}
+          {/* STEP 1: Account Chooser (1-click sign in) */}
           {step === 'choose' && (
-            <div className="mt-4">
-              <div className="divide-y divide-slate-200/80 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+            <div className="mt-6">
+              <div className="divide-y divide-slate-200/80 dark:divide-slate-800 border-y border-slate-200 dark:border-slate-800">
                 {accounts.map((acc, idx) => (
                   <button
                     key={acc.email}
                     type="button"
                     disabled={submitting}
-                    onClick={() => handlePickAccount(acc)}
+                    onClick={() => completeOAuth2SignIn(acc.email, acc.fullName, acc.role, acc.avatarBg)}
                     data-testid={`oauth2-account-${idx}`}
-                    className="w-full px-4 py-3.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/80 transition text-left cursor-pointer"
+                    className="w-full py-3.5 px-2 flex items-center gap-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition text-left cursor-pointer disabled:opacity-50"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span
-                        style={{ backgroundColor: `#${acc.avatarBg}` }}
-                        className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-white text-xs font-black shadow-xs"
-                      >
-                        {initialsOf(acc.fullName)}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="text-sm font-bold text-slate-900 dark:text-white truncate">{acc.fullName}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{acc.email}</div>
-                        <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium truncate">
-                          {acc.title}
-                        </div>
-                      </div>
+                    <span
+                      style={{ backgroundColor: `#${acc.avatarBg}` }}
+                      className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-white text-xs font-bold"
+                    >
+                      {initialsOf(acc.fullName)}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-slate-900 dark:text-white truncate">{acc.fullName}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{acc.email}</div>
                     </div>
                   </button>
                 ))}
 
                 <button
                   type="button"
+                  disabled={submitting}
                   onClick={() => {
                     setModalError(null);
-                    setStep('signin');
+                    setStep('email');
                   }}
                   data-testid="oauth2-use-another-account"
-                  className="w-full px-4 py-3.5 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition text-left cursor-pointer text-slate-700 dark:text-slate-200 font-semibold text-xs"
+                  className="w-full py-3.5 px-2 flex items-center gap-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition text-left cursor-pointer text-slate-700 dark:text-slate-200 font-medium text-sm"
                 >
-                  <span className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300">
-                    <UserPlus className="w-4 h-4" />
+                  <span className="w-9 h-9 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300">
+                    <UserPlus className="w-5 h-5" />
                   </span>
-                  <span>
-                    {isVi ? 'Sử dụng một tài khoản khác' : 'Use another account'}
-                  </span>
+                  <span>{isVi ? 'Sử dụng một tài khoản khác' : 'Use another account'}</span>
                 </button>
               </div>
 
-              <p className="mt-4 text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
+              <p className="mt-5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 {isVi
-                  ? `Để tiếp tục, ${isGoogle ? 'Google' : 'LinkedIn'} sẽ chia sẻ tên, địa chỉ email và ảnh hồ sơ của bạn với TalentBridge theo chuẩn OAuth 2.0 & OpenID Connect.`
-                  : `To continue, ${isGoogle ? 'Google' : 'LinkedIn'} will share your name, email address, and profile picture with TalentBridge via OAuth 2.0.`}
+                  ? `Để tiếp tục, ${isGoogle ? 'Google' : 'LinkedIn'} sẽ chia sẻ tên, địa chỉ email và ảnh hồ sơ của bạn với TalentBridge.`
+                  : `To continue, ${isGoogle ? 'Google' : 'LinkedIn'} will share your name, email address, and profile picture with TalentBridge.`}
               </p>
             </div>
           )}
 
-          {/* STEP 2: Sign in with another Gmail / LinkedIn account */}
-          {step === 'signin' && (
-            <form onSubmit={handleCustomAccountContinue} className="mt-4 space-y-3.5">
+          {/* STEP 2A: Email only (Exact Google Sign-In Step 1) */}
+          {step === 'email' && (
+            <form onSubmit={handleEmailNext} className="mt-6 space-y-6">
               <div>
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  {isGoogle
-                    ? isVi
-                      ? 'Email hoặc số điện thoại Google'
-                      : 'Google Email or phone'
-                    : isVi
-                      ? 'Email LinkedIn'
-                      : 'LinkedIn Email'}
-                </label>
                 <input
                   type="email"
                   required
                   autoFocus
-                  placeholder={isGoogle ? 'tenban@gmail.com' : 'tenban@company.com'}
+                  placeholder={isVi ? 'Email hoặc số điện thoại' : 'Email or phone'}
                   value={customEmail}
                   onChange={(e) => setCustomEmail(e.target.value)}
                   data-testid="oauth2-custom-email"
-                  className={`${inputCls} mt-1`}
+                  className={`${inputCls} py-3 text-sm`}
                 />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  {isVi ? 'Họ và tên hiển thị' : 'Full Name'}
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Vũ Minh Khang"
-                  value={customName}
-                  onChange={(e) => setCustomName(e.target.value)}
-                  data-testid="oauth2-custom-name"
-                  className={`${inputCls} mt-1`}
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  {isVi ? 'Mật khẩu tài khoản ' : 'Account Password '}
-                  {isGoogle ? 'Google' : 'LinkedIn'}
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={customPassword}
-                  onChange={(e) => setCustomPassword(e.target.value)}
-                  data-testid="oauth2-custom-password"
-                  className={`${inputCls} mt-1`}
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  {isVi ? 'Vai trò trên TalentBridge' : 'Role on TalentBridge'}
-                </label>
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  <button
-                    type="button"
-                    onClick={() => setCustomRole('ROLE_CANDIDATE')}
-                    className={`py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
-                      customRole === 'ROLE_CANDIDATE'
-                        ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    {isVi ? 'Ứng viên tìm việc' : 'Job Seeker'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCustomRole('ROLE_RECRUITER')}
-                    className={`py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
-                      customRole === 'ROLE_RECRUITER'
-                        ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    {isVi ? 'Nhà tuyển dụng' : 'Employer'}
-                  </button>
-                </div>
               </div>
 
               <div className="flex items-center justify-between pt-2">
                 <button
                   type="button"
                   onClick={() => setStep('choose')}
-                  className="text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
+                  className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                 >
-                  {isVi ? '← Quay lại' : '← Back'}
+                  {isVi ? 'Chọn tài khoản' : 'Choose account'}
                 </button>
                 <button
                   type="submit"
                   data-testid="oauth2-custom-next"
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-soft transition cursor-pointer"
+                  className="px-6 py-2.5 rounded-full bg-[#0b57d0] hover:bg-[#0842a0] text-white text-sm font-semibold transition cursor-pointer"
                 >
                   {isVi ? 'Tiếp theo' : 'Next'}
                 </button>
@@ -481,74 +370,40 @@ const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
             </form>
           )}
 
-          {/* STEP 3: OAuth 2.0 Scope Consent Screen */}
-          {step === 'consent' && selectedAccount && (
-            <div className="mt-4 space-y-4">
-              <div className="space-y-2.5">
-                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  {isVi
-                    ? 'Khi tiếp tục, bạn cho phép TalentBridge truy cập:'
-                    : 'By continuing, you allow TalentBridge to access:'}
-                </p>
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-800 space-y-2.5 text-xs text-slate-700 dark:text-slate-300">
-                  <div className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white">
-                        {isVi ? 'Địa chỉ email chính của bạn' : 'Your primary email address'}
-                      </div>
-                      <div className="text-[11px] text-slate-500">{selectedAccount.email} (Scope: openid, email)</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white">
-                        {isVi ? 'Thông tin hồ sơ cá nhân công khai' : 'Your public profile info'}
-                      </div>
-                      <div className="text-[11px] text-slate-500">
-                        {selectedAccount.fullName} · {selectedAccount.title} (Scope: profile)
-                      </div>
-                    </div>
-                  </div>
-                </div>
+          {/* STEP 2B: Password only (Exact Google Sign-In Step 2) */}
+          {step === 'password' && (
+            <form onSubmit={handlePasswordSubmit} className="mt-6 space-y-6">
+              <div>
+                <input
+                  type="password"
+                  required
+                  autoFocus
+                  placeholder={isVi ? 'Nhập mật khẩu của bạn' : 'Enter your password'}
+                  value={customPassword}
+                  onChange={(e) => setCustomPassword(e.target.value)}
+                  data-testid="oauth2-custom-password"
+                  className={`${inputCls} py-3 text-sm`}
+                />
               </div>
 
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-800/50 text-[11px] text-emerald-800 dark:text-emerald-300">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>
-                  {isVi
-                    ? 'Xác thực theo chuẩn OAuth 2.0 Authorization Code & HttpOnly Cookie.'
-                    : 'Secured by OAuth 2.0 Authorization Code & HttpOnly Cookie.'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-2">
+              <div className="flex items-center justify-between pt-2">
                 <button
                   type="button"
-                  disabled={submitting}
-                  onClick={onClose}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  onClick={() => setStep('email')}
+                  className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                 >
-                  {isVi ? 'Hủy' : 'Cancel'}
+                  {isVi ? 'Quay lại' : 'Back'}
                 </button>
                 <button
-                  type="button"
+                  type="submit"
                   disabled={submitting}
-                  onClick={handleGrantConsent}
                   data-testid="oauth2-consent-allow"
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-soft transition cursor-pointer disabled:opacity-60"
+                  className="px-6 py-2.5 rounded-full bg-[#0b57d0] hover:bg-[#0842a0] text-white text-sm font-semibold transition cursor-pointer disabled:opacity-60"
                 >
-                  {submitting
-                    ? isVi
-                      ? 'Đang cấp mã uỷ quyền…'
-                      : 'Authorizing…'
-                    : isVi
-                      ? 'Cho phép & Tiếp tục'
-                      : 'Allow & Continue'}
+                  {submitting ? (isVi ? 'Đang đăng nhập…' : 'Signing in…') : (isVi ? 'Tiếp theo' : 'Next')}
                 </button>
               </div>
-            </div>
+            </form>
           )}
         </div>
       </div>
