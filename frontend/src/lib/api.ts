@@ -200,6 +200,21 @@ export const authApi = {
       googleConfigured: boolean;
       linkedinConfigured: boolean;
     }>('/auth/oauth2/config'),
+  oauth2Authorize: (
+    provider: 'google' | 'linkedin',
+    payload: { email: string; fullName: string; avatarUrl?: string; role?: 'ROLE_CANDIDATE' | 'ROLE_RECRUITER'; redirectUri?: string }
+  ) =>
+    request<{ code: string; provider: string; state: string; redirectUri: string }>(`/auth/oauth2/${provider}/authorize`, {
+      method: 'POST',
+      body: {
+        provider: provider.toUpperCase(),
+        email: payload.email,
+        fullName: payload.fullName,
+        avatarUrl: payload.avatarUrl,
+        role: payload.role,
+        redirectUri: payload.redirectUri ?? `${window.location.origin}/login`,
+      },
+    }),
   oauth2: (provider: 'google' | 'linkedin', payload?: OAuth2LoginPayload) =>
     request<AuthResponse>(`/auth/oauth2/${provider}`, {
       method: 'POST',

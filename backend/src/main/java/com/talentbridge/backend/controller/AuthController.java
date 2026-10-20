@@ -191,6 +191,20 @@ public class AuthController {
                 .build());
     }
 
+    @PostMapping("/oauth2/{provider}/authorize")
+    @Operation(summary = "Cấp mã uỷ quyền OAuth2 (Authorization Code Flow)", description = "Sinh mã Authorization Code dùng 1 lần (TTL 5 phút) sau khi người dùng xác nhận uỷ quyền trên màn hình OAuth2 Consent Screen.")
+    public ResponseEntity<ApiResponse<Map<String, String>>> authorizeOAuth2(
+            @PathVariable String provider,
+            @RequestBody OAuth2LoginRequestDto request) {
+        request.setProvider(provider.toUpperCase());
+        Map<String, String> grant = authService.issueOAuth2AuthorizationCode(request);
+        return ResponseEntity.ok(ApiResponse.<Map<String, String>>builder()
+                .success(true)
+                .message("Đã cấp mã uỷ quyền OAuth2 Authorization Code")
+                .data(grant)
+                .build());
+    }
+
     @PostMapping("/oauth2/{provider}")
     @Operation(summary = "Đăng nhập OAuth2 (Google / LinkedIn)", description = "Xác thực qua nhà cung cấp danh tính Google hoặc LinkedIn, tự động liên kết hoặc tạo tài khoản và thiết lập HttpOnly Cookies.")
     @ApiResponses({

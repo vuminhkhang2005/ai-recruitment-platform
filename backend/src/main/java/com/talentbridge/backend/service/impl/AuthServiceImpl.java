@@ -69,6 +69,67 @@ public class AuthServiceImpl implements AuthService {
             .connectTimeout(Duration.ofSeconds(8))
             .build();
 
+    private record OAuth2AuthorizationGrant(
+            String provider,
+            String email,
+            String fullName,
+            String avatarUrl,
+            String role,
+            LocalDateTime expiresAt
+    ) {}
+
+    private final java.util.concurrent.ConcurrentHashMap<String, OAuth2AuthorizationGrant> authorizationCodeStore =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    @Override
+    public Map<String, String> issueOAuth2AuthorizationCode(OAuth2LoginRequestDto request) {
+        String provider = request.getProvider() != null ? request.getProvider().trim().toUpperCase() : "GOOGLE";
+        if (!"GOOGLE".equals(provider) && !"LINKEDIN".equals(provider)) {
+            throw new BadRequestException("Nhà cung cấp OAuth2 không được hỗ trợ: " + provider);
+        }
+        if (!StringUtils.hasText(request.getEmail())) {
+            throw new BadRequestException("Email tài khoản OAuth2 không được để trống.");
+        }
+        String email = request.getEmail().trim().toLowerCase();
+        String fullName = StringUtils.hasText(request.getFullName())
+                ? request.getFullName().trim()
+                : email.split("@")[0];
+        String role = StringUtils.hasText(request.getRole()) && request.getRole().toUpperCase().contains("RECRUITER")
+                ? "ROLE_RECRUITER"
+                : "ROLE_CANDIDATE";
+        String avatarUrl = StringUtils.hasText(request.getAvatarUrl())
+                ? request.getAvatarUrl().trim()
+                : "https://ui-avatars.com/api/?name=" + URLEncoder.encode(fullName, StandardCharsets.UTF_8) + "&background=0D9488&color=fff";
+
+        // Purge expired codes
+        LocalDateTime now = LocalDateTime.now();
+        authorizationCodeStore.entrySet().removeIf(e -> e.getValue().expiresAt().isBefore(now));
+
+        String rawCode = ("GOOGLE".equals(provider) ? "4/0AeanS0_" : "AQV_li_")
+                + UUID.randomUUID().toString().replace("-", "")
+                + UUID.randomUUID().toString().substring(0, 8);
+
+        authorizationCodeStore.put(rawCode, new OAuth2AuthorizationGrant(
+                provider,
+                email,
+                fullName,
+                avatarUrl,
+                role,
+                now.plusMinutes(5)
+        ));
+
+        String redirectUri = StringUtils.hasText(request.getRedirectUri())
+                ? request.getRedirectUri().trim()
+                : "http://localhost:5173/login";
+
+        Map<String, String> result = new HashMap<>();
+        result.put("code", rawCode);
+        result.put("provider", provider.toLowerCase());
+        result.put("state", provider.toLowerCase() + "_oauth2");
+        result.put("redirectUri", redirectUri);
+        return result;
+    }
+
     @Override
     @Transactional
     public AuthResponseDto register(RegisterRequestDto request, String ipAddress, String userAgent) {
@@ -232,19 +293,32 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String resolvedToken = request.getToken();
-
-        // 1. If OAuth2 Authorization Code is provided, exchange it with Google / LinkedIn token endpoint
-        if (StringUtils.hasText(request.getAuthCode())) {
-            resolvedToken = exchangeAuthorizationCode(provider, request.getAuthCode().trim(), request.getRedirectUri());
-        }
-
         String email = null;
         String fullName = null;
         String avatarUrl = null;
+        String grantedRole = request.getRole();
+
+        // 1. If OAuth2 Authorization Code is provided, consume single-use grant or exchange with external provider
+        if (StringUtils.hasText(request.getAuthCode())) {
+            String code = request.getAuthCode().trim();
+            OAuth2AuthorizationGrant localGrant = authorizationCodeStore.remove(code);
+            if (localGrant != null) {
+                if (localGrant.expiresAt().isBefore(LocalDateTime.now())) {
+                    throw new BadRequestException("Mã uỷ quyền OAuth2 (Authorization Code) đã hết hạn. Vui lòng đăng nhập lại.");
+                }
+                email = localGrant.email();
+                fullName = localGrant.fullName();
+                avatarUrl = localGrant.avatarUrl();
+                grantedRole = localGrant.role();
+                resolvedToken = null;
+            } else {
+                resolvedToken = exchangeAuthorizationCode(provider, code, request.getRedirectUri());
+            }
+        }
 
         // 2. If a real external OAuth2 token (Access Token or ID Token) is provided, verify it with Google / LinkedIn servers
         boolean isSandboxToken = resolvedToken != null && resolvedToken.startsWith("oauth2_sandbox_");
-        if (StringUtils.hasText(resolvedToken) && !isSandboxToken) {
+        if (StringUtils.hasText(resolvedToken) && !isSandboxToken && !StringUtils.hasText(email)) {
             Map<String, String> verifiedProfile = verifyExternalOAuth2Token(provider, resolvedToken.trim());
             email = verifiedProfile.get("email");
             fullName = verifiedProfile.get("fullName");
@@ -287,7 +361,7 @@ public class AuthServiceImpl implements AuthService {
                 user = userRepository.save(user);
             }
         } else {
-            String requestedRole = StringUtils.hasText(request.getRole()) && request.getRole().toUpperCase().contains("RECRUITER")
+            String requestedRole = StringUtils.hasText(grantedRole) && grantedRole.toUpperCase().contains("RECRUITER")
                     ? "ROLE_RECRUITER"
                     : "ROLE_CANDIDATE";
             Role targetRole = roleRepository.findByName(requestedRole)

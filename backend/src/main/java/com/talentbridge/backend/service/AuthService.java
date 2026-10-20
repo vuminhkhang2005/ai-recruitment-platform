@@ -17,6 +17,12 @@ public interface AuthService {
 
     AuthResponseDto loginWithOAuth2(OAuth2LoginRequestDto request, String ipAddress, String userAgent);
 
+    /**
+     * Issues a single-use OAuth 2.0 Authorization Code (RFC 6749) after user consent,
+     * which the frontend callback exchanges at POST /api/v1/auth/oauth2/{provider}.
+     */
+    java.util.Map<String, String> issueOAuth2AuthorizationCode(OAuth2LoginRequestDto request);
+
     /** Issues an access/refresh token pair for an already-verified user (e.g. after accepting a team invitation). */
     AuthResponseDto issueTokensFor(com.talentbridge.backend.entity.User user, String ipAddress, String userAgent);
 

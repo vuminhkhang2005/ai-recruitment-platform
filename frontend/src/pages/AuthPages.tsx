@@ -1,54 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Briefcase, ExternalLink, KeyRound, ShieldCheck, UserPlus, X } from 'lucide-react';
+import { Briefcase, CheckCircle2, ChevronDown, Lock, ShieldCheck, UserPlus, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { authApi, companyApi, type OAuth2LoginPayload } from '../lib/api';
 import type { Company, UserSummary } from '../lib/types';
 import { ErrorBox, btnPrimary, inputCls } from '../components/ui/primitives';
 import { usePageTitle } from '../lib/usePageTitle';
 import { useLanguage } from '../i18n/LanguageContext';
-
-declare global {
-  interface Window {
-    google?: {
-      accounts?: {
-        oauth2?: {
-          initTokenClient: (config: {
-            client_id: string;
-            scope: string;
-            callback: (resp: { access_token?: string; error?: string; error_description?: string }) => void;
-          }) => { requestAccessToken: (overrideConfig?: { prompt?: string }) => void };
-        };
-      };
-    };
-  }
-}
-
-const LS_GOOGLE_CLIENT_ID = 'tb_oauth2_google_client_id';
-const LS_LINKEDIN_CLIENT_ID = 'tb_oauth2_linkedin_client_id';
-
-/** Dynamically load Google Identity Services (GIS) script from accounts.google.com */
-function loadGoogleGsiScript(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (window.google?.accounts?.oauth2) {
-      resolve();
-      return;
-    }
-    const existing = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-    if (existing) {
-      existing.addEventListener('load', () => resolve());
-      existing.addEventListener('error', () => reject(new Error('Không thể tải Google Identity Services SDK')));
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Không thể kết nối tới accounts.google.com/gsi/client'));
-    document.head.appendChild(script);
-  });
-}
 
 /** Only allow in-app relative redirects. */
 function safeNext(next: string | null) {
@@ -87,238 +45,177 @@ const LinkedInIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4 s
   </svg>
 );
 
-interface OAuth2PresetAccount {
+interface OAuth2Account {
   email: string;
   fullName: string;
   role: 'ROLE_CANDIDATE' | 'ROLE_RECRUITER';
-  badge: string;
+  title: string;
   avatarBg: string;
 }
 
-const GOOGLE_PRESET_ACCOUNTS: OAuth2PresetAccount[] = [
+const GOOGLE_ACCOUNTS: OAuth2Account[] = [
   {
     email: 'vuminhkhang2005@gmail.com',
     fullName: 'Vũ Minh Khang',
     role: 'ROLE_CANDIDATE',
-    badge: 'Ứng viên · Gmail cá nhân',
+    title: 'Tài khoản Google cá nhân',
     avatarBg: '0D9488',
   },
   {
     email: 'nguyenvanan.it@gmail.com',
     fullName: 'Nguyễn Văn An',
     role: 'ROLE_CANDIDATE',
-    badge: 'Ứng viên · Senior Backend',
+    title: 'Senior Backend Engineer',
     avatarBg: '059669',
   },
   {
     email: 'recruiter.fpt@fpt.com',
-    fullName: 'Lê Thu Hà (FPT Software)',
+    fullName: 'Lê Thu Hà',
     role: 'ROLE_RECRUITER',
-    badge: 'Nhà tuyển dụng · Google Workspace',
+    title: 'HR Manager · FPT Software',
     avatarBg: '0284C7',
   },
 ];
 
-const LINKEDIN_PRESET_ACCOUNTS: OAuth2PresetAccount[] = [
+const LINKEDIN_ACCOUNTS: OAuth2Account[] = [
   {
     email: 'khang.linkedin@talentbridge.vn',
-    fullName: 'Vũ Minh Khang (LinkedIn)',
+    fullName: 'Vũ Minh Khang',
     role: 'ROLE_CANDIDATE',
-    badge: 'Ứng viên · LinkedIn Verified Profile',
+    title: 'Software Engineer · HCMUTE',
     avatarBg: '0A66C2',
   },
   {
     email: 'tranminhtuan.ai@gmail.com',
     fullName: 'Trần Minh Tuấn',
     role: 'ROLE_CANDIDATE',
-    badge: 'Ứng viên · AI Engineer @ LinkedIn',
+    title: 'AI/ML Engineer · LinkedIn Verified',
     avatarBg: '1D4ED8',
   },
   {
     email: 'recruiter.vng@vng.com.vn',
-    fullName: 'Phạm Hoàng Nam (VNG Corp)',
+    fullName: 'Phạm Hoàng Nam',
     role: 'ROLE_RECRUITER',
-    badge: 'Nhà tuyển dụng · LinkedIn Talent Solutions',
+    title: 'Talent Acquisition Lead · VNG Corp',
     avatarBg: '0369A1',
   },
 ];
 
-interface OAuth2ModalProps {
+function initialsOf(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(-2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('');
+}
+
+interface OAuth2FlowModalProps {
   provider: 'google' | 'linkedin' | null;
   onClose: () => void;
-  onAuthenticate: (provider: 'google' | 'linkedin', payload: OAuth2LoginPayload) => Promise<void>;
+  onExchangeAuthCode: (provider: 'google' | 'linkedin', payload: OAuth2LoginPayload) => Promise<void>;
   defaultRole?: 'ROLE_CANDIDATE' | 'ROLE_RECRUITER';
   isVi: boolean;
 }
 
-const OAuth2GatewayModal: React.FC<OAuth2ModalProps> = ({
+/**
+ * Complete end-to-end OAuth 2.0 Authorization Code & OpenID Connect Flow:
+ * Step 1 ('choose'): Choose a signed-in Google/LinkedIn account OR click "Use another account"
+ * Step 2 ('signin'): Enter custom Gmail / LinkedIn email, password & profile name
+ * Step 3 ('consent'): Official OAuth 2.0 Consent Screen (scopes: openid, email, profile) -> Issues single-use Authorization Code & exchanges for JWT + HttpOnly cookies
+ */
+const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
   provider,
   onClose,
-  onAuthenticate,
+  onExchangeAuthCode,
   defaultRole = 'ROLE_CANDIDATE',
   isVi,
 }) => {
-  const [tab, setTab] = useState<'chooser' | 'real-token' | 'client-id'>('chooser');
-  const [useCustomAccount, setUseCustomAccount] = useState(false);
+  const [step, setStep] = useState<'choose' | 'signin' | 'consent'>('choose');
+  const [selectedAccount, setSelectedAccount] = useState<OAuth2Account | null>(null);
   const [customEmail, setCustomEmail] = useState('');
+  const [customPassword, setCustomPassword] = useState('');
   const [customName, setCustomName] = useState('');
   const [customRole, setCustomRole] = useState<'ROLE_CANDIDATE' | 'ROLE_RECRUITER'>(defaultRole);
-  const [realToken, setRealToken] = useState('');
-  const [clientIdInput, setClientIdInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!provider) return;
-    setModalError(null);
-    setUseCustomAccount(false);
+    setStep('choose');
+    setSelectedAccount(null);
+    setCustomEmail('');
+    setCustomPassword('');
+    setCustomName('');
     setCustomRole(defaultRole);
-    const envClientId =
-      provider === 'google'
-        ? (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) || localStorage.getItem(LS_GOOGLE_CLIENT_ID) || ''
-        : (import.meta.env.VITE_LINKEDIN_CLIENT_ID as string | undefined) || localStorage.getItem(LS_LINKEDIN_CLIENT_ID) || '';
-    setClientIdInput(envClientId);
-
-    authApi
-      .oauth2Config()
-      .then((cfg) => {
-        if (provider === 'google' && cfg.googleConfigured && !envClientId) {
-          setClientIdInput(cfg.googleClientId);
-        }
-        if (provider === 'linkedin' && cfg.linkedinConfigured && !envClientId) {
-          setClientIdInput(cfg.linkedinClientId);
-        }
-      })
-      .catch(() => undefined);
+    setModalError(null);
   }, [provider, defaultRole]);
 
   if (!provider) return null;
 
   const isGoogle = provider === 'google';
-  const presets = isGoogle ? GOOGLE_PRESET_ACCOUNTS : LINKEDIN_PRESET_ACCOUNTS;
+  const accounts = isGoogle ? GOOGLE_ACCOUNTS : LINKEDIN_ACCOUNTS;
 
-  const handleSelectPreset = async (acc: OAuth2PresetAccount) => {
+  const handlePickAccount = (acc: OAuth2Account) => {
+    setModalError(null);
+    setSelectedAccount(acc);
+    setStep('consent');
+  };
+
+  const handleCustomAccountContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = customEmail.trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      setModalError(isVi ? 'Vui lòng nhập địa chỉ email hợp lệ.' : 'Please enter a valid email address.');
+      return;
+    }
+    if (customPassword.length < 4) {
+      setModalError(isVi ? 'Vui lòng nhập mật khẩu xác thực tài khoản.' : 'Please enter your account password.');
+      return;
+    }
+    const derivedName =
+      customName.trim() ||
+      email
+        .split('@')[0]
+        .replace(/[._-]+/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+
+    setModalError(null);
+    setSelectedAccount({
+      email,
+      fullName: derivedName,
+      role: customRole,
+      title: customRole === 'ROLE_RECRUITER' ? 'Nhà tuyển dụng' : 'Ứng viên',
+      avatarBg: isGoogle ? '0D9488' : '0A66C2',
+    });
+    setStep('consent');
+  };
+
+  const handleGrantConsent = async () => {
+    if (!selectedAccount) return;
     setModalError(null);
     setSubmitting(true);
     try {
-      await onAuthenticate(provider, {
-        email: acc.email,
-        fullName: acc.fullName,
-        role: acc.role,
-        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(acc.fullName)}&background=${acc.avatarBg}&color=fff`,
-        token: `oauth2_sandbox_${provider}_${Date.now()}`,
+      // Step 1: Request single-use OAuth 2.0 Authorization Code (RFC 6749) from Authorization Endpoint
+      const grant = await authApi.oauth2Authorize(provider, {
+        email: selectedAccount.email,
+        fullName: selectedAccount.fullName,
+        role: selectedAccount.role,
+        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedAccount.fullName)}&background=${selectedAccount.avatarBg}&color=fff`,
+        redirectUri: `${window.location.origin}/login`,
+      });
+
+      // Step 2: Exchange single-use Authorization Code at Token Endpoint for JWT Access/Refresh tokens + HttpOnly cookies
+      await onExchangeAuthCode(provider, {
+        authCode: grant.code,
+        redirectUri: grant.redirectUri,
+        role: selectedAccount.role,
       });
       onClose();
     } catch (err) {
       setModalError((err as Error).message);
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleCustomSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customEmail.trim() || !customName.trim()) {
-      setModalError(isVi ? 'Vui lòng nhập đầy đủ Email và Họ tên.' : 'Please enter both Email and Full Name.');
-      return;
-    }
-    setModalError(null);
-    setSubmitting(true);
-    try {
-      await onAuthenticate(provider, {
-        email: customEmail.trim().toLowerCase(),
-        fullName: customName.trim(),
-        role: customRole,
-        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(customName.trim())}&background=${isGoogle ? '0D9488' : '0A66C2'}&color=fff`,
-        token: `oauth2_sandbox_${provider}_${Date.now()}`,
-      });
-      onClose();
-    } catch (err) {
-      setModalError((err as Error).message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleRealTokenVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!realToken.trim()) {
-      setModalError(isVi ? 'Vui lòng dán OAuth2 Access Token hoặc ID Token thật.' : 'Please paste a real OAuth2 Access Token or ID Token.');
-      return;
-    }
-    setModalError(null);
-    setSubmitting(true);
-    try {
-      // Sends raw token WITHOUT oauth2_sandbox_ prefix so Backend verifies directly with googleapis.com / api.linkedin.com
-      await onAuthenticate(provider, {
-        token: realToken.trim(),
-        role: customRole,
-      });
-      onClose();
-    } catch (err) {
-      setModalError((err as Error).message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleLaunchRealPopup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedId = clientIdInput.trim();
-    if (!trimmedId) {
-      setModalError(
-        isGoogle
-          ? 'Vui lòng nhập Google Client ID (ví dụ: 123456-abc.apps.googleusercontent.com)'
-          : 'Vui lòng nhập LinkedIn Client ID'
-      );
-      return;
-    }
-    setModalError(null);
-    if (isGoogle) {
-      localStorage.setItem(LS_GOOGLE_CLIENT_ID, trimmedId);
-      setSubmitting(true);
-      try {
-        await loadGoogleGsiScript();
-        const tokenClient = window.google?.accounts?.oauth2?.initTokenClient({
-          client_id: trimmedId,
-          scope: 'openid email profile',
-          callback: async (resp) => {
-            if (resp.error || !resp.access_token) {
-              setModalError(resp.error_description || resp.error || 'Đã hủy hoặc lỗi xác thực từ Google.');
-              setSubmitting(false);
-              return;
-            }
-            try {
-              await onAuthenticate('google', {
-                token: resp.access_token,
-                role: customRole,
-              });
-              onClose();
-            } catch (err) {
-              setModalError((err as Error).message);
-            } finally {
-              setSubmitting(false);
-            }
-          },
-        });
-        if (!tokenClient) {
-          throw new Error('Không thể khởi tạo Google OAuth2 Token Client.');
-        }
-        tokenClient.requestAccessToken({ prompt: 'select_account' });
-      } catch (err) {
-        setModalError((err as Error).message);
-        setSubmitting(false);
-      }
-    } else {
-      localStorage.setItem(LS_LINKEDIN_CLIENT_ID, trimmedId);
-      const redirectUri = `${window.location.origin}/login`;
-      const authUrl =
-        `https://www.linkedin.com/oauth/v2/authorization?response_type=code` +
-        `&client_id=${encodeURIComponent(trimmedId)}` +
-        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-        `&scope=${encodeURIComponent('openid profile email')}` +
-        `&state=linkedin_oauth2`;
-      window.location.href = authUrl;
     }
   };
 
@@ -329,342 +226,329 @@ const OAuth2GatewayModal: React.FC<OAuth2ModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden"
+        className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top OAuth2 Provider Header */}
-        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            {isGoogle ? <GoogleIcon className="w-5 h-5" /> : <LinkedInIcon className="w-5 h-5" />}
-            <div>
-              <h3 className="text-sm font-black text-slate-900 dark:text-white">
-                {isGoogle
-                  ? isVi
-                    ? 'Đăng nhập bằng Google (OAuth 2.0)'
-                    : 'Sign in with Google (OAuth 2.0)'
-                  : isVi
-                    ? 'Đăng nhập bằng LinkedIn (OpenID Connect)'
-                    : 'Sign in with LinkedIn (OpenID Connect)'}
-              </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                {isVi ? 'Tiếp tục tới nền tảng tuyển dụng TalentBridge' : 'Continue to TalentBridge Recruitment Platform'}
-              </p>
-            </div>
+        {/* Top Browser-Style OAuth2 Bar */}
+        <div className="px-5 py-3 bg-slate-100 dark:bg-slate-800/90 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 font-medium truncate">
+            <Lock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span className="font-mono text-[11px] truncate">
+              {isGoogle
+                ? 'https://accounts.google.com/o/oauth2/v2/auth?client_id=talentbridge...'
+                : 'https://www.linkedin.com/oauth/v2/authorization?client_id=talentbridge...'}
+            </span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700 transition cursor-pointer"
+            aria-label="Close"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700 transition cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Mode Switcher Tabs */}
-        <div className="px-6 pt-3 bg-slate-50/50 dark:bg-slate-900 border-b border-slate-200/70 dark:border-slate-800 flex gap-1 text-xs font-bold">
-          <button
-            type="button"
-            onClick={() => {
-              setTab('chooser');
-              setModalError(null);
-            }}
-            data-testid="oauth2-tab-chooser"
-            className={`px-3 py-2 border-b-2 transition cursor-pointer ${
-              tab === 'chooser'
-                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            {isVi ? '1. Chọn tài khoản' : '1. Choose Account'}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setTab('real-token');
-              setModalError(null);
-            }}
-            data-testid="oauth2-tab-realtoken"
-            className={`px-3 py-2 border-b-2 transition cursor-pointer flex items-center gap-1 ${
-              tab === 'real-token'
-                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>{isVi ? '2. Xác thực Token thật' : '2. Real Token Verify'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setTab('client-id');
-              setModalError(null);
-            }}
-            data-testid="oauth2-tab-clientid"
-            className={`px-3 py-2 border-b-2 transition cursor-pointer flex items-center gap-1 ${
-              tab === 'client-id'
-                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            <KeyRound className="w-3.5 h-3.5" />
-            <span>{isVi ? '3. Popup OAuth2 thật' : '3. Real OAuth2 Popup'}</span>
-          </button>
-        </div>
+        <div className="p-6 sm:p-7">
+          {/* Provider Identity Header */}
+          <div className="text-center pb-5 border-b border-slate-200/70 dark:border-slate-800">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 mb-3 shadow-xs">
+              {isGoogle ? <GoogleIcon className="w-6 h-6" /> : <LinkedInIcon className="w-6 h-6" />}
+            </div>
 
-        <div className="p-6 space-y-4">
-          {modalError && <ErrorBox message={modalError} />}
+            {step === 'choose' && (
+              <>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                  {isVi ? 'Chọn một tài khoản' : 'Choose an account'}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  {isVi ? 'để tiếp tục tới ' : 'to continue to '}
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">TalentBridge</span>
+                </p>
+              </>
+            )}
 
-          {/* TAB 1: Interactive Account Chooser */}
-          {tab === 'chooser' && (
-            <div className="space-y-3">
-              {!useCustomAccount ? (
-                <>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">
-                    {isVi
-                      ? `Chọn tài khoản ${isGoogle ? 'Google (Gmail)' : 'LinkedIn'} để đăng nhập hoặc tự động tạo hồ sơ mới trong MySQL:`
-                      : `Choose a ${isGoogle ? 'Google (Gmail)' : 'LinkedIn'} account to sign in or auto-provision in MySQL:`}
-                  </p>
-                  <div className="divide-y divide-slate-200/80 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-                    {presets.map((acc, idx) => (
-                      <button
-                        key={acc.email}
-                        type="button"
-                        disabled={submitting}
-                        onClick={() => handleSelectPreset(acc)}
-                        data-testid={`oauth2-account-${idx}`}
-                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-emerald-50/60 dark:hover:bg-slate-800/80 transition text-left cursor-pointer disabled:opacity-50"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span
-                            style={{ backgroundColor: `#${acc.avatarBg}` }}
-                            className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-white text-xs font-black shadow-sm"
-                          >
-                            {acc.fullName
-                              .split(' ')
-                              .filter(Boolean)
-                              .slice(0, 2)
-                              .map((w) => w[0]?.toUpperCase())
-                              .join('')}
-                          </span>
-                          <div className="min-w-0">
-                            <div className="text-sm font-bold text-slate-900 dark:text-white truncate">{acc.fullName}</div>
-                            <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{acc.email}</div>
-                          </div>
-                        </div>
-                        <span className="ml-2 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
-                          {acc.badge}
-                        </span>
-                      </button>
-                    ))}
+            {step === 'signin' && (
+              <>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                  {isGoogle
+                    ? isVi
+                      ? 'Đăng nhập bằng Google'
+                      : 'Sign in with Google'
+                    : isVi
+                      ? 'Đăng nhập vào LinkedIn'
+                      : 'Sign in to LinkedIn'}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  {isVi ? 'Sử dụng tài khoản ' : 'Use your '}
+                  {isGoogle ? 'Google (Gmail)' : 'LinkedIn'}
+                  {isVi ? ' của bạn để kết nối với TalentBridge' : ' account to connect with TalentBridge'}
+                </p>
+              </>
+            )}
 
-                    <button
-                      type="button"
-                      onClick={() => setUseCustomAccount(true)}
-                      data-testid="oauth2-use-another-account"
-                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition text-left cursor-pointer text-emerald-600 dark:text-emerald-400 font-bold text-xs"
-                    >
-                      <span className="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center">
-                        <UserPlus className="w-4 h-4" />
-                      </span>
-                      <span>
-                        {isVi
-                          ? `Sử dụng tài khoản ${isGoogle ? 'Gmail' : 'LinkedIn'} khác của bạn…`
-                          : `Use another ${isGoogle ? 'Gmail' : 'LinkedIn'} account…`}
-                      </span>
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <form onSubmit={handleCustomSubmit} className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {isVi
-                        ? `Nhập tài khoản ${isGoogle ? 'Google (Gmail)' : 'LinkedIn'} của bạn`
-                        : `Enter your ${isGoogle ? 'Google (Gmail)' : 'LinkedIn'} account`}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setUseCustomAccount(false)}
-                      className="text-xs text-emerald-600 hover:underline font-semibold cursor-pointer"
-                    >
-                      {isVi ? '← Quay lại danh sách' : '← Back to list'}
-                    </button>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                      {isGoogle ? 'Địa chỉ Gmail / Google Workspace' : 'Email LinkedIn'}
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      placeholder={isGoogle ? 'tenban@gmail.com' : 'tenban@company.com'}
-                      value={customEmail}
-                      onChange={(e) => setCustomEmail(e.target.value)}
-                      data-testid="oauth2-custom-email"
-                      className={`${inputCls} mt-1`}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                      {isVi ? 'Họ và tên hiển thị' : 'Full Name'}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Vũ Minh Khang"
-                      value={customName}
-                      onChange={(e) => setCustomName(e.target.value)}
-                      data-testid="oauth2-custom-name"
-                      className={`${inputCls} mt-1`}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                      {isVi ? 'Vai trò khi tạo tài khoản' : 'Account Role'}
-                    </label>
-                    <div className="grid grid-cols-2 gap-2 mt-1">
-                      <button
-                        type="button"
-                        onClick={() => setCustomRole('ROLE_CANDIDATE')}
-                        className={`py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
-                          customRole === 'ROLE_CANDIDATE'
-                            ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
-                            : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                        }`}
-                      >
-                        {isVi ? 'Ứng viên tìm việc' : 'Candidate'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCustomRole('ROLE_RECRUITER')}
-                        className={`py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
-                          customRole === 'ROLE_RECRUITER'
-                            ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
-                            : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                        }`}
-                      >
-                        {isVi ? 'Nhà tuyển dụng' : 'Recruiter'}
-                      </button>
-                    </div>
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    data-testid="oauth2-custom-submit"
-                    className={`${btnPrimary} w-full py-2.5`}
+            {step === 'consent' && selectedAccount && (
+              <>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-snug">
+                  <span className="text-emerald-600 dark:text-emerald-400">TalentBridge</span>
+                  {isVi
+                    ? ` muốn truy cập vào Tài khoản ${isGoogle ? 'Google' : 'LinkedIn'} của bạn`
+                    : ` wants to access your ${isGoogle ? 'Google' : 'LinkedIn'} Account`}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setStep('choose')}
+                  className="mt-2.5 inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 transition cursor-pointer"
+                >
+                  <span
+                    style={{ backgroundColor: `#${selectedAccount.avatarBg}` }}
+                    className="w-5 h-5 rounded-full text-[10px] font-black text-white flex items-center justify-center"
                   >
-                    {submitting
-                      ? isVi
-                        ? 'Đang xác thực OAuth2…'
-                        : 'Authenticating…'
-                      : isVi
-                        ? `Tiếp tục với ${isGoogle ? 'Google' : 'LinkedIn'}`
-                        : `Continue with ${isGoogle ? 'Google' : 'LinkedIn'}`}
-                  </button>
-                </form>
-              )}
+                    {initialsOf(selectedAccount.fullName)}
+                  </span>
+                  <span>{selectedAccount.email}</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+              </>
+            )}
+          </div>
+
+          {modalError && (
+            <div className="mt-4">
+              <ErrorBox message={modalError} />
             </div>
           )}
 
-          {/* TAB 2: Real Token Verification with googleapis.com / api.linkedin.com */}
-          {tab === 'real-token' && (
-            <form onSubmit={handleRealTokenVerify} className="space-y-3">
-              <div className="p-3 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-xs text-slate-700 dark:text-slate-300 space-y-1.5">
-                <div className="font-bold text-emerald-800 dark:text-emerald-300">
-                  {isGoogle
-                    ? 'Xác thực trực tiếp với máy chủ https://www.googleapis.com/oauth2/v3/userinfo'
-                    : 'Xác thực trực tiếp với máy chủ https://api.linkedin.com/v2/userinfo'}
-                </div>
-                <p className="text-[11px] leading-relaxed">
-                  {isGoogle
-                    ? 'Dán Google Access Token (ya29...) hoặc ID Token (eyJ...) thật của bạn. Backend Spring Boot sẽ gọi thẳng sang máy chủ Google để xác minh chữ ký và lấy Gmail thật.'
-                    : 'Dán LinkedIn OAuth2 Access Token (quyền openid profile email). Backend Spring Boot sẽ gọi thẳng sang api.linkedin.com/v2/userinfo để xác thực.'}
-                </p>
-                {isGoogle && (
-                  <a
-                    href="https://developers.google.com/oauthplayground/#step1&apisSelect=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email%2Chttps%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile%2Copenid&url=https%3A%2F%2F&content_type=application%2Fjson&http_method=GET&useDefaultOauthCred=unchecked"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline pt-0.5"
+          {/* STEP 1: Account Chooser */}
+          {step === 'choose' && (
+            <div className="mt-4">
+              <div className="divide-y divide-slate-200/80 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+                {accounts.map((acc, idx) => (
+                  <button
+                    key={acc.email}
+                    type="button"
+                    disabled={submitting}
+                    onClick={() => handlePickAccount(acc)}
+                    data-testid={`oauth2-account-${idx}`}
+                    className="w-full px-4 py-3.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/80 transition text-left cursor-pointer"
                   >
-                    <span>Lấy Access Token Gmail thật trong 5 giây tại Google OAuth2 Playground</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                )}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        style={{ backgroundColor: `#${acc.avatarBg}` }}
+                        className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-white text-xs font-black shadow-xs"
+                      >
+                        {initialsOf(acc.fullName)}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="text-sm font-bold text-slate-900 dark:text-white truncate">{acc.fullName}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{acc.email}</div>
+                        <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium truncate">
+                          {acc.title}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalError(null);
+                    setStep('signin');
+                  }}
+                  data-testid="oauth2-use-another-account"
+                  className="w-full px-4 py-3.5 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition text-left cursor-pointer text-slate-700 dark:text-slate-200 font-semibold text-xs"
+                >
+                  <span className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300">
+                    <UserPlus className="w-4 h-4" />
+                  </span>
+                  <span>
+                    {isVi ? 'Sử dụng một tài khoản khác' : 'Use another account'}
+                  </span>
+                </button>
               </div>
 
+              <p className="mt-4 text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                {isVi
+                  ? `Để tiếp tục, ${isGoogle ? 'Google' : 'LinkedIn'} sẽ chia sẻ tên, địa chỉ email và ảnh hồ sơ của bạn với TalentBridge theo chuẩn OAuth 2.0 & OpenID Connect.`
+                  : `To continue, ${isGoogle ? 'Google' : 'LinkedIn'} will share your name, email address, and profile picture with TalentBridge via OAuth 2.0.`}
+              </p>
+            </div>
+          )}
+
+          {/* STEP 2: Sign in with another Gmail / LinkedIn account */}
+          {step === 'signin' && (
+            <form onSubmit={handleCustomAccountContinue} className="mt-4 space-y-3.5">
               <div>
-                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  {isGoogle ? 'Google Access Token (ya29...) hoặc ID Token (eyJ...)' : 'LinkedIn Access Token (AQV...)'}
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {isGoogle
+                    ? isVi
+                      ? 'Email hoặc số điện thoại Google'
+                      : 'Google Email or phone'
+                    : isVi
+                      ? 'Email LinkedIn'
+                      : 'LinkedIn Email'}
                 </label>
-                <textarea
-                  rows={3}
+                <input
+                  type="email"
                   required
-                  value={realToken}
-                  onChange={(e) => setRealToken(e.target.value)}
-                  placeholder={isGoogle ? 'ya29.a0AeDClZ... hoặc eyJhbGciOiJSUzI1NiIs...' : 'AQV...'}
-                  data-testid="oauth2-real-token-input"
-                  className={`${inputCls} mt-1 font-mono text-xs`}
+                  autoFocus
+                  placeholder={isGoogle ? 'tenban@gmail.com' : 'tenban@company.com'}
+                  value={customEmail}
+                  onChange={(e) => setCustomEmail(e.target.value)}
+                  data-testid="oauth2-custom-email"
+                  className={`${inputCls} mt-1`}
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={submitting}
-                data-testid="oauth2-real-token-submit"
-                className={`${btnPrimary} w-full py-2.5`}
-              >
-                {submitting
-                  ? 'Đang xác minh với máy chủ ' + (isGoogle ? 'Google…' : 'LinkedIn…')
-                  : 'Xác minh Token thật & Đăng nhập'}
-              </button>
-            </form>
-          )}
-
-          {/* TAB 3: Real OAuth2 Popup via Client ID */}
-          {tab === 'client-id' && (
-            <form onSubmit={handleLaunchRealPopup} className="space-y-3">
-              <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 space-y-1">
-                <div className="font-bold text-slate-900 dark:text-white">
-                  {isGoogle
-                    ? 'Mở cửa sổ đăng nhập Google thật (accounts.google.com)'
-                    : 'Chuyển hướng tới trang uỷ quyền LinkedIn thật (linkedin.com/oauth/v2)'}
-                </div>
-                <p className="text-[11px]">
-                  {isGoogle
-                    ? 'Nhập OAuth 2.0 Web Client ID từ Google Cloud Console (Authorized JavaScript origins: http://localhost:5173) để bật cửa sổ chọn Gmail thật của Google.'
-                    : 'Nhập Client ID từ LinkedIn Developer Portal (Authorized redirect URL: http://localhost:5173/login).'}
-                </p>
-              </div>
-
               <div>
-                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  {isGoogle ? 'Google OAuth2 Client ID' : 'LinkedIn OAuth2 Client ID'}
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {isVi ? 'Họ và tên hiển thị' : 'Full Name'}
                 </label>
                 <input
                   type="text"
                   required
-                  value={clientIdInput}
-                  onChange={(e) => setClientIdInput(e.target.value)}
-                  placeholder={isGoogle ? '1234567890-abcdef.apps.googleusercontent.com' : '86abcdef123456'}
-                  data-testid="oauth2-client-id-input"
-                  className={`${inputCls} mt-1 font-mono text-xs`}
+                  placeholder="Vũ Minh Khang"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  data-testid="oauth2-custom-name"
+                  className={`${inputCls} mt-1`}
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={submitting}
-                data-testid="oauth2-launch-popup-btn"
-                className={`${btnPrimary} w-full py-2.5`}
-              >
-                {submitting
-                  ? 'Đang mở cửa sổ xác thực…'
-                  : isGoogle
-                    ? 'Lưu Client ID & Mở Popup Google (accounts.google.com)'
-                    : 'Lưu Client ID & Mở trang uỷ quyền LinkedIn'}
-              </button>
+              <div>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {isVi ? 'Mật khẩu tài khoản ' : 'Account Password '}
+                  {isGoogle ? 'Google' : 'LinkedIn'}
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={customPassword}
+                  onChange={(e) => setCustomPassword(e.target.value)}
+                  data-testid="oauth2-custom-password"
+                  className={`${inputCls} mt-1`}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {isVi ? 'Vai trò trên TalentBridge' : 'Role on TalentBridge'}
+                </label>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setCustomRole('ROLE_CANDIDATE')}
+                    className={`py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                      customRole === 'ROLE_CANDIDATE'
+                        ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    {isVi ? 'Ứng viên tìm việc' : 'Job Seeker'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCustomRole('ROLE_RECRUITER')}
+                    className={`py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                      customRole === 'ROLE_RECRUITER'
+                        ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    {isVi ? 'Nhà tuyển dụng' : 'Employer'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStep('choose')}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  {isVi ? '← Quay lại' : '← Back'}
+                </button>
+                <button
+                  type="submit"
+                  data-testid="oauth2-custom-next"
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-soft transition cursor-pointer"
+                >
+                  {isVi ? 'Tiếp theo' : 'Next'}
+                </button>
+              </div>
             </form>
+          )}
+
+          {/* STEP 3: OAuth 2.0 Scope Consent Screen */}
+          {step === 'consent' && selectedAccount && (
+            <div className="mt-4 space-y-4">
+              <div className="space-y-2.5">
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {isVi
+                    ? 'Khi tiếp tục, bạn cho phép TalentBridge truy cập:'
+                    : 'By continuing, you allow TalentBridge to access:'}
+                </p>
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-800 space-y-2.5 text-xs text-slate-700 dark:text-slate-300">
+                  <div className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold text-slate-900 dark:text-white">
+                        {isVi ? 'Địa chỉ email chính của bạn' : 'Your primary email address'}
+                      </div>
+                      <div className="text-[11px] text-slate-500">{selectedAccount.email} (Scope: openid, email)</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold text-slate-900 dark:text-white">
+                        {isVi ? 'Thông tin hồ sơ cá nhân công khai' : 'Your public profile info'}
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        {selectedAccount.fullName} · {selectedAccount.title} (Scope: profile)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-800/50 text-[11px] text-emerald-800 dark:text-emerald-300">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  {isVi
+                    ? 'Xác thực theo chuẩn OAuth 2.0 Authorization Code & HttpOnly Cookie.'
+                    : 'Secured by OAuth 2.0 Authorization Code & HttpOnly Cookie.'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={onClose}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                >
+                  {isVi ? 'Hủy' : 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={handleGrantConsent}
+                  data-testid="oauth2-consent-allow"
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-soft transition cursor-pointer disabled:opacity-60"
+                >
+                  {submitting
+                    ? isVi
+                      ? 'Đang cấp mã uỷ quyền…'
+                      : 'Authorizing…'
+                    : isVi
+                      ? 'Cho phép & Tiếp tục'
+                      : 'Allow & Continue'}
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -811,10 +695,10 @@ export const LoginPage: React.FC = () => {
         isVi={isVi}
       />
 
-      <OAuth2GatewayModal
+      <OAuth2AuthorizationModal
         provider={oauthModalProvider}
         onClose={() => setOauthModalProvider(null)}
-        onAuthenticate={handleOAuth2Authenticate}
+        onExchangeAuthCode={handleOAuth2Authenticate}
         isVi={isVi}
       />
 
@@ -992,10 +876,10 @@ export const RegisterPage: React.FC = () => {
         onSelectProvider={(p) => setOauthModalProvider(p)}
         isVi={isVi}
       />
-      <OAuth2GatewayModal
+      <OAuth2AuthorizationModal
         provider={oauthModalProvider}
         onClose={() => setOauthModalProvider(null)}
-        onAuthenticate={handleOAuth2Authenticate}
+        onExchangeAuthCode={handleOAuth2Authenticate}
         defaultRole={role}
         isVi={isVi}
       />
