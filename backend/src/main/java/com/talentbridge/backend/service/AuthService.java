@@ -23,6 +23,10 @@ public interface AuthService {
      */
     java.util.Map<String, String> issueOAuth2AuthorizationCode(OAuth2LoginRequestDto request);
 
+    java.util.Map<String, Object> getOAuth2ClientConfig();
+
+    java.util.Map<String, Object> updateOAuth2ClientConfig(String provider, String clientId, String clientSecret);
+
     /** Issues an access/refresh token pair for an already-verified user (e.g. after accepting a team invitation). */
     AuthResponseDto issueTokensFor(com.talentbridge.backend.entity.User user, String ipAddress, String userAgent);
 

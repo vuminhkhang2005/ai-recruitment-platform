@@ -82,6 +82,34 @@ public class AuthServiceImpl implements AuthService {
             new java.util.concurrent.ConcurrentHashMap<>();
 
     @Override
+    public Map<String, Object> getOAuth2ClientConfig() {
+        boolean googleConfigured = StringUtils.hasText(googleClientId) && !"talentbridge-google-client-id".equals(googleClientId);
+        boolean linkedinConfigured = StringUtils.hasText(linkedinClientId) && !"talentbridge-linkedin-client-id".equals(linkedinClientId);
+        Map<String, Object> map = new HashMap<>();
+        map.put("googleClientId", googleConfigured ? googleClientId : "");
+        map.put("linkedinClientId", linkedinConfigured ? linkedinConfigured ? linkedinClientId : "" : "");
+        map.put("googleConfigured", googleConfigured);
+        map.put("linkedinConfigured", linkedinConfigured);
+        return map;
+    }
+
+    @Override
+    public Map<String, Object> updateOAuth2ClientConfig(String provider, String clientId, String clientSecret) {
+        if ("GOOGLE".equalsIgnoreCase(provider)) {
+            this.googleClientId = clientId != null ? clientId.trim() : "";
+            if (StringUtils.hasText(clientSecret)) {
+                this.googleClientSecret = clientSecret.trim();
+            }
+        } else if ("LINKEDIN".equalsIgnoreCase(provider)) {
+            this.linkedinClientId = clientId != null ? clientId.trim() : "";
+            if (StringUtils.hasText(clientSecret)) {
+                this.linkedinClientSecret = clientSecret.trim();
+            }
+        }
+        return getOAuth2ClientConfig();
+    }
+
+    @Override
     public Map<String, String> issueOAuth2AuthorizationCode(OAuth2LoginRequestDto request) {
         String provider = request.getProvider() != null ? request.getProvider().trim().toUpperCase() : "GOOGLE";
         if (!"GOOGLE".equals(provider) && !"LINKEDIN".equals(provider)) {

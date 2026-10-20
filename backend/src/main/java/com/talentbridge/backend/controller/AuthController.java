@@ -177,17 +177,24 @@ public class AuthController {
     @GetMapping("/oauth2/config")
     @Operation(summary = "Lấy cấu hình OAuth2 Client ID (Google & LinkedIn)", description = "Trả về Client ID đã cấu hình trên máy chủ để Frontend khởi tạo Google Identity Services / LinkedIn OAuth2.")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getOAuth2Config() {
-        boolean googleConfigured = StringUtils.hasText(googleClientId) && !"talentbridge-google-client-id".equals(googleClientId);
-        boolean linkedinConfigured = StringUtils.hasText(linkedinClientId) && !"talentbridge-linkedin-client-id".equals(linkedinClientId);
         return ResponseEntity.ok(ApiResponse.<Map<String, Object>>builder()
                 .success(true)
                 .message("Cấu hình OAuth2")
-                .data(Map.of(
-                        "googleClientId", googleConfigured ? googleClientId : "",
-                        "linkedinClientId", linkedinConfigured ? linkedinClientId : "",
-                        "googleConfigured", googleConfigured,
-                        "linkedinConfigured", linkedinConfigured
-                ))
+                .data(authService.getOAuth2ClientConfig())
+                .build());
+    }
+
+    @PostMapping("/oauth2/config")
+    @Operation(summary = "Cập nhật nhanh OAuth2 Client ID & Client Secret (Google / LinkedIn)", description = "Cập nhật Client ID & Client Secret trực tiếp trên máy chủ mà không cần khởi động lại.")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updateOAuth2Config(
+            @RequestBody Map<String, String> body) {
+        String provider = body.getOrDefault("provider", "GOOGLE");
+        String clientId = body.getOrDefault("clientId", "");
+        String clientSecret = body.getOrDefault("clientSecret", "");
+        return ResponseEntity.ok(ApiResponse.<Map<String, Object>>builder()
+                .success(true)
+                .message("Đã cập nhật cấu hình OAuth2 cho " + provider.toUpperCase())
+                .data(authService.updateOAuth2ClientConfig(provider, clientId, clientSecret))
                 .build());
     }
 

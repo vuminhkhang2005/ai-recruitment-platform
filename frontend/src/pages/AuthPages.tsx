@@ -134,7 +134,8 @@ const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
   defaultRole = 'ROLE_CANDIDATE',
   isVi,
 }) => {
-  const [step, setStep] = useState<'choose' | 'email' | 'password'>('choose');
+  const [step, setStep] = useState<'choose' | 'email' | 'password' | 'consent'>('choose');
+  const [selectedAccount, setSelectedAccount] = useState<OAuth2Account | null>(null);
   const [customEmail, setCustomEmail] = useState('');
   const [customPassword, setCustomPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -143,6 +144,7 @@ const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
   useEffect(() => {
     if (!provider) return;
     setStep('choose');
+    setSelectedAccount(null);
     setCustomEmail('');
     setCustomPassword('');
     setModalError(null);
@@ -177,6 +179,12 @@ const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
     }
   };
 
+  const handlePickExistingAccount = (acc: OAuth2Account) => {
+    setModalError(null);
+    setSelectedAccount(acc);
+    setStep('consent');
+  };
+
   const handleEmailNext = (e: React.FormEvent) => {
     e.preventDefault();
     const email = customEmail.trim().toLowerCase();
@@ -188,7 +196,7 @@ const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
     setStep('password');
   };
 
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
+  const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customPassword) {
       setModalError(isVi ? 'Nhập mật khẩu' : 'Enter a password');
@@ -196,7 +204,24 @@ const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
     }
     const email = customEmail.trim().toLowerCase();
     const fullName = formatNameFromEmail(email);
-    await completeOAuth2SignIn(email, fullName, defaultRole, isGoogle ? '0D9488' : '0A66C2');
+    setModalError(null);
+    setSelectedAccount({
+      email,
+      fullName,
+      role: defaultRole,
+      avatarBg: isGoogle ? '0D9488' : '0A66C2',
+    });
+    setStep('consent');
+  };
+
+  const handleConfirmConsent = async () => {
+    if (!selectedAccount) return;
+    await completeOAuth2SignIn(
+      selectedAccount.email,
+      selectedAccount.fullName,
+      selectedAccount.role,
+      selectedAccount.avatarBg
+    );
   };
 
   return (
@@ -276,6 +301,30 @@ const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
                 </button>
               </>
             )}
+
+            {step === 'consent' && selectedAccount && (
+              <>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white leading-snug">
+                  {isVi
+                    ? `Đăng nhập vào TalentBridge bằng ${isGoogle ? 'Google' : 'LinkedIn'}`
+                    : `Sign in to TalentBridge with ${isGoogle ? 'Google' : 'LinkedIn'}`}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setStep('choose')}
+                  className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-300 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                >
+                  <span
+                    style={{ backgroundColor: `#${selectedAccount.avatarBg}` }}
+                    className="w-4 h-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
+                  >
+                    {initialsOf(selectedAccount.fullName)}
+                  </span>
+                  <span>{selectedAccount.email}</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                </button>
+              </>
+            )}
           </div>
 
           {modalError && (
@@ -284,7 +333,7 @@ const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
             </div>
           )}
 
-          {/* STEP 1: Account Chooser (1-click sign in) */}
+          {/* STEP 1: Account Chooser */}
           {step === 'choose' && (
             <div className="mt-6">
               <div className="divide-y divide-slate-200/80 dark:divide-slate-800 border-y border-slate-200 dark:border-slate-800">
@@ -293,7 +342,7 @@ const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
                     key={acc.email}
                     type="button"
                     disabled={submitting}
-                    onClick={() => completeOAuth2SignIn(acc.email, acc.fullName, acc.role, acc.avatarBg)}
+                    onClick={() => handlePickExistingAccount(acc)}
                     data-testid={`oauth2-account-${idx}`}
                     className="w-full py-3.5 px-2 flex items-center gap-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition text-left cursor-pointer disabled:opacity-50"
                   >
@@ -397,13 +446,65 @@ const OAuth2AuthorizationModal: React.FC<OAuth2FlowModalProps> = ({
                 <button
                   type="submit"
                   disabled={submitting}
-                  data-testid="oauth2-consent-allow"
+                  data-testid="oauth2-password-next"
                   className="px-6 py-2.5 rounded-full bg-[#0b57d0] hover:bg-[#0842a0] text-white text-sm font-semibold transition cursor-pointer disabled:opacity-60"
                 >
-                  {submitting ? (isVi ? 'Đang đăng nhập…' : 'Signing in…') : (isVi ? 'Tiếp theo' : 'Next')}
+                  {isVi ? 'Tiếp theo' : 'Next'}
                 </button>
               </div>
             </form>
+          )}
+
+          {/* STEP 3: Google / LinkedIn Information Sharing Consent Screen */}
+          {step === 'consent' && selectedAccount && (
+            <div className="mt-6 space-y-5">
+              <div className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed space-y-3">
+                <p>
+                  {isVi ? (
+                    <>
+                      Để tiếp tục, <strong>{isGoogle ? 'Google' : 'LinkedIn'}</strong> sẽ chia sẻ tên, địa chỉ email, ngôn ngữ ưu tiên và ảnh hồ sơ của bạn với <strong>TalentBridge</strong>.
+                    </>
+                  ) : (
+                    <>
+                      To continue, <strong>{isGoogle ? 'Google' : 'LinkedIn'}</strong> will share your name, email address, language preference, and profile picture with <strong>TalentBridge</strong>.
+                    </>
+                  )}
+                </p>
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 space-y-2">
+                  <div className="text-xs font-semibold text-slate-900 dark:text-white">
+                    {selectedAccount.fullName}
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {selectedAccount.email}
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {isVi
+                    ? 'Trước khi sử dụng ứng dụng này, bạn có thể xem Chính sách quyền riêng tư và Điều khoản dịch vụ của TalentBridge.'
+                    : 'Before using this app, you can review TalentBridge’s Privacy Policy and Terms of Service.'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={onClose}
+                  className="py-2.5 px-4 rounded-full border border-slate-300 dark:border-slate-700 text-sm font-semibold text-[#0b57d0] dark:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                >
+                  {isVi ? 'Hủy' : 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={handleConfirmConsent}
+                  data-testid="oauth2-consent-allow"
+                  className="py-2.5 px-4 rounded-full bg-[#0b57d0] hover:bg-[#0842a0] text-white text-sm font-semibold transition cursor-pointer disabled:opacity-60"
+                >
+                  {submitting ? (isVi ? 'Đang kết nối…' : 'Connecting…') : (isVi ? 'Tiếp tục' : 'Continue')}
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -532,6 +633,34 @@ export const LoginPage: React.FC = () => {
     navigate(next ?? homeFor(u), { replace: true });
   };
 
+  const handleSelectOAuth2Provider = async (provider: 'google' | 'linkedin') => {
+    try {
+      const cfg = await authApi.oauth2Config();
+      const redirectUri = `${window.location.origin}/login`;
+      if (provider === 'google' && cfg.googleConfigured && cfg.googleClientId) {
+        window.location.href =
+          `https://accounts.google.com/o/oauth2/v2/auth?response_type=code` +
+          `&client_id=${encodeURIComponent(cfg.googleClientId)}` +
+          `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+          `&scope=${encodeURIComponent('openid email profile')}` +
+          `&access_type=offline&prompt=consent&state=google_oauth2`;
+        return;
+      }
+      if (provider === 'linkedin' && cfg.linkedinConfigured && cfg.linkedinClientId) {
+        window.location.href =
+          `https://www.linkedin.com/oauth/v2/authorization?response_type=code` +
+          `&client_id=${encodeURIComponent(cfg.linkedinClientId)}` +
+          `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+          `&scope=${encodeURIComponent('openid profile email')}` +
+          `&state=linkedin_oauth2`;
+        return;
+      }
+    } catch {
+      // Fallback to in-app OAuth2 dialog if config check fails
+    }
+    setOauthModalProvider(provider);
+  };
+
   return (
     <AuthShell
       title={isVi ? "Đăng nhập" : "Sign In"}
@@ -546,7 +675,7 @@ export const LoginPage: React.FC = () => {
     >
       <SocialOAuth2Buttons
         loading={loading}
-        onSelectProvider={(p) => setOauthModalProvider(p)}
+        onSelectProvider={handleSelectOAuth2Provider}
         isVi={isVi}
       />
 
@@ -710,6 +839,34 @@ export const RegisterPage: React.FC = () => {
     </button>
   );
 
+  const handleSelectOAuth2Provider = async (provider: 'google' | 'linkedin') => {
+    try {
+      const cfg = await authApi.oauth2Config();
+      const redirectUri = `${window.location.origin}/login`;
+      if (provider === 'google' && cfg.googleConfigured && cfg.googleClientId) {
+        window.location.href =
+          `https://accounts.google.com/o/oauth2/v2/auth?response_type=code` +
+          `&client_id=${encodeURIComponent(cfg.googleClientId)}` +
+          `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+          `&scope=${encodeURIComponent('openid email profile')}` +
+          `&access_type=offline&prompt=consent&state=google_oauth2`;
+        return;
+      }
+      if (provider === 'linkedin' && cfg.linkedinConfigured && cfg.linkedinClientId) {
+        window.location.href =
+          `https://www.linkedin.com/oauth/v2/authorization?response_type=code` +
+          `&client_id=${encodeURIComponent(cfg.linkedinClientId)}` +
+          `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+          `&scope=${encodeURIComponent('openid profile email')}` +
+          `&state=linkedin_oauth2`;
+        return;
+      }
+    } catch {
+      // Fallback to in-app OAuth2 dialog
+    }
+    setOauthModalProvider(provider);
+  };
+
   return (
     <AuthShell
       title={isVi ? "Tạo tài khoản" : "Create Account"}
@@ -728,7 +885,7 @@ export const RegisterPage: React.FC = () => {
       </div>
       <SocialOAuth2Buttons
         loading={loading}
-        onSelectProvider={(p) => setOauthModalProvider(p)}
+        onSelectProvider={handleSelectOAuth2Provider}
         isVi={isVi}
       />
       <OAuth2AuthorizationModal
