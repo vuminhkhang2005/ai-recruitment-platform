@@ -34,13 +34,13 @@ const ADMIN_TABS: AdminNavTab[] = [
   },
   {
     to: '/admin/moderation',
-    label: 'Kiểm duyệt Công ty & Việc làm',
+    label: 'Kiểm duyệt Công ty & Tin',
     icon: Building2,
     testId: 'admin-tab-moderation',
   },
   {
     to: '/admin/skills',
-    label: 'Từ điển Kỹ năng (Taxonomy)',
+    label: 'Từ điển Kỹ năng AI',
     icon: BookOpen,
     testId: 'admin-tab-skills',
   },
@@ -58,15 +58,15 @@ export const AdminHeader: React.FC<{
   rightSlot?: React.ReactNode;
 }> = ({ title, subtitle, rightSlot }) => {
   return (
-    <div className="mb-8 space-y-5">
+    <div className="mb-6 space-y-4">
       {/* Executive Command Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-emerald-950 text-white p-6 sm:p-8 shadow-xl border border-indigo-500/20">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-emerald-950 text-white p-5 sm:p-6 shadow-xl border border-indigo-500/20">
         <div className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full bg-emerald-500/15 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-indigo-500/15 blur-3xl" />
 
         <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-xs font-bold uppercase tracking-wider mb-3">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-[11px] font-bold uppercase tracking-wider mb-2">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span>TalentBridge Governance & AI Control Center</span>
               <span className="inline-flex items-center gap-1 text-emerald-300 ml-1">
@@ -74,10 +74,10 @@ export const AdminHeader: React.FC<{
                 LIVE
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
               {title}
             </h1>
-            <p className="mt-1.5 text-sm sm:text-base text-slate-300 max-w-3xl">
+            <p className="mt-1 text-xs sm:text-sm text-slate-300 max-w-3xl">
               {subtitle}
             </p>
           </div>
@@ -85,8 +85,8 @@ export const AdminHeader: React.FC<{
           {rightSlot && <div className="shrink-0">{rightSlot}</div>}
         </div>
 
-        {/* Navigation Sub-bar */}
-        <div className="relative mt-6 pt-5 border-t border-white/10 flex flex-wrap items-center gap-2">
+        {/* Navigation Sub-bar (Single Symmetrical 5-Column Row on Desktop) */}
+        <div className="relative mt-4 pt-4 border-t border-white/10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
           {ADMIN_TABS.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -96,15 +96,15 @@ export const AdminHeader: React.FC<{
                 end={tab.end}
                 data-testid={tab.testId}
                 className={({ isActive }) =>
-                  `inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  `inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all truncate ${
                     isActive
                       ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 ring-2 ring-emerald-300/60'
                       : 'bg-white/10 text-slate-200 hover:bg-white/20 hover:text-white'
                   }`
                 }
               >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{tab.label}</span>
               </NavLink>
             );
           })}

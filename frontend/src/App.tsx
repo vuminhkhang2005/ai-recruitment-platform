@@ -39,16 +39,20 @@ function ScrollToTop() {
   return null;
 }
 
-const Layout: React.FC = () => (
-  <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
-    <ScrollToTop />
-    <Navbar />
-    <main className="flex-1">
-      <Outlet />
-    </main>
-    <Footer />
-  </div>
-);
+const Layout: React.FC = () => {
+  const { pathname } = useLocation();
+  const isFullHeightApp = pathname.startsWith('/messages');
+  return (
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+      <ScrollToTop />
+      <Navbar />
+      <main className="flex-1">
+        <Outlet />
+      </main>
+      {!isFullHeightApp && <Footer />}
+    </div>
+  );
+};
 
 export function App() {
   return (

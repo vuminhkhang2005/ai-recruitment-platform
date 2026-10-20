@@ -171,12 +171,12 @@ export const CareerRoadmapPreview: React.FC = () => {
   ];
 
   return (
-    <section id="roadmap" className="scroll-mt-24 py-20 sm:py-24 bg-white dark:bg-slate-950 relative overflow-hidden transition-colors duration-300">
+    <section id="roadmap" className="scroll-mt-24 py-8 sm:py-10 bg-white dark:bg-slate-950 rounded-3xl border border-slate-200/80 dark:border-slate-800 relative overflow-hidden transition-colors duration-300">
       {/* Ambient background glow */}
       <div className="absolute top-1/4 left-1/4 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 relative z-10">
         
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-3">

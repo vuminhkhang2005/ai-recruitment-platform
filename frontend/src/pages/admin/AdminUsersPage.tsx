@@ -168,7 +168,7 @@ export const AdminUsersPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8" data-testid="admin-users-page">
       <AdminHeader
-        title="Quản lý Tài khoản Người dùng & Phân quyền RBAC (UC-ADM-02)"
+        title="Quản lý Tài khoản Người dùng & Phân quyền RBAC"
         subtitle="Tra cứu, lọc theo vai trò/trạng thái, khóa hoặc mở khóa tài khoản vi phạm và cấp phát quyền RBAC thời gian thực."
         rightSlot={
           <button

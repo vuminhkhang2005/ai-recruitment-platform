@@ -1086,9 +1086,10 @@ export const ApplicantsPage: React.FC = () => {
   }, [byJob, stageFilter, query]);
 
   const selected =
-    visible.find((a) => String(a.id) === selectedId) ??
-    (apps ?? []).find((a) => String(a.id) === selectedId) ??
-    null;
+    (selectedId
+      ? visible.find((a) => String(a.id) === selectedId) ??
+        (apps ?? []).find((a) => String(a.id) === selectedId)
+      : visible[0]) ?? null;
 
   if (error)
     return (

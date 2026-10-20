@@ -59,7 +59,7 @@ export const AdminAuditLogsPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8" data-testid="admin-audit-logs-page">
       <AdminHeader
-        title="Nhật ký Truy vết Hệ thống (Audit Trail) & Email Giao dịch (FR-38)"
+        title="Nhật ký Truy vết Hệ thống (Audit Trail) & Email Giao dịch"
         subtitle="Giám sát minh bạch mọi thao tác quản trị, thay đổi dữ liệu nhạy cảm (JSON Old/New Values), địa chỉ IP và lịch sử gửi email tự động."
         rightSlot={
           <button

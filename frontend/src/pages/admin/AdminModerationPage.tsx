@@ -99,7 +99,7 @@ export const AdminModerationPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8" data-testid="admin-moderation-page">
       <AdminHeader
-        title="Trung tâm Kiểm duyệt Doanh nghiệp & Tin tuyển dụng (UC-ADM-03 & UC-ADM-04)"
+        title="Trung tâm Kiểm duyệt Doanh nghiệp & Tin tuyển dụng"
         subtitle="Thẩm định hồ sơ pháp lý doanh nghiệp đối tác (Tax Code, Website) và kiểm duyệt chất lượng tin đăng tuyển dụng trên toàn hệ thống."
         rightSlot={
           <button

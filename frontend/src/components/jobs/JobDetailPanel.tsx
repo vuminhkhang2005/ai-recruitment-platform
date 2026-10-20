@@ -252,8 +252,11 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
               <MapPin className="w-3.5 h-3.5" />
             </span>
             <span className="pt-0.5">
-              {job.locationAddress ? `${job.locationAddress}, ` : ''}
-              {job.locationCity}
+              {job.locationAddress &&
+              job.locationAddress !== job.locationCity &&
+              !job.locationAddress.includes(job.locationCity || '')
+                ? `${job.locationAddress}, ${job.locationCity}`
+                : job.locationAddress || job.locationCity}
             </span>
           </div>
           <div className={metaItem}>

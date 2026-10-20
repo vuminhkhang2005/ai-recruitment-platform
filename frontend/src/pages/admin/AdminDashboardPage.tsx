@@ -198,7 +198,7 @@ export const AdminDashboardPage: React.FC = () => {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-lg sm:text-xl font-black text-white">
-                  Giám sát Trạng thái AI Matching & ATS Intelligence (UC-ADM-06)
+                  Giám sát Trạng thái AI Matching & ATS Intelligence
                 </h2>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
                   <Activity className="w-3.5 h-3.5 animate-pulse" />

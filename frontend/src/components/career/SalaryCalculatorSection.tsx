@@ -14,9 +14,9 @@ const TRAN_BHXH_BHYT = 20 * LUONG_CO_SO;
 
 // Mức lương tối thiểu vùng từ 01/07/2024 (Nghị định 74/2024/NĐ-CP)
 const VUNG_CONFIG = [
-  { id: 1, name: 'Vùng I (Hà Nội, TP.HCM, Hải Phòng...)', minWage: 4_960_000 },
-  { id: 2, name: 'Vùng II (Đà Nẵng, Cần Thơ, Nha Trang...)', minWage: 4_410_000 },
-  { id: 3, name: 'Vùng III (Các tỉnh/thành còn lại)', minWage: 3_860_000 },
+  { id: 1, name: 'Vùng I (Hà Nội, TP.HCM...)', minWage: 4_960_000 },
+  { id: 2, name: 'Vùng II (Đà Nẵng, Cần Thơ...)', minWage: 4_410_000 },
+  { id: 3, name: 'Vùng III (Tỉnh/thành còn lại)', minWage: 3_860_000 },
   { id: 4, name: 'Vùng IV (Địa bàn khó khăn)', minWage: 3_450_000 },
 ];
 

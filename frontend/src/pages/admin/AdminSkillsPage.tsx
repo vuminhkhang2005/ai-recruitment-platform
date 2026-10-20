@@ -134,7 +134,7 @@ export const AdminSkillsPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8" data-testid="admin-skills-page">
       <AdminHeader
-        title="Quản lý Từ điển Kỹ năng Chuẩn - Master Skill Taxonomy (UC-ADM-05)"
+        title="Quản lý Từ điển Kỹ năng Chuẩn AI (Skill Taxonomy)"
         subtitle="Chuẩn hóa danh mục kỹ năng phục vụ thuật toán bóc tách CV (AI Resume Parser) và chấm điểm độ khớp ATS (Job-Candidate Matching)."
         rightSlot={
           <div className="flex items-center gap-2">

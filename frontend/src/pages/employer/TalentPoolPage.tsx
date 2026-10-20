@@ -162,7 +162,7 @@ export const TalentPoolPage: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-soft space-y-4">
         <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-3">
           {/* Keyword Search */}
-          <div className="md:col-span-5 relative">
+          <div className="md:col-span-4 relative">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
@@ -175,11 +175,11 @@ export const TalentPoolPage: React.FC = () => {
 
           {/* Location Selector */}
           <div className="md:col-span-3 relative">
-            <MapPin className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <MapPin className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <select
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white"
+              className="w-full pl-9 pr-8 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white truncate"
             >
               <option value="All">{isEn ? 'All Locations' : 'Tất cả địa điểm'}</option>
               <option value="Hà Nội">Hà Nội</option>
@@ -189,12 +189,12 @@ export const TalentPoolPage: React.FC = () => {
           </div>
 
           {/* Job Target Selector for ATS Matching */}
-          <div className="md:col-span-3 relative">
-            <Briefcase className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-indigo-500" />
+          <div className="md:col-span-4 relative">
+            <Briefcase className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none" />
             <select
               value={selectedJobId ?? ''}
               onChange={(e) => setSelectedJobId(e.target.value ? Number(e.target.value) : undefined)}
-              className="w-full pl-9 pr-4 py-2.5 bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white font-medium"
+              className="w-full pl-9 pr-8 py-2.5 bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white font-medium truncate"
             >
               <option value="">{isEn ? '-- Select job to match ATS --' : '-- Chọn tin đối sánh ATS --'}</option>
               {myJobs.map((job) => (
@@ -330,9 +330,11 @@ export const TalentPoolPage: React.FC = () => {
 
                     {/* Bio Snippet */}
                     {cand.bio && (
-                      <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 italic bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
-                        "{cand.bio}"
-                      </p>
+                      <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 italic leading-relaxed">
+                          "{cand.bio}"
+                        </p>
+                      </div>
                     )}
 
                     {/* Skills list */}

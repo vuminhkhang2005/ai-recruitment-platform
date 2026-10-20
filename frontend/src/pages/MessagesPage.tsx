@@ -331,7 +331,7 @@ export const MessagesPage: React.FC = () => {
               jobId: app.jobId,
               jobTitle: app.jobTitle,
               jobLocation: app.jobLocation,
-              companyId: app.companyId,
+              companyId: null,
               companyName: app.companyName,
               companyLogo: app.companyLogo,
               candidateUserId: null,
@@ -1270,9 +1270,9 @@ export const MessagesPage: React.FC = () => {
 
         {/* COLUMN 3: Right Context Drawer (Recruitment Dossier) */}
         {activeThread && showContextDrawer && (
-          <aside className="hidden lg:flex w-[280px] xl:w-[300px] shrink-0 border-l border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/50 flex-col h-full overflow-y-auto p-4 space-y-3.5">
+          <aside className="hidden lg:flex w-[280px] xl:w-[300px] shrink-0 border-l border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/50 flex-col h-full overflow-y-auto p-3.5 space-y-2.5">
             {/* Counterpart Summary Card */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 text-center shadow-2xs">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3.5 text-center shadow-2xs">
               <div className="inline-flex relative">
                 <CounterpartAvatar
                   name={
@@ -1286,16 +1286,16 @@ export const MessagesPage: React.FC = () => {
                       : activeThread.companyLogo ?? null
                   }
                   isCompany={!isRecruiter}
-                  size="w-14 h-14 text-base"
+                  size="w-12 h-12 text-sm"
                 />
                 <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
               </div>
 
-              <h3 className="mt-2.5 text-sm font-black text-slate-900 dark:text-white">
+              <h3 className="mt-2 text-sm font-black text-slate-900 dark:text-white leading-tight">
                 {isRecruiter ? activeThread.candidateName : activeThread.companyName}
               </h3>
 
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                 {isRecruiter
                   ? activeThread.candidateHeadline ||
                     (isVi ? 'Ứng viên Công nghệ thông tin' : 'IT Candidate')
@@ -1305,34 +1305,36 @@ export const MessagesPage: React.FC = () => {
               </p>
 
               {isRecruiter && (
-                <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-left space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+                <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-slate-800 text-left space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
                   {activeThread.candidateEmail && (
                     <a
                       href={`mailto:${activeThread.candidateEmail}`}
-                      className="flex items-center gap-2 hover:text-emerald-600 truncate"
+                      className="flex items-center gap-1.5 hover:text-emerald-600 truncate"
                     >
                       <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <span className="truncate">{activeThread.candidateEmail}</span>
                     </a>
                   )}
-                  {activeThread.candidatePhone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>{activeThread.candidatePhone}</span>
-                    </div>
-                  )}
-                  {activeThread.candidateCity && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>{activeThread.candidateCity}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center justify-between gap-2">
+                    {activeThread.candidatePhone && (
+                      <div className="flex items-center gap-1.5 truncate">
+                        <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">{activeThread.candidatePhone}</span>
+                      </div>
+                    )}
+                    {activeThread.candidateCity && (
+                      <div className="flex items-center gap-1 shrink-0 text-slate-500">
+                        <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span>{activeThread.candidateCity}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Recruitment Pipeline Progress */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 shadow-2xs space-y-3">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   {isVi ? 'Tiến độ Tuyển dụng' : 'Pipeline Stage'}
@@ -1351,22 +1353,22 @@ export const MessagesPage: React.FC = () => {
                     : 'This application is currently marked as not selected.'}
                 </div>
               ) : (
-                <div className="space-y-2 pt-0.5">
+                <div className="space-y-1.5 pt-0.5">
                   {PIPELINE_STEPS.map((st, idx) => {
                     const currentStepNum = activeStageMeta.step;
                     const stepNum = idx + 1;
                     const done = stepNum <= currentStepNum;
                     const isCurrent = stepNum === currentStepNum;
                     return (
-                      <div key={st.key} className="flex items-center gap-2.5 text-xs">
+                      <div key={st.key} className="flex items-center gap-2 text-xs">
                         <div
-                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                          className={`w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
                             done
                               ? 'bg-emerald-600 text-white'
                               : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700'
                           }`}
                         >
-                          {done ? <CheckCircle2 className="w-3.5 h-3.5" /> : stepNum}
+                          {done ? <CheckCircle2 className="w-3 h-3" /> : stepNum}
                         </div>
                         <span
                           className={
@@ -1387,7 +1389,7 @@ export const MessagesPage: React.FC = () => {
             </div>
 
             {/* Job Context Card */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 shadow-2xs space-y-3">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs space-y-2.5">
               <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                 <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
                 {isVi ? 'Vị trí Ứng tuyển' : 'Target Position'}
@@ -1396,41 +1398,40 @@ export const MessagesPage: React.FC = () => {
               <div>
                 <Link
                   to={`/jobs/${activeThread.jobId}`}
-                  className="text-xs font-black text-slate-900 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 leading-snug block"
+                  className="text-xs font-black text-slate-900 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 leading-snug block truncate"
                 >
                   {activeThread.jobTitle}
                 </Link>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1 truncate">
                   <Building2 className="w-3 h-3 shrink-0" />
-                  {activeThread.companyName}
+                  <span className="truncate">{activeThread.companyName}</span>
                 </p>
               </div>
 
-              <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
+              <div className="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
                 {activeThread.jobLocation && (
                   <div className="flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span>{activeThread.jobLocation}</span>
+                    <span className="truncate">{activeThread.jobLocation}</span>
                   </div>
                 )}
-                {activeThread.appliedAt && (
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span>
-                      {isVi ? 'Ngày nộp: ' : 'Applied: '}
-                      {formatDate(activeThread.appliedAt, language)}
-                    </span>
-                  </div>
-                )}
-                <div className="flex items-center gap-1.5">
-                  <UserCheck className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <span>
-                    {isVi ? 'Mã hồ sơ: ' : 'Application ID: '}#{activeThread.applicationId}
+                <div className="flex items-center justify-between gap-2">
+                  {activeThread.appliedAt && (
+                    <div className="flex items-center gap-1.5 truncate">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">
+                        {isVi ? 'Nộp: ' : 'Applied: '}
+                        {formatDate(activeThread.appliedAt, language)}
+                      </span>
+                    </div>
+                  )}
+                  <span className="text-[10px] font-bold text-slate-400 shrink-0">
+                    #{activeThread.applicationId}
                   </span>
                 </div>
               </div>
 
-              <div className="pt-1 flex flex-col gap-1.5">
+              <div className="pt-0.5 flex flex-col">
                 {isRecruiter ? (
                   <Link
                     to="/employer/applicants"
