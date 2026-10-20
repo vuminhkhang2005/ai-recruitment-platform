@@ -65,7 +65,7 @@ export const Logo: React.FC<{ to?: string }> = ({ to = '/' }) => (
 );
 
 const linkCls = ({ isActive }: { isActive: boolean }) =>
-  `inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-bold rounded-xl transition-all whitespace-nowrap ${
+  `inline-flex items-center gap-1 px-1.5 xl:px-2 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap shrink-0 ${
     isActive
       ? 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/50 shadow-soft-xs'
       : 'text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800/80'
@@ -196,19 +196,19 @@ export const Navbar: React.FC = () => {
 
   const links: NavItem[] = isAdmin
     ? [
-        { to: '/admin', label: language === 'vi' ? 'Tổng quan & AI' : 'Overview & AI', icon: BarChart3, end: true },
-        { to: '/admin/users', label: language === 'vi' ? 'Người dùng & RBAC' : 'Users & RBAC', icon: Users },
+        { to: '/admin', label: language === 'vi' ? 'Tổng quan' : 'Overview', icon: BarChart3, end: true },
+        { to: '/admin/users', label: language === 'vi' ? 'Người dùng' : 'Users', icon: Users },
         { to: '/admin/moderation', label: language === 'vi' ? 'Kiểm duyệt' : 'Moderation', icon: ShieldCheck },
-        { to: '/admin/skills', label: language === 'vi' ? 'Từ điển Kỹ năng' : 'Skills', icon: Sparkles },
+        { to: '/admin/skills', label: language === 'vi' ? 'Kỹ năng AI' : 'AI Skills', icon: Sparkles },
         { to: '/admin/audit-logs', label: language === 'vi' ? 'Nhật ký Audit' : 'Audit Logs', icon: FileCheck2 },
       ]
     : isRecruiter
     ? [
-        { to: '/employer', label: language === 'vi' ? 'Tin tuyển dụng' : 'Jobs', icon: LayoutGrid, end: true },
+        { to: '/employer', label: language === 'vi' ? 'Tin đăng' : 'Jobs', icon: LayoutGrid, end: true },
         { to: '/employer/applicants', label: language === 'vi' ? 'Ứng viên' : 'Applicants', icon: Users },
-        { to: '/employer/talent-pool', label: language === 'vi' ? 'Săn ứng viên' : 'Talent Pool', icon: Sparkles },
-        { to: '/employer/analytics', label: language === 'vi' ? 'Thống kê' : 'Analytics', icon: BarChart3 },
+        { to: '/employer/talent-pool', label: language === 'vi' ? 'Nhân tài' : 'Talent Pool', icon: Sparkles },
         { to: '/employer/interviews', label: language === 'vi' ? 'Lịch PV' : 'Interviews', icon: Calendar },
+        { to: '/employer/analytics', label: language === 'vi' ? 'Thống kê' : 'Analytics', icon: BarChart3 },
         { to: '/employer/team', label: language === 'vi' ? 'Đội ngũ' : 'Team', icon: ShieldCheck },
         { to: '/employer/jobs/new', label: language === 'vi' ? 'Đăng tin' : 'Post Job', icon: PlusCircle },
       ]
@@ -259,20 +259,39 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/90 transition-colors duration-300 shadow-soft-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center gap-4 lg:gap-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-5 h-16 flex items-center justify-between gap-2 lg:gap-4">
         <Logo to={isAdmin ? '/admin' : isRecruiter ? '/employer' : '/'} />
 
-        <nav className="hidden md:flex items-center gap-1" aria-label="Điều hướng chính">
-          {links.map((l) => (
-            <NavLink key={l.to} to={l.to} end={l.end} className={linkCls}>
-              <l.icon className="w-4 h-4" />
-              {l.label}
-            </NavLink>
-          ))}
+        <nav
+          className="hidden md:flex items-center gap-0.5 xl:gap-1 min-w-0 overflow-x-auto no-scrollbar"
+          aria-label="Điều hướng chính"
+        >
+          {links.map((l) => {
+            const isPostJobCta = l.to === '/employer/jobs/new';
+            if (isPostJobCta) {
+              return (
+                <NavLink
+                  key={l.to}
+                  to={l.to}
+                  end={l.end}
+                  className="ml-0.5 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-soft-xs transition-all whitespace-nowrap shrink-0"
+                >
+                  <l.icon className="w-3.5 h-3.5 shrink-0" />
+                  {l.label}
+                </NavLink>
+              );
+            }
+            return (
+              <NavLink key={l.to} to={l.to} end={l.end} className={linkCls}>
+                <l.icon className="w-3.5 h-3.5 shrink-0" />
+                {l.label}
+              </NavLink>
+            );
+          })}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
-          <LanguageSwitch />
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <LanguageSwitch compact={isRecruiter || isAdmin} />
           <div className="hidden sm:block">
             <ThemeSwitch />
           </div>
@@ -301,25 +320,27 @@ export const Navbar: React.FC = () => {
             </>
           ) : (
             <>
-              <Link
-                to="/messages"
-                className="relative p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                aria-label={language === 'vi' ? 'Tin nhắn' : 'Messages'}
-                title={language === 'vi' ? 'Tin nhắn' : 'Messages'}
-                data-testid="navbar-messages"
-              >
-                <MessageSquare className="w-5 h-5" />
-                {unreadMsgCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-600 text-white text-[11px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-soft-xs">
-                    {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
-                  </span>
-                )}
-              </Link>
+              {!isAdmin && (
+                <Link
+                  to="/messages"
+                  className="relative p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  aria-label={language === 'vi' ? 'Tin nhắn' : 'Messages'}
+                  title={language === 'vi' ? 'Tin nhắn' : 'Messages'}
+                  data-testid="navbar-messages"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  {unreadMsgCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-600 text-white text-[11px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-soft-xs">
+                      {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
+                    </span>
+                  )}
+                </Link>
+              )}
               <NotificationBell />
-              <div className="relative hidden md:block" ref={menuRef}>
+              <div className="relative hidden md:block shrink-0" ref={menuRef}>
                 <button
                   onClick={() => setMenuOpen((o) => !o)}
-                  className="flex items-center gap-2 p-1 pr-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-700 transition-all shadow-soft-xs"
+                  className="flex items-center gap-2 p-1 pr-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-700 transition-all shadow-soft-xs cursor-pointer"
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
                   data-testid="account-menu"
@@ -329,12 +350,14 @@ export const Navbar: React.FC = () => {
                     <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full ring-1 ring-white dark:ring-slate-900" />
                   </span>
                   <span className="text-left hidden lg:block">
-                    <span className="block text-xs font-bold text-slate-800 dark:text-slate-100 max-w-[140px] truncate leading-tight">
+                    <span className="block text-xs font-bold text-slate-800 dark:text-slate-100 max-w-[110px] xl:max-w-[135px] truncate leading-tight">
                       {user!.fullName}
                     </span>
-                    <span className="block text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 leading-none mt-0.5">{roleLabel}</span>
+                    <span className="block text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 leading-none mt-0.5">
+                      {roleLabel}
+                    </span>
                   </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
                 {menuOpen && (
                   <div
