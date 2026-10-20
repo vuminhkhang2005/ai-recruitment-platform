@@ -586,6 +586,20 @@ export const LoginPage: React.FC = () => {
 
   // Handle OAuth2 Authorization Code redirect callback (?code=...&state=linkedin_oauth2 or google_oauth2)
   useEffect(() => {
+    const oauthError = params.get('error');
+    const oauthErrorDesc = params.get('error_description');
+    if (oauthError) {
+      if (oauthError === 'invalid_scope_error') {
+        setError(
+          isVi
+            ? 'Ứng dụng LinkedIn (86h3lfjflpzwb7) chưa bật sản phẩm "Sign In with LinkedIn using OpenID Connect". Vui lòng vào tab Products trên LinkedIn Developer Portal -> bấm "Request access" ở mục "Sign In with LinkedIn using OpenID Connect" rồi thử lại.'
+            : 'LinkedIn App (86h3lfjflpzwb7) has not enabled "Sign In with LinkedIn using OpenID Connect". Please open the Products tab in LinkedIn Developer Portal -> click "Request access" on "Sign In with LinkedIn using OpenID Connect" and try again.'
+        );
+      } else {
+        setError(oauthErrorDesc || oauthError);
+      }
+      return;
+    }
     const code = params.get('code');
     const state = params.get('state');
     if (!code || !state) return;
@@ -652,7 +666,7 @@ export const LoginPage: React.FC = () => {
       }
       if (provider === 'linkedin' && cfg.linkedinConfigured && cfg.linkedinClientId) {
         window.location.href =
-          `https://www.linkedin.com/oauth/v2/authorization?response_type=code` +
+          `https://api.linkedin.com/oauth/v2/authorization?response_type=code` +
           `&client_id=${encodeURIComponent(cfg.linkedinClientId)}` +
           `&redirect_uri=${encodeURIComponent(redirectUri)}` +
           `&scope=${encodeURIComponent('openid profile email')}` +
@@ -858,7 +872,7 @@ export const RegisterPage: React.FC = () => {
       }
       if (provider === 'linkedin' && cfg.linkedinConfigured && cfg.linkedinClientId) {
         window.location.href =
-          `https://www.linkedin.com/oauth/v2/authorization?response_type=code` +
+          `https://api.linkedin.com/oauth/v2/authorization?response_type=code` +
           `&client_id=${encodeURIComponent(cfg.linkedinClientId)}` +
           `&redirect_uri=${encodeURIComponent(redirectUri)}` +
           `&scope=${encodeURIComponent('openid profile email')}` +
