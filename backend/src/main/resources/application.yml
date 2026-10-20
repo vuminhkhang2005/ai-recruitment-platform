@@ -94,8 +94,10 @@ app:
   oauth2:
     google:
       client-id: ${GOOGLE_CLIENT_ID:talentbridge-google-client-id}
+      client-secret: ${GOOGLE_CLIENT_SECRET:}
     linkedin:
       client-id: ${LINKEDIN_CLIENT_ID:talentbridge-linkedin-client-id}
+      client-secret: ${LINKEDIN_CLIENT_SECRET:}
   storage:
     dir: ${APP_STORAGE_DIR:uploads}
   # Base URL of the React app, used to build links inside e-mails (invitations, application pages)

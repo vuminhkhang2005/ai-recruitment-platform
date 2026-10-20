@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { authApi, SESSION_EXPIRED_EVENT, tokens } from '../lib/api';
+import { authApi, SESSION_EXPIRED_EVENT, tokens, type OAuth2LoginPayload } from '../lib/api';
 import type { AuthResponse, RegisterInput, UserSummary } from '../lib/types';
 
 interface AuthContextValue {
@@ -14,7 +14,7 @@ interface AuthContextValue {
   register: (input: RegisterInput) => Promise<UserSummary>;
   loginWithOAuth2: (
     provider: 'google' | 'linkedin',
-    payload?: { email?: string; fullName?: string; avatarUrl?: string }
+    payload?: OAuth2LoginPayload
   ) => Promise<UserSummary>;
   logout: () => Promise<void>;
   setUserSession: (res: AuthResponse) => void;
@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithOAuth2 = useCallback(
     async (
       provider: 'google' | 'linkedin',
-      payload?: { email?: string; fullName?: string; avatarUrl?: string }
+      payload?: OAuth2LoginPayload
     ) => {
       const res = await authApi.oauth2(provider, payload);
       tokens.set(res);

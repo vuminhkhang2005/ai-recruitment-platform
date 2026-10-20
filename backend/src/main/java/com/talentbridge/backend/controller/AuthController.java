@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -18,6 +19,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -27,6 +30,12 @@ public class AuthController {
 
     private final AuthService authService;
     private final JwtCookieHelper cookieHelper;
+
+    @Value("${app.oauth2.google.client-id:}")
+    private String googleClientId;
+
+    @Value("${app.oauth2.linkedin.client-id:}")
+    private String linkedinClientId;
 
     @PostMapping("/register")
     @Operation(summary = "Đăng ký tài khoản mới", description = "Đăng ký tài khoản Ứng viên (ROLE_CANDIDATE) hoặc Nhà tuyển dụng (ROLE_RECRUITER). Mật khẩu được băm BCrypt, tự động thiết lập Cookie HttpOnly và trả về JWT Access Token.")
@@ -162,6 +171,23 @@ public class AuthController {
                 .success(true)
                 .message("Lấy thông tin người dùng thành công")
                 .data(user)
+                .build());
+    }
+
+    @GetMapping("/oauth2/config")
+    @Operation(summary = "Lấy cấu hình OAuth2 Client ID (Google & LinkedIn)", description = "Trả về Client ID đã cấu hình trên máy chủ để Frontend khởi tạo Google Identity Services / LinkedIn OAuth2.")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getOAuth2Config() {
+        boolean googleConfigured = StringUtils.hasText(googleClientId) && !"talentbridge-google-client-id".equals(googleClientId);
+        boolean linkedinConfigured = StringUtils.hasText(linkedinClientId) && !"talentbridge-linkedin-client-id".equals(linkedinClientId);
+        return ResponseEntity.ok(ApiResponse.<Map<String, Object>>builder()
+                .success(true)
+                .message("Cấu hình OAuth2")
+                .data(Map.of(
+                        "googleClientId", googleConfigured ? googleClientId : "",
+                        "linkedinClientId", linkedinConfigured ? linkedinClientId : "",
+                        "googleConfigured", googleConfigured,
+                        "linkedinConfigured", linkedinConfigured
+                ))
                 .build());
     }
 

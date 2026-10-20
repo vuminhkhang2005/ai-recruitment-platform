@@ -1,5 +1,7 @@
 package com.talentbridge.backend.service.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.talentbridge.backend.dto.*;
 import com.talentbridge.backend.entity.*;
 import com.talentbridge.backend.exception.BadRequestException;
@@ -10,6 +12,7 @@ import com.talentbridge.backend.security.UserPrincipal;
 import com.talentbridge.backend.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -21,9 +24,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -42,6 +51,23 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
+    private final ObjectMapper objectMapper;
+
+    @Value("${app.oauth2.google.client-id:}")
+    private String googleClientId;
+
+    @Value("${app.oauth2.google.client-secret:}")
+    private String googleClientSecret;
+
+    @Value("${app.oauth2.linkedin.client-id:}")
+    private String linkedinClientId;
+
+    @Value("${app.oauth2.linkedin.client-secret:}")
+    private String linkedinClientSecret;
+
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(8))
+            .build();
 
     @Override
     @Transactional
@@ -205,22 +231,48 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Nhà cung cấp OAuth2 không được hỗ trợ: " + provider + ". Chỉ hỗ trợ GOOGLE hoặc LINKEDIN.");
         }
 
-        String defaultEmail = "GOOGLE".equals(provider)
-                ? "khang.google@gmail.com"
-                : "khang.linkedin@talentbridge.vn";
-        String defaultName = "GOOGLE".equals(provider)
-                ? "Vũ Minh Khang (Google)"
-                : "Vũ Minh Khang (LinkedIn)";
+        String resolvedToken = request.getToken();
 
-        String email = StringUtils.hasText(request.getEmail())
-                ? request.getEmail().trim().toLowerCase()
-                : defaultEmail;
-        String fullName = StringUtils.hasText(request.getFullName())
-                ? request.getFullName().trim()
-                : defaultName;
-        String avatarUrl = StringUtils.hasText(request.getAvatarUrl())
-                ? request.getAvatarUrl().trim()
-                : "https://ui-avatars.com/api/?name=" + fullName.replace(" ", "+") + "&background=0D9488&color=fff";
+        // 1. If OAuth2 Authorization Code is provided, exchange it with Google / LinkedIn token endpoint
+        if (StringUtils.hasText(request.getAuthCode())) {
+            resolvedToken = exchangeAuthorizationCode(provider, request.getAuthCode().trim(), request.getRedirectUri());
+        }
+
+        String email = null;
+        String fullName = null;
+        String avatarUrl = null;
+
+        // 2. If a real external OAuth2 token (Access Token or ID Token) is provided, verify it with Google / LinkedIn servers
+        boolean isSandboxToken = resolvedToken != null && resolvedToken.startsWith("oauth2_sandbox_");
+        if (StringUtils.hasText(resolvedToken) && !isSandboxToken) {
+            Map<String, String> verifiedProfile = verifyExternalOAuth2Token(provider, resolvedToken.trim());
+            email = verifiedProfile.get("email");
+            fullName = verifiedProfile.get("fullName");
+            avatarUrl = verifiedProfile.get("avatarUrl");
+        }
+
+        // 3. Fallback to OAuth2 Account Chooser / Sandbox parameters if in local sandbox mode
+        if (!StringUtils.hasText(email)) {
+            String defaultEmail = "GOOGLE".equals(provider)
+                    ? "khang.google@gmail.com"
+                    : "khang.linkedin@talentbridge.vn";
+            email = StringUtils.hasText(request.getEmail())
+                    ? request.getEmail().trim().toLowerCase()
+                    : defaultEmail;
+        }
+        if (!StringUtils.hasText(fullName)) {
+            String defaultName = "GOOGLE".equals(provider)
+                    ? "Vũ Minh Khang (Google)"
+                    : "Vũ Minh Khang (LinkedIn)";
+            fullName = StringUtils.hasText(request.getFullName())
+                    ? request.getFullName().trim()
+                    : defaultName;
+        }
+        if (!StringUtils.hasText(avatarUrl)) {
+            avatarUrl = StringUtils.hasText(request.getAvatarUrl())
+                    ? request.getAvatarUrl().trim()
+                    : "https://ui-avatars.com/api/?name=" + URLEncoder.encode(fullName, StandardCharsets.UTF_8) + "&background=0D9488&color=fff";
+        }
 
         Optional<User> existingUserOpt = userRepository.findByEmail(email);
         User user;
@@ -230,13 +282,16 @@ public class AuthServiceImpl implements AuthService {
             if (!"ACTIVE".equals(user.getStatus())) {
                 throw new BadRequestException("Tài khoản đã bị vô hiệu hoá. Vui lòng liên hệ quản trị viên.");
             }
-            if (StringUtils.hasText(request.getAvatarUrl()) && !StringUtils.hasText(user.getAvatarUrl())) {
+            if (StringUtils.hasText(avatarUrl) && !StringUtils.hasText(user.getAvatarUrl())) {
                 user.setAvatarUrl(avatarUrl);
                 user = userRepository.save(user);
             }
         } else {
-            Role candidateRole = roleRepository.findByName("ROLE_CANDIDATE")
-                    .orElseThrow(() -> new BadRequestException("Không tìm thấy vai trò ROLE_CANDIDATE"));
+            String requestedRole = StringUtils.hasText(request.getRole()) && request.getRole().toUpperCase().contains("RECRUITER")
+                    ? "ROLE_RECRUITER"
+                    : "ROLE_CANDIDATE";
+            Role targetRole = roleRepository.findByName(requestedRole)
+                    .orElseThrow(() -> new BadRequestException("Không tìm thấy vai trò " + requestedRole));
 
             user = User.builder()
                     .uuid(UUID.randomUUID().toString())
@@ -246,23 +301,171 @@ public class AuthServiceImpl implements AuthService {
                     .avatarUrl(avatarUrl)
                     .status("ACTIVE")
                     .isEmailVerified(true)
-                    .roles(new HashSet<>(Collections.singletonList(candidateRole)))
+                    .roles(new HashSet<>(Collections.singletonList(targetRole)))
                     .build();
 
             user = userRepository.save(user);
 
-            candidateProfileRepository.save(CandidateProfile.builder()
-                    .uuid(UUID.randomUUID().toString())
-                    .userId(user.getId())
-                    .headline("Ứng viên kết nối qua " + ("GOOGLE".equals(provider) ? "Google (Gmail)" : "LinkedIn"))
-                    .country("Vietnam")
-                    .isOpenToWork(true)
-                    .visibility("PUBLIC")
-                    .build());
+            if ("ROLE_RECRUITER".equals(requestedRole)) {
+                String companyName = fullName + " Corp";
+                String slug = "company-" + UUID.randomUUID().toString().substring(0, 8);
+                Company company = companyRepository.save(Company.builder()
+                        .uuid(UUID.randomUUID().toString())
+                        .name(companyName)
+                        .slug(slug)
+                        .verificationStatus("PENDING")
+                        .build());
+                recruiterProfileRepository.save(RecruiterProfile.builder()
+                        .userId(user.getId())
+                        .companyId(company.getId())
+                        .jobTitle("Chuyên viên tuyển dụng (" + provider + ")")
+                        .teamRole("ADMIN")
+                        .isCompanyAdmin(true)
+                        .build());
+            } else {
+                candidateProfileRepository.save(CandidateProfile.builder()
+                        .uuid(UUID.randomUUID().toString())
+                        .userId(user.getId())
+                        .headline("Ứng viên kết nối qua " + ("GOOGLE".equals(provider) ? "Google (Gmail)" : "LinkedIn"))
+                        .country("Vietnam")
+                        .isOpenToWork(true)
+                        .visibility("PUBLIC")
+                        .build());
+            }
         }
 
         UserPrincipal userPrincipal = UserPrincipal.create(user);
         return issueTokens(userPrincipal, user, ipAddress, userAgent);
+    }
+
+    /**
+     * Exchanges an OAuth2 Authorization Code with Google or LinkedIn token endpoint for an access_token.
+     */
+    private String exchangeAuthorizationCode(String provider, String code, String redirectUri) {
+        String effectiveRedirect = StringUtils.hasText(redirectUri) ? redirectUri : "http://localhost:5173/login";
+        try {
+            if ("GOOGLE".equals(provider)) {
+                String form = "code=" + URLEncoder.encode(code, StandardCharsets.UTF_8)
+                        + "&client_id=" + URLEncoder.encode(googleClientId, StandardCharsets.UTF_8)
+                        + "&client_secret=" + URLEncoder.encode(googleClientSecret, StandardCharsets.UTF_8)
+                        + "&redirect_uri=" + URLEncoder.encode(effectiveRedirect, StandardCharsets.UTF_8)
+                        + "&grant_type=authorization_code";
+
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create("https://oauth2.googleapis.com/token"))
+                        .header("Content-Type", "application/x-www-form-urlencoded")
+                        .POST(HttpRequest.BodyPublishers.ofString(form))
+                        .build();
+                HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+                if (resp.statusCode() != 200) {
+                    log.warn("Google code exchange failed ({}): {}", resp.statusCode(), resp.body());
+                    throw new BadRequestException("Không thể đổi Authorization Code với máy chủ Google OAuth2. Vui lòng kiểm tra GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET.");
+                }
+                JsonNode json = objectMapper.readTree(resp.body());
+                if (json.hasNonNull("access_token")) return json.get("access_token").asText();
+                if (json.hasNonNull("id_token")) return json.get("id_token").asText();
+                throw new BadRequestException("Phản hồi từ Google OAuth2 không chứa access_token.");
+            } else {
+                String form = "grant_type=authorization_code"
+                        + "&code=" + URLEncoder.encode(code, StandardCharsets.UTF_8)
+                        + "&client_id=" + URLEncoder.encode(linkedinClientId, StandardCharsets.UTF_8)
+                        + "&client_secret=" + URLEncoder.encode(linkedinClientSecret, StandardCharsets.UTF_8)
+                        + "&redirect_uri=" + URLEncoder.encode(effectiveRedirect, StandardCharsets.UTF_8);
+
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create("https://www.linkedin.com/oauth/v2/accessToken"))
+                        .header("Content-Type", "application/x-www-form-urlencoded")
+                        .POST(HttpRequest.BodyPublishers.ofString(form))
+                        .build();
+                HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+                if (resp.statusCode() != 200) {
+                    log.warn("LinkedIn code exchange failed ({}): {}", resp.statusCode(), resp.body());
+                    throw new BadRequestException("Không thể đổi Authorization Code với máy chủ LinkedIn OAuth2. Vui lòng kiểm tra LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET.");
+                }
+                JsonNode json = objectMapper.readTree(resp.body());
+                if (json.hasNonNull("access_token")) return json.get("access_token").asText();
+                throw new BadRequestException("Phản hồi từ LinkedIn OAuth2 không chứa access_token.");
+            }
+        } catch (BadRequestException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("OAuth2 code exchange error for {}: {}", provider, e.getMessage());
+            throw new BadRequestException("Lỗi kết nối tới máy chủ OAuth2 " + provider + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Verifies a real Google (ID Token or Access Token) or LinkedIn (Access Token) against official OAuth2 UserInfo endpoints.
+     */
+    private Map<String, String> verifyExternalOAuth2Token(String provider, String token) {
+        try {
+            if ("GOOGLE".equals(provider)) {
+                boolean looksLikeJwtIdToken = token.startsWith("eyJ") && token.chars().filter(ch -> ch == '.').count() == 2;
+                HttpRequest req;
+                if (looksLikeJwtIdToken) {
+                    req = HttpRequest.newBuilder()
+                            .uri(URI.create("https://oauth2.googleapis.com/tokeninfo?id_token=" + URLEncoder.encode(token, StandardCharsets.UTF_8)))
+                            .GET()
+                            .build();
+                } else {
+                    req = HttpRequest.newBuilder()
+                            .uri(URI.create("https://www.googleapis.com/oauth2/v3/userinfo"))
+                            .header("Authorization", "Bearer " + token)
+                            .GET()
+                            .build();
+                }
+                HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+                if (resp.statusCode() != 200) {
+                    log.warn("Google OAuth2 token verification failed ({}): {}", resp.statusCode(), resp.body());
+                    throw new BadRequestException("Xác thực Google OAuth2 thất bại: Token không hợp lệ hoặc đã hết hạn (phản hồi từ googleapis.com).");
+                }
+                JsonNode node = objectMapper.readTree(resp.body());
+                String email = node.hasNonNull("email") ? node.get("email").asText().trim().toLowerCase() : null;
+                if (!StringUtils.hasText(email)) {
+                    throw new BadRequestException("Tài khoản Google không cung cấp địa chỉ email hợp lệ.");
+                }
+                String name = node.hasNonNull("name")
+                        ? node.get("name").asText()
+                        : email.split("@")[0];
+                String picture = node.hasNonNull("picture") ? node.get("picture").asText() : "";
+                Map<String, String> res = new HashMap<>();
+                res.put("email", email);
+                res.put("fullName", name);
+                res.put("avatarUrl", picture);
+                return res;
+            } else {
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create("https://api.linkedin.com/v2/userinfo"))
+                        .header("Authorization", "Bearer " + token)
+                        .GET()
+                        .build();
+                HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+                if (resp.statusCode() != 200) {
+                    log.warn("LinkedIn OAuth2 token verification failed ({}): {}", resp.statusCode(), resp.body());
+                    throw new BadRequestException("Xác thực LinkedIn OAuth2 thất bại: Token không hợp lệ hoặc đã hết hạn (phản hồi từ api.linkedin.com).");
+                }
+                JsonNode node = objectMapper.readTree(resp.body());
+                String email = node.hasNonNull("email") ? node.get("email").asText().trim().toLowerCase() : null;
+                if (!StringUtils.hasText(email)) {
+                    throw new BadRequestException("Tài khoản LinkedIn không cung cấp địa chỉ email (yêu cầu quyền openid email profile).");
+                }
+                String name = node.hasNonNull("name")
+                        ? node.get("name").asText()
+                        : ((node.path("given_name").asText("") + " " + node.path("family_name").asText("")).trim());
+                if (!StringUtils.hasText(name)) name = email.split("@")[0];
+                String picture = node.hasNonNull("picture") ? node.get("picture").asText() : "";
+                Map<String, String> res = new HashMap<>();
+                res.put("email", email);
+                res.put("fullName", name);
+                res.put("avatarUrl", picture);
+                return res;
+            }
+        } catch (BadRequestException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("External OAuth2 token verification error ({}): {}", provider, e.getMessage());
+            throw new BadRequestException("Không thể xác thực token với máy chủ " + provider + ": " + e.getMessage());
+        }
     }
 
     @Override

@@ -179,14 +179,28 @@ async function request<T>(path: string, opts: RequestOptions = {}, retried = fal
 
 // ---------------------------------------------------------------- endpoints
 
+export interface OAuth2LoginPayload {
+  email?: string;
+  fullName?: string;
+  avatarUrl?: string;
+  token?: string;
+  authCode?: string;
+  redirectUri?: string;
+  role?: 'ROLE_CANDIDATE' | 'ROLE_RECRUITER';
+}
+
 export const authApi = {
   login: (email: string, password: string) =>
     request<AuthResponse>('/auth/login', { method: 'POST', body: { email, password } }),
   register: (input: RegisterInput) => request<AuthResponse>('/auth/register', { method: 'POST', body: input }),
-  oauth2: (
-    provider: 'google' | 'linkedin',
-    payload?: { email?: string; fullName?: string; avatarUrl?: string; token?: string }
-  ) =>
+  oauth2Config: () =>
+    request<{
+      googleClientId: string;
+      linkedinClientId: string;
+      googleConfigured: boolean;
+      linkedinConfigured: boolean;
+    }>('/auth/oauth2/config'),
+  oauth2: (provider: 'google' | 'linkedin', payload?: OAuth2LoginPayload) =>
     request<AuthResponse>(`/auth/oauth2/${provider}`, {
       method: 'POST',
       body: {
@@ -194,7 +208,10 @@ export const authApi = {
         email: payload?.email,
         fullName: payload?.fullName,
         avatarUrl: payload?.avatarUrl,
-        token: payload?.token ?? `oauth2_${provider}_token_${Date.now()}`,
+        token: payload?.token,
+        authCode: payload?.authCode,
+        redirectUri: payload?.redirectUri,
+        role: payload?.role,
       },
     }),
   me: () => request<UserSummary>('/auth/me'),
