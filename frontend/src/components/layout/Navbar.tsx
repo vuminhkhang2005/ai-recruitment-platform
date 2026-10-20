@@ -33,6 +33,7 @@ import { NotificationBell } from './NotificationBell';
 interface NavItem {
   to: string;
   label: string;
+  desc?: string;
   icon: React.ElementType;
   end?: boolean;
 }
@@ -49,23 +50,33 @@ const RECRUITER_LINKS: NavItem[] = [
   { to: '/employer/jobs/new', label: 'Đăng tin', icon: PlusCircle },
 ];
 
-/** Original TalentBridge brand mark: gradient tile + wordmark + live dot. */
-export const Logo: React.FC<{ to?: string }> = ({ to = '/' }) => (
-  <Link to={to} className="flex items-center gap-2 shrink-0 group" aria-label="TalentBridge - Trang chủ">
-    <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-500 flex items-center justify-center text-white shadow-soft group-hover:scale-105 transition-transform duration-300 shrink-0">
+/** Original TalentBridge brand mark: gradient tile + optional wordmark + live dot. */
+export const Logo: React.FC<{ to?: string; iconOnly?: boolean }> = ({ to = '/', iconOnly = false }) => (
+  <Link
+    to={to}
+    className="flex items-center gap-2 shrink-0 group relative"
+    aria-label="TalentBridge - Trang chủ"
+    title="TalentBridge - Trang chủ"
+  >
+    <span className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-500 flex items-center justify-center text-white shadow-soft group-hover:scale-105 transition-transform duration-300 shrink-0">
       <Briefcase className="w-4 h-4 sm:w-5 sm:h-5" />
+      {iconOnly && (
+        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-slate-900 animate-pulse" />
+      )}
     </span>
-    <span className="flex items-center gap-1.5">
-      <span className="text-base sm:text-lg xl:text-xl font-black tracking-tight text-slate-900 dark:text-white whitespace-nowrap">
-        TalentBridge
+    {!iconOnly && (
+      <span className="flex items-center gap-1.5">
+        <span className="text-base sm:text-lg xl:text-xl font-black tracking-tight text-slate-900 dark:text-white whitespace-nowrap">
+          TalentBridge
+        </span>
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
       </span>
-      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-    </span>
+    )}
   </Link>
 );
 
 const linkCls = ({ isActive }: { isActive: boolean }) =>
-  `inline-flex items-center gap-1 px-1.5 xl:px-2 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap shrink-0 ${
+  `inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-xl transition-all whitespace-nowrap shrink-0 ${
     isActive
       ? 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/50 shadow-soft-xs'
       : 'text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800/80'
@@ -149,22 +160,26 @@ export const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moreNavOpen, setMoreNavOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const moreNavRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMenuOpen(false);
+    setMoreNavOpen(false);
     setMobileOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuOpen && !moreNavOpen) return;
     const close = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+      if (moreNavRef.current && !moreNavRef.current.contains(e.target as Node)) setMoreNavOpen(false);
     };
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
-  }, [menuOpen]);
+  }, [menuOpen, moreNavOpen]);
 
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
 
@@ -194,29 +209,77 @@ export const Navbar: React.FC = () => {
     };
   }, [isAuthenticated, subscribeToUserMessages, location.pathname]);
 
-  const links: NavItem[] = isAdmin
+  const primaryLinks: NavItem[] = isAdmin
     ? [
-        { to: '/admin', label: language === 'vi' ? 'Tổng quan' : 'Overview', icon: BarChart3, end: true },
-        { to: '/admin/users', label: language === 'vi' ? 'Người dùng' : 'Users', icon: Users },
+        { to: '/admin', label: language === 'vi' ? 'Tổng quan & AI' : 'Overview & AI', icon: BarChart3, end: true },
+        { to: '/admin/users', label: language === 'vi' ? 'Người dùng & RBAC' : 'Users & RBAC', icon: Users },
         { to: '/admin/moderation', label: language === 'vi' ? 'Kiểm duyệt' : 'Moderation', icon: ShieldCheck },
-        { to: '/admin/skills', label: language === 'vi' ? 'Kỹ năng AI' : 'AI Skills', icon: Sparkles },
-        { to: '/admin/audit-logs', label: language === 'vi' ? 'Nhật ký Audit' : 'Audit Logs', icon: FileCheck2 },
       ]
     : isRecruiter
     ? [
-        { to: '/employer', label: language === 'vi' ? 'Tin đăng' : 'Jobs', icon: LayoutGrid, end: true },
+        { to: '/employer', label: language === 'vi' ? 'Tin tuyển dụng' : 'Jobs', icon: LayoutGrid, end: true },
         { to: '/employer/applicants', label: language === 'vi' ? 'Ứng viên' : 'Applicants', icon: Users },
-        { to: '/employer/talent-pool', label: language === 'vi' ? 'Nhân tài' : 'Talent Pool', icon: Sparkles },
-        { to: '/employer/interviews', label: language === 'vi' ? 'Lịch PV' : 'Interviews', icon: Calendar },
-        { to: '/employer/analytics', label: language === 'vi' ? 'Thống kê' : 'Analytics', icon: BarChart3 },
-        { to: '/employer/team', label: language === 'vi' ? 'Đội ngũ' : 'Team', icon: ShieldCheck },
-        { to: '/employer/jobs/new', label: language === 'vi' ? 'Đăng tin' : 'Post Job', icon: PlusCircle },
+        { to: '/employer/talent-pool', label: language === 'vi' ? 'Săn nhân tài' : 'Talent Pool', icon: Sparkles },
       ]
     : [
         { to: '/jobs', label: language === 'vi' ? 'Việc làm' : 'Jobs', icon: Search },
         { to: '/companies', label: language === 'vi' ? 'Công ty' : 'Companies', icon: Building2 },
         { to: '/tools', label: language === 'vi' ? 'Công cụ' : 'Tools', icon: Wrench },
       ];
+
+  const dropdownLinks: NavItem[] = isAdmin
+    ? [
+        {
+          to: '/admin/skills',
+          label: language === 'vi' ? 'Từ điển Kỹ năng AI' : 'AI Skill Taxonomy',
+          desc: language === 'vi' ? 'Chuẩn hóa kỹ năng & từ đồng nghĩa' : 'Manage skill taxonomy & synonyms',
+          icon: Sparkles,
+        },
+        {
+          to: '/admin/audit-logs',
+          label: language === 'vi' ? 'Nhật ký Audit & Email' : 'Audit & Email Logs',
+          desc: language === 'vi' ? 'Truy vết thao tác & lịch sử gửi thư' : 'System audit trail & email logs',
+          icon: FileCheck2,
+        },
+      ]
+    : isRecruiter
+    ? [
+        {
+          to: '/employer/interviews',
+          label: language === 'vi' ? 'Lịch phỏng vấn' : 'Interview Schedule',
+          desc: language === 'vi' ? 'Quản lý lịch hẹn & hội đồng chấm điểm' : 'Manage interview rounds & panels',
+          icon: Calendar,
+        },
+        {
+          to: '/employer/analytics',
+          label: language === 'vi' ? 'Thống kê & Phễu tuyển' : 'Analytics & Funnel',
+          desc: language === 'vi' ? 'Báo cáo hiệu quả tuyển dụng & ATS' : 'Hiring funnel & conversion metrics',
+          icon: BarChart3,
+        },
+        {
+          to: '/employer/team',
+          label: language === 'vi' ? 'Đội ngũ tuyển dụng' : 'Hiring Team',
+          desc: language === 'vi' ? 'Phân quyền HR, Admin & Interviewer' : 'Collaborators & role permissions',
+          icon: ShieldCheck,
+        },
+        {
+          to: '/employer/company',
+          label: language === 'vi' ? 'Hồ sơ công ty' : 'Company Profile',
+          desc: language === 'vi' ? 'Thông tin thương hiệu nhà tuyển dụng' : 'Employer brand & company details',
+          icon: Building2,
+        },
+      ]
+    : [];
+
+  const links: NavItem[] = [...primaryLinks, ...dropdownLinks];
+  const activeDropdownItem = dropdownLinks.find((d) => location.pathname.startsWith(d.to));
+  const dropdownTriggerLabel = isAdmin
+    ? language === 'vi'
+      ? 'Hệ thống'
+      : 'System'
+    : language === 'vi'
+    ? 'Quản lý'
+    : 'Manage';
 
   const accountLinks: NavItem[] = isAdmin
     ? [
@@ -259,35 +322,101 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/90 transition-colors duration-300 shadow-soft-sm">
-      <div className="max-w-7xl mx-auto px-3 sm:px-5 h-16 flex items-center justify-between gap-2 lg:gap-4">
-        <Logo to={isAdmin ? '/admin' : isRecruiter ? '/employer' : '/'} />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3 lg:gap-6">
+        <Logo to={isAdmin ? '/admin' : isRecruiter ? '/employer' : '/'} iconOnly={isAdmin || isRecruiter} />
 
         <nav
-          className="hidden md:flex items-center gap-0.5 xl:gap-1 min-w-0 overflow-x-auto no-scrollbar"
+          className="hidden md:flex items-center gap-1"
           aria-label="Điều hướng chính"
         >
-          {links.map((l) => {
-            const isPostJobCta = l.to === '/employer/jobs/new';
-            if (isPostJobCta) {
-              return (
-                <NavLink
-                  key={l.to}
-                  to={l.to}
-                  end={l.end}
-                  className="ml-0.5 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-soft-xs transition-all whitespace-nowrap shrink-0"
+          {primaryLinks.map((l) => (
+            <NavLink key={l.to} to={l.to} end={l.end} className={linkCls}>
+              <l.icon className="w-4 h-4 shrink-0" />
+              {l.label}
+            </NavLink>
+          ))}
+
+          {/* Functional Dropdown Menu for Admin & Recruiter */}
+          {dropdownLinks.length > 0 && (
+            <div className="relative" ref={moreNavRef}>
+              <button
+                type="button"
+                onClick={() => setMoreNavOpen((v) => !v)}
+                aria-expanded={moreNavOpen}
+                data-testid="navbar-more-dropdown"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+                  activeDropdownItem || moreNavOpen
+                    ? 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/50 shadow-soft-xs'
+                    : 'text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800/80'
+                }`}
+              >
+                {activeDropdownItem ? (
+                  <activeDropdownItem.icon className="w-4 h-4 shrink-0" />
+                ) : (
+                  <Wrench className="w-4 h-4 shrink-0" />
+                )}
+                <span>{activeDropdownItem ? activeDropdownItem.label : dropdownTriggerLabel}</span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                    moreNavOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {moreNavOpen && (
+                <div
+                  role="menu"
+                  className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 rounded-2xl shadow-soft-xl border border-slate-200 dark:border-slate-800 p-2 z-50 space-y-1"
                 >
-                  <l.icon className="w-3.5 h-3.5 shrink-0" />
-                  {l.label}
-                </NavLink>
-              );
-            }
-            return (
-              <NavLink key={l.to} to={l.to} end={l.end} className={linkCls}>
-                <l.icon className="w-3.5 h-3.5 shrink-0" />
-                {l.label}
-              </NavLink>
-            );
-          })}
+                  {dropdownLinks.map((item) => {
+                    const isItemActive = location.pathname.startsWith(item.to);
+                    return (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        role="menuitem"
+                        className={`flex items-start gap-3 p-2.5 rounded-xl transition-colors ${
+                          isItemActive
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/70 text-slate-700 dark:text-slate-200'
+                        }`}
+                      >
+                        <span
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                            isItemActive
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400'
+                          }`}
+                        >
+                          <item.icon className="w-4 h-4" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-extrabold text-slate-900 dark:text-white">
+                            {item.label}
+                          </p>
+                          {item.desc && (
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                              {item.desc}
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {isRecruiter && (
+            <NavLink
+              to="/employer/jobs/new"
+              className="ml-1 inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-soft-xs transition-all whitespace-nowrap shrink-0"
+            >
+              <PlusCircle className="w-4 h-4 shrink-0" />
+              {language === 'vi' ? 'Đăng tin' : 'Post Job'}
+            </NavLink>
+          )}
         </nav>
 
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2 shrink-0">
