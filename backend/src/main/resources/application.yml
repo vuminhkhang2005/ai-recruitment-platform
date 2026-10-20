@@ -93,7 +93,7 @@ app:
     same-site: Lax
   oauth2:
     google:
-      client-id: ${GOOGLE_CLIENT_ID:talentbridge-google-client-id}
+      client-id: ${GOOGLE_CLIENT_ID:}
       client-secret: ${GOOGLE_CLIENT_SECRET:}
     linkedin:
       client-id: ${LINKEDIN_CLIENT_ID:talentbridge-linkedin-client-id}

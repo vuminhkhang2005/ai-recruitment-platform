@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Briefcase, ChevronDown, Lock, UserPlus, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -578,6 +578,7 @@ export const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [oauthModalProvider, setOauthModalProvider] = useState<'google' | 'linkedin' | null>(null);
+  const processedCodeRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (user) navigate(next ?? homeFor(user), { replace: true });
@@ -588,6 +589,9 @@ export const LoginPage: React.FC = () => {
     const code = params.get('code');
     const state = params.get('state');
     if (!code || !state) return;
+    if (processedCodeRef.current === code) return;
+    processedCodeRef.current = code;
+
     const provider = state.includes('linkedin') ? 'linkedin' : 'google';
     setLoading(true);
     loginWithOAuth2(provider, {
