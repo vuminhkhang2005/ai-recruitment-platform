@@ -467,6 +467,10 @@ export interface AtsMatchAnalysis {
   skillMatchScore?: number;
   experienceMatchScore?: number;
   keywordMatchScore?: number;
+  modelName?: string;
+  modelVersion?: string;
+  semanticSimilarity?: number;
+  inferenceTimeMs?: number;
   matchRating: string;
   ratingColor: string;
   matchedSkills: AtsSkillBreakdown[];

@@ -104,6 +104,13 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- Apache PDFBox for real PDF CV text extraction -->
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>3.0.2</version>
+		</dependency>
+
 		<!-- Testing Starters -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

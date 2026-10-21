@@ -391,6 +391,20 @@ export const ApplyModal: React.FC<{
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 font-bold text-emerald-800 dark:text-emerald-300">
                     JD: {job.title}
                   </span>
+                  {atsAnalysis.modelName && (
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-900 text-emerald-300 dark:bg-slate-800 text-[10px] font-mono font-bold"
+                      data-testid="ai-model-badge"
+                    >
+                      🧠 {atsAnalysis.modelName} ({atsAnalysis.modelVersion || 'PyTorch'})
+                      {typeof atsAnalysis.semanticSimilarity === 'number'
+                        ? ` · cos=${atsAnalysis.semanticSimilarity.toFixed(2)}`
+                        : ''}
+                      {typeof atsAnalysis.inferenceTimeMs === 'number'
+                        ? ` · ${atsAnalysis.inferenceTimeMs.toFixed(1)}ms`
+                        : ''}
+                    </span>
+                  )}
                 </div>
                 <button
                   type="button"

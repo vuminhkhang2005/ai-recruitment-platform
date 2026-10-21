@@ -162,6 +162,10 @@ public class AiDtos {
         private Integer skillMatchScore; // 0 - 100
         private Integer experienceMatchScore; // 0 - 100
         private Integer keywordMatchScore; // 0 - 100
+        private String modelName;
+        private String modelVersion;
+        private Double semanticSimilarity;
+        private Double inferenceTimeMs;
         private String matchRating; // XUẤT SẮC, PHÙ HỢP, TIỀM NĂNG, CẦN BỔ SUNG
         private String ratingColor; // emerald, sky, amber, rose
         @Builder.Default
