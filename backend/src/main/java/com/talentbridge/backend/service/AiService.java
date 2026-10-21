@@ -307,7 +307,17 @@ public class AiService {
                 ? extractCityFromCvText(cvTextLower)
                 : (profile != null && StringUtils.hasText(profile.getCity()) ? profile.getCity() : "TP. Hồ Chí Minh");
 
-        // 2. Compare CV Skills vs JD Required Skills
+        // 2. Experience & Level requirement of the target JD
+        int requiredExpYears = switch (job.getExpLevel() != null ? job.getExpLevel().toUpperCase() : "JUNIOR") {
+            case "INTERN", "FRESHER" -> 0;
+            case "JUNIOR" -> 1;
+            case "MIDDLE" -> 2;
+            case "SENIOR" -> 4;
+            case "LEAD", "MANAGER" -> 5;
+            default -> 1;
+        };
+
+        // 3. Compare CV Skills vs JD Required Skills
         List<JobSkill> jobSkills = jobSkillRepository.findByJobId(jobId);
         List<AtsSkillBreakdownItem> matchedList = new ArrayList<>();
         List<AtsSkillBreakdownItem> missingList = new ArrayList<>();
@@ -327,14 +337,16 @@ public class AiService {
             boolean foundInCvText = cvTextLower.contains(skillLower)
                     || SKILL_TAXONOMY.getOrDefault(skillName, List.of()).stream().anyMatch(cvTextLower::contains);
 
-            int needYears = js.getMinYearsExp() != null ? js.getMinYearsExp() : 0;
+            // For INTERN/FRESHER jobs (requiredExpYears == 0), do not penalize 0 years of experience on individual skills
+            int rawNeedYears = js.getMinYearsExp() != null ? js.getMinYearsExp() : 0;
+            int needYears = requiredExpYears == 0 ? 0 : rawNeedYears;
 
             if (cs != null || foundInCvText) {
                 int haveYears = cs != null && cs.getYearsExperience() != null
                         ? cs.getYearsExperience()
                         : Math.max(parsedCvYears, estimateSkillYears(cvTextLower, skillName, parsedCvYears));
                 maxCandidateYears = Math.max(maxCandidateYears, haveYears);
-                double earned = haveYears >= needYears ? w : w * 0.80;
+                double earned = haveYears >= needYears ? w : w * 0.85;
                 gainedWeight += earned;
 
                 matchedList.add(AtsSkillBreakdownItem.builder()
@@ -359,25 +371,21 @@ public class AiService {
             }
         }
 
-        int skillScore = totalWeight > 0 ? (int) Math.round(100.0 * gainedWeight / totalWeight) : 50;
+        double skillMatchRatio = jobSkills.isEmpty() ? 0.75 : (double) matchedList.size() / jobSkills.size();
+        int bonusDepth = (!matchedList.isEmpty() && allDetectedCvSkills.size() >= 6) ? 6 : 0;
+        int skillScore = totalWeight > 0
+                ? (int) Math.round(100.0 * gainedWeight / totalWeight) + bonusDepth
+                : 50;
         skillScore = Math.max(10, Math.min(100, skillScore));
 
-        // 3. Experience & Level Match Score (CV vs JD expLevel)
-        int requiredExpYears = switch (job.getExpLevel() != null ? job.getExpLevel().toUpperCase() : "JUNIOR") {
-            case "INTERN", "FRESHER" -> 0;
-            case "JUNIOR" -> 1;
-            case "MIDDLE" -> 2;
-            case "SENIOR" -> 4;
-            case "LEAD", "MANAGER" -> 5;
-            default -> 1;
-        };
+        boolean expFulfilled = maxCandidateYears >= requiredExpYears;
         int expScore;
-        if (maxCandidateYears >= requiredExpYears) {
-            expScore = Math.min(100, 88 + Math.min(12, (maxCandidateYears - requiredExpYears) * 4));
+        if (expFulfilled) {
+            expScore = Math.min(100, 92 + Math.min(8, (maxCandidateYears - requiredExpYears) * 4));
         } else if (requiredExpYears - maxCandidateYears == 1) {
             expScore = 72;
         } else {
-            expScore = 55;
+            expScore = 50;
         }
 
         // 4. Keyword & JD Content Match Score
@@ -451,10 +459,21 @@ public class AiService {
                 int modelKw = aiPred.path("keyword_score").asInt(keywordScore);
 
                 // Blend neural semantic prediction with exact JD skill/level alignment
-                skillScore = (int) Math.round(skillScore * 0.55 + modelSkill * 0.45);
-                expScore = (int) Math.round(expScore * 0.50 + modelExp * 0.50);
-                keywordScore = (int) Math.round(keywordScore * 0.45 + modelKw * 0.55);
-                score = (int) Math.round(modelOverall * 0.55 + (skillScore * 0.60 + expScore * 0.25 + keywordScore * 0.15) * 0.45);
+                int baseSkillFloor = skillMatchRatio >= 0.70
+                        ? Math.min(96, (int) Math.round(skillMatchRatio * 100) + bonusDepth)
+                        : 10;
+                skillScore = Math.max(baseSkillFloor, (int) Math.round(skillScore * 0.65 + modelSkill * 0.35));
+                expScore = expFulfilled
+                        ? Math.max(88, (int) Math.round(expScore * 0.65 + modelExp * 0.35))
+                        : (int) Math.round(expScore * 0.55 + modelExp * 0.45);
+                keywordScore = (int) Math.round(keywordScore * 0.50 + modelKw * 0.50);
+                if (skillMatchRatio >= 0.70) {
+                    keywordScore = Math.max(75, keywordScore);
+                }
+                int weightedComposite = (int) Math.round(skillScore * 0.55 + expScore * 0.25 + keywordScore * 0.20);
+                score = skillMatchRatio >= 0.70 && expFulfilled
+                        ? Math.max(weightedComposite, (int) Math.round(modelOverall * 0.35 + weightedComposite * 0.65))
+                        : (int) Math.round(modelOverall * 0.45 + weightedComposite * 0.55);
 
                 semanticSimilarity = aiPred.path("cosine_similarity").asDouble(semanticSimilarity);
                 inferenceTimeMs = aiPred.path("inference_time_ms").asDouble(inferenceTimeMs);
@@ -505,7 +524,7 @@ public class AiService {
                 .criterion("Kỹ năng chuyên môn")
                 .cvValue(cvSkillSummary)
                 .jdValue(jdSkillSummary)
-                .status(skillScore >= 75 ? "MATCH" : skillScore >= 50 ? "PARTIAL" : "GAP")
+                .status((skillMatchRatio >= 0.70 || skillScore >= 72) ? "MATCH" : (skillMatchRatio >= 0.40 || skillScore >= 48) ? "PARTIAL" : "GAP")
                 .build());
 
         String cvExpSummary;
@@ -523,7 +542,7 @@ public class AiService {
                 .criterion("Kinh nghiệm & Cấp bậc")
                 .cvValue(cvExpSummary)
                 .jdValue(jdExpSummary)
-                .status(expScore >= 80 ? "MATCH" : expScore >= 65 ? "PARTIAL" : "GAP")
+                .status((expFulfilled || expScore >= 78) ? "MATCH" : expScore >= 60 ? "PARTIAL" : "GAP")
                 .build());
 
         String candCity = parsedCvCity;
