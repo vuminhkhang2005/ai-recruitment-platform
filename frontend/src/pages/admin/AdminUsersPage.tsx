@@ -17,21 +17,24 @@ import { ErrorBox, PageLoader, inputCls } from '../../components/ui/primitives';
 import { usePageTitle } from '../../lib/usePageTitle';
 import { useAuth } from '../../context/AuthContext';
 import { AdminHeader } from './AdminHeader';
-
-const ALL_ROLES = [
-  { code: 'ROLE_CANDIDATE', label: 'Ứng viên (ROLE_CANDIDATE)' },
-  { code: 'ROLE_RECRUITER', label: 'Nhà tuyển dụng (ROLE_RECRUITER)' },
-  { code: 'ROLE_HIRING_MANAGER', label: 'Quản lý tuyển dụng (ROLE_HIRING_MANAGER)' },
-  { code: 'ROLE_ADMIN', label: 'Quản trị viên (ROLE_ADMIN)' },
-];
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export const AdminUsersPage: React.FC = () => {
-  usePageTitle('Quản lý Người dùng & Phân quyền RBAC');
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
+  usePageTitle(isVi ? 'Quản lý Người dùng & Phân quyền RBAC' : 'User Management & RBAC');
   const { user: currentAdmin } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+  const allRoles = [
+    { code: 'ROLE_CANDIDATE', label: isVi ? 'Ứng viên (ROLE_CANDIDATE)' : 'Candidate (ROLE_CANDIDATE)' },
+    { code: 'ROLE_RECRUITER', label: isVi ? 'Nhà tuyển dụng (ROLE_RECRUITER)' : 'Recruiter (ROLE_RECRUITER)' },
+    { code: 'ROLE_HIRING_MANAGER', label: isVi ? 'Quản lý tuyển dụng (ROLE_HIRING_MANAGER)' : 'Hiring Manager (ROLE_HIRING_MANAGER)' },
+    { code: 'ROLE_ADMIN', label: isVi ? 'Quản trị viên (ROLE_ADMIN)' : 'Administrator (ROLE_ADMIN)' },
+  ];
 
   // Filters
   const [keyword, setKeyword] = useState('');
@@ -168,8 +171,12 @@ export const AdminUsersPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8" data-testid="admin-users-page">
       <AdminHeader
-        title="Quản lý Tài khoản Người dùng & Phân quyền RBAC"
-        subtitle="Tra cứu, lọc theo vai trò/trạng thái, khóa hoặc mở khóa tài khoản vi phạm và cấp phát quyền RBAC thời gian thực."
+        title={isVi ? 'Quản lý Tài khoản Người dùng & Phân quyền RBAC' : 'User Account Management & RBAC Permissions'}
+        subtitle={
+          isVi
+            ? 'Tra cứu, lọc theo vai trò/trạng thái, khóa hoặc mở khóa tài khoản vi phạm và cấp phát quyền RBAC thời gian thực.'
+            : 'Search, filter by role/status, suspend or reactivate accounts, and assign real-time RBAC permissions.'
+        }
         rightSlot={
           <button
             type="button"
@@ -177,7 +184,7 @@ export const AdminUsersPage: React.FC = () => {
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-bold border border-white/20 transition cursor-pointer"
           >
             <RefreshCw className="w-4 h-4" />
-            <span>Tải lại ({users.length})</span>
+            <span>{isVi ? 'Tải lại' : 'Refresh'} ({users.length})</span>
           </button>
         }
       />
@@ -215,7 +222,7 @@ export const AdminUsersPage: React.FC = () => {
               type="text"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              placeholder="Tìm theo họ tên, email hoặc số điện thoại..."
+              placeholder={isVi ? 'Tìm theo họ tên, email hoặc số điện thoại...' : 'Search by name, email, or phone number...'}
               className={`${inputCls} pl-10`}
               data-testid="admin-user-search-input"
             />
@@ -228,11 +235,11 @@ export const AdminUsersPage: React.FC = () => {
               className={inputCls}
               data-testid="admin-user-role-filter"
             >
-              <option value="ALL">Tất cả vai trò (RBAC)</option>
-              <option value="ROLE_CANDIDATE">Ứng viên (CANDIDATE)</option>
-              <option value="ROLE_RECRUITER">Nhà tuyển dụng (RECRUITER)</option>
+              <option value="ALL">{isVi ? 'Tất cả vai trò (RBAC)' : 'All Roles (RBAC)'}</option>
+              <option value="ROLE_CANDIDATE">{isVi ? 'Ứng viên (CANDIDATE)' : 'Candidate (CANDIDATE)'}</option>
+              <option value="ROLE_RECRUITER">{isVi ? 'Nhà tuyển dụng (RECRUITER)' : 'Recruiter (RECRUITER)'}</option>
               <option value="ROLE_HIRING_MANAGER">Hiring Manager</option>
-              <option value="ROLE_ADMIN">Quản trị viên (ADMIN)</option>
+              <option value="ROLE_ADMIN">{isVi ? 'Quản trị viên (ADMIN)' : 'Administrator (ADMIN)'}</option>
             </select>
           </div>
 
@@ -243,10 +250,10 @@ export const AdminUsersPage: React.FC = () => {
               className={inputCls}
               data-testid="admin-user-status-filter"
             >
-              <option value="ALL">Mọi trạng thái</option>
-              <option value="ACTIVE">ACTIVE (Hoạt động)</option>
-              <option value="SUSPENDED">SUSPENDED (Tạm khóa)</option>
-              <option value="BANNED">BANNED (Cấm vĩnh viễn)</option>
+              <option value="ALL">{isVi ? 'Mọi trạng thái' : 'All Statuses'}</option>
+              <option value="ACTIVE">{isVi ? 'ACTIVE (Hoạt động)' : 'ACTIVE'}</option>
+              <option value="SUSPENDED">{isVi ? 'SUSPENDED (Tạm khóa)' : 'SUSPENDED'}</option>
+              <option value="BANNED">{isVi ? 'BANNED (Cấm vĩnh viễn)' : 'BANNED'}</option>
               <option value="PENDING_VERIFY">PENDING_VERIFY</option>
             </select>
           </div>
@@ -257,7 +264,7 @@ export const AdminUsersPage: React.FC = () => {
               className="w-full h-full px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition cursor-pointer"
               data-testid="admin-user-search-btn"
             >
-              Tìm kiếm
+              {isVi ? 'Tìm kiếm' : 'Search'}
             </button>
           </div>
         </form>
@@ -272,11 +279,11 @@ export const AdminUsersPage: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  <th className="py-3.5 px-4">ID / Tài khoản</th>
-                  <th className="py-3.5 px-4">Đơn vị / Chức danh</th>
-                  <th className="py-3.5 px-4">Vai trò (RBAC)</th>
-                  <th className="py-3.5 px-4">Trạng thái</th>
-                  <th className="py-3.5 px-4 text-right">Thao tác Quản trị</th>
+                  <th className="py-3.5 px-4">{isVi ? 'ID / Tài khoản' : 'ID / Account'}</th>
+                  <th className="py-3.5 px-4">{isVi ? 'Đơn vị / Chức danh' : 'Organization / Title'}</th>
+                  <th className="py-3.5 px-4">{isVi ? 'Vai trò (RBAC)' : 'Roles (RBAC)'}</th>
+                  <th className="py-3.5 px-4">{isVi ? 'Trạng thái' : 'Status'}</th>
+                  <th className="py-3.5 px-4 text-right">{isVi ? 'Thao tác Quản trị' : 'Admin Actions'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
@@ -306,14 +313,14 @@ export const AdminUsersPage: React.FC = () => {
                       <td className="py-3.5 px-4">
                         {u.companyName ? (
                           <span className="text-xs font-semibold text-teal-700 dark:text-teal-300">
-                            Doanh nghiệp: {u.companyName}
+                            {isVi ? 'Doanh nghiệp' : 'Company'}: {u.companyName}
                           </span>
                         ) : u.candidateHeadline ? (
                           <span className="text-xs text-slate-600 dark:text-slate-300">
                             {u.candidateHeadline}
                           </span>
                         ) : (
-                          <span className="text-xs text-slate-400">Quản trị hệ thống</span>
+                          <span className="text-xs text-slate-400">{isVi ? 'Quản trị hệ thống' : 'System Administrator'}</span>
                         )}
                       </td>
 
@@ -332,7 +339,7 @@ export const AdminUsersPage: React.FC = () => {
                             data-testid={`btn-edit-roles-${u.id}`}
                           >
                             <KeyRound className="w-3.5 h-3.5" />
-                            <span>Phân quyền</span>
+                            <span>{isVi ? 'Phân quyền' : 'Permissions'}</span>
                           </button>
 
                           {!isSelf && (
@@ -346,7 +353,7 @@ export const AdminUsersPage: React.FC = () => {
                                   data-testid={`btn-suspend-user-${u.id}`}
                                 >
                                   <Lock className="w-3.5 h-3.5" />
-                                  <span>Tạm khóa</span>
+                                  <span>{isVi ? 'Tạm khóa' : 'Suspend'}</span>
                                 </button>
                               ) : (
                                 <button
@@ -357,7 +364,7 @@ export const AdminUsersPage: React.FC = () => {
                                   data-testid={`btn-activate-user-${u.id}`}
                                 >
                                   <Unlock className="w-3.5 h-3.5" />
-                                  <span>Mở khóa</span>
+                                  <span>{isVi ? 'Mở khóa' : 'Activate'}</span>
                                 </button>
                               )}
                             </>
@@ -381,7 +388,7 @@ export const AdminUsersPage: React.FC = () => {
               <div className="flex items-center gap-2.5">
                 <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                 <h3 className="text-lg font-black text-slate-900 dark:text-white">
-                  Cấu hình Quyền RBAC
+                  {isVi ? 'Cấu hình Quyền RBAC' : 'Configure RBAC Permissions'}
                 </h3>
               </div>
               <button
@@ -395,11 +402,11 @@ export const AdminUsersPage: React.FC = () => {
 
             <div className="my-4">
               <p className="text-sm text-slate-600 dark:text-slate-300">
-                Tài khoản: <strong className="text-slate-900 dark:text-white">{editingRoleUser.fullName}</strong> ({editingRoleUser.email})
+                {isVi ? 'Tài khoản' : 'Account'}: <strong className="text-slate-900 dark:text-white">{editingRoleUser.fullName}</strong> ({editingRoleUser.email})
               </p>
 
               <div className="mt-4 space-y-2.5">
-                {ALL_ROLES.map((r) => {
+                {allRoles.map((r) => {
                   const checked = selectedRoles.includes(r.code);
                   return (
                     <label
@@ -429,7 +436,7 @@ export const AdminUsersPage: React.FC = () => {
                 onClick={() => setEditingRoleUser(null)}
                 className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
-                Hủy
+                {isVi ? 'Hủy' : 'Cancel'}
               </button>
               <button
                 type="button"
@@ -438,7 +445,7 @@ export const AdminUsersPage: React.FC = () => {
                 className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50 cursor-pointer"
                 data-testid="btn-save-user-roles"
               >
-                {savingAction ? 'Đang lưu...' : 'Lưu phân quyền RBAC'}
+                {savingAction ? (isVi ? 'Đang lưu...' : 'Saving...') : (isVi ? 'Lưu phân quyền RBAC' : 'Save RBAC Permissions')}
               </button>
             </div>
           </div>

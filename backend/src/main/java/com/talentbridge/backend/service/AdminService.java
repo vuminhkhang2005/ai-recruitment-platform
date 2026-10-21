@@ -33,12 +33,12 @@ public class AdminService {
 
     private static final List<String> ORDERED_STAGES = List.of("APPLIED", "SCREENING", "INTERVIEW", "OFFERED", "HIRED", "REJECTED");
     private static final Map<String, String> STAGE_LABELS = Map.of(
-            "APPLIED", "Mới nộp hồ sơ",
-            "SCREENING", "Đang sàng lọc CV",
-            "INTERVIEW", "Đang phỏng vấn",
-            "OFFERED", "Đã gửi Offer",
-            "HIRED", "Đã tuyển dụng",
-            "REJECTED", "Không phù hợp"
+            "APPLIED", "Applied",
+            "SCREENING", "CV Screening",
+            "INTERVIEW", "Interviewing",
+            "OFFERED", "Offer Sent",
+            "HIRED", "Hired",
+            "REJECTED", "Rejected"
     );
 
     private final UserRepository userRepository;
@@ -733,7 +733,7 @@ public class AdminService {
                     return AuditLogDto.builder()
                             .id(log.getId())
                             .userId(log.getUserId())
-                            .actorName(actor != null ? actor.getFullName() : "Hệ thống / Khách")
+                            .actorName(actor != null ? actor.getFullName() : "System / Guest")
                             .actorEmail(actor != null ? actor.getEmail() : "system@talentbridge.vn")
                             .action(log.getAction())
                             .entityName(log.getEntityName())

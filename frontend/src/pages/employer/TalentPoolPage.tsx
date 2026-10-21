@@ -90,9 +90,11 @@ export const TalentPoolPage: React.FC = () => {
     setInvitingCandidate(candidate);
     const targetJob = selectedJobId || (myJobs.length > 0 ? myJobs[0].id : undefined);
     setInviteJobId(targetJob);
-    const jobTitle = myJobs.find((j) => j.id === targetJob)?.title || 'vị trí tại công ty';
+    const jobTitle = myJobs.find((j) => j.id === targetJob)?.title || (isEn ? 'our open position' : 'vị trí tại công ty');
     setCustomMessage(
-      `Chào ${candidate.fullName},\n\nChúng tôi rất ấn tượng với hồ sơ và kỹ năng chuyên môn của bạn. Công ty chúng tôi hiện đang tìm kiếm nhân sự cho vị trí "${jobTitle}" và tin rằng bạn rất phù hợp.\n\nTrân trọng mời bạn tham khảo và nộp hồ sơ ứng tuyển!`
+      isEn
+        ? `Hello ${candidate.fullName},\n\nWe are very impressed with your engineering profile and technical skills. We are currently hiring for "${jobTitle}" and believe you would be an excellent fit.\n\nWe warmly invite you to review the role and submit your application!`
+        : `Chào ${candidate.fullName},\n\nChúng tôi rất ấn tượng với hồ sơ và kỹ năng chuyên môn của bạn. Công ty chúng tôi hiện đang tìm kiếm nhân sự cho vị trí "${jobTitle}" và tin rằng bạn rất phù hợp.\n\nTrân trọng mời bạn tham khảo và nộp hồ sơ ứng tuyển!`
     );
     setInviteSuccessMsg(null);
     setInviteModalOpen(true);
@@ -182,9 +184,9 @@ export const TalentPoolPage: React.FC = () => {
               className="w-full pl-9 pr-8 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white truncate"
             >
               <option value="All">{isEn ? 'All Locations' : 'Tất cả địa điểm'}</option>
-              <option value="Hà Nội">Hà Nội</option>
-              <option value="Hồ Chí Minh">TP. Hồ Chí Minh</option>
-              <option value="Đà Nẵng">Đà Nẵng</option>
+              <option value="Ha Noi">Ha Noi</option>
+              <option value="Ho Chi Minh City">Ho Chi Minh City</option>
+              <option value="Da Nang">Da Nang</option>
             </select>
           </div>
 

@@ -9,10 +9,12 @@ import {
   ShieldCheck,
   Users,
 } from 'lucide-react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface AdminNavTab {
   to: string;
-  label: string;
+  labelVi: string;
+  labelEn: string;
   icon: React.ElementType;
   end?: boolean;
   testId: string;
@@ -21,32 +23,37 @@ interface AdminNavTab {
 const ADMIN_TABS: AdminNavTab[] = [
   {
     to: '/admin',
-    label: 'Tổng quan & AI Engine',
+    labelVi: 'Tổng quan & AI Engine',
+    labelEn: 'Overview & AI Engine',
     icon: LayoutDashboard,
     end: true,
     testId: 'admin-tab-overview',
   },
   {
     to: '/admin/users',
-    label: 'Người dùng & RBAC',
+    labelVi: 'Người dùng & RBAC',
+    labelEn: 'Users & RBAC',
     icon: Users,
     testId: 'admin-tab-users',
   },
   {
     to: '/admin/moderation',
-    label: 'Kiểm duyệt Công ty & Tin',
+    labelVi: 'Kiểm duyệt Công ty & Tin',
+    labelEn: 'Company & Job Moderation',
     icon: Building2,
     testId: 'admin-tab-moderation',
   },
   {
     to: '/admin/skills',
-    label: 'Từ điển Kỹ năng AI',
+    labelVi: 'Từ điển Kỹ năng AI',
+    labelEn: 'AI Skill Taxonomy',
     icon: BookOpen,
     testId: 'admin-tab-skills',
   },
   {
     to: '/admin/audit-logs',
-    label: 'Nhật ký Audit & Email',
+    labelVi: 'Nhật ký Audit & Email',
+    labelEn: 'Audit & Email Logs',
     icon: FileSearch,
     testId: 'admin-tab-audit',
   },
@@ -57,6 +64,8 @@ export const AdminHeader: React.FC<{
   subtitle: string;
   rightSlot?: React.ReactNode;
 }> = ({ title, subtitle, rightSlot }) => {
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
   return (
     <div className="mb-6 space-y-4">
       {/* Executive Command Banner */}
@@ -104,7 +113,7 @@ export const AdminHeader: React.FC<{
                 }
               >
                 <Icon className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{tab.label}</span>
+                <span className="truncate">{isVi ? tab.labelVi : tab.labelEn}</span>
               </NavLink>
             );
           })}

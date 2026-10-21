@@ -10,21 +10,21 @@ public final class SalaryFormatter {
 
     public static String format(BigDecimal min, BigDecimal max, String currency, Boolean isNegotiable) {
         if (Boolean.TRUE.equals(isNegotiable) || (min == null && max == null)) {
-            return "Thỏa thuận";
+            return "Negotiable";
         }
         boolean usd = "USD".equalsIgnoreCase(currency);
         if (usd) {
             if (min != null && max != null) return "$" + min.toBigInteger() + " - $" + max.toBigInteger();
-            if (min != null) return "Từ $" + min.toBigInteger();
-            return "Lên đến $" + max.toBigInteger();
+            if (min != null) return "From $" + min.toBigInteger();
+            return "Up to $" + max.toBigInteger();
         }
         if (min != null && max != null) {
-            return millions(min) + " - " + millions(max) + " triệu";
+            return millions(min) + " - " + millions(max) + "M VND";
         }
         if (min != null) {
-            return "Từ " + millions(min) + " triệu";
+            return "From " + millions(min) + "M VND";
         }
-        return "Lên đến " + millions(max) + " triệu";
+        return "Up to " + millions(max) + "M VND";
     }
 
     private static BigDecimal millions(BigDecimal v) {

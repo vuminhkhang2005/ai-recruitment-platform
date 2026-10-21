@@ -244,7 +244,7 @@ public class AnalyticsService {
         for (int i = 3; i >= 0; i--) {
             LocalDateTime start = now.minusWeeks(i + 1);
             LocalDateTime end = now.minusWeeks(i);
-            String label = i == 0 ? "Tuần này" : "T-" + i;
+            String label = i == 0 ? "This Week" : "W-" + i;
 
             int appCount = (int) applications.stream()
                     .filter(a -> a.getAppliedAt() != null && !a.getAppliedAt().isBefore(start) && a.getAppliedAt().isBefore(end))

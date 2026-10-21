@@ -22,9 +22,12 @@ import type { PlatformOverview } from '../../lib/types';
 import { ErrorBox, PageLoader } from '../../components/ui/primitives';
 import { usePageTitle } from '../../lib/usePageTitle';
 import { AdminHeader } from './AdminHeader';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export const AdminDashboardPage: React.FC = () => {
-  usePageTitle('Quản trị Hệ thống & AI Telemetry');
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
+  usePageTitle(isVi ? 'Quản trị Hệ thống & AI Telemetry' : 'System Administration & AI Telemetry');
   const [data, setData] = useState<PlatformOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +53,7 @@ export const AdminDashboardPage: React.FC = () => {
   if (error || !data) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <ErrorBox message={error ?? 'Không thể tải dữ liệu tổng quan hệ thống'} />
+        <ErrorBox message={error ?? (isVi ? 'Không thể tải dữ liệu tổng quan hệ thống' : 'Failed to load platform overview')} />
       </div>
     );
   }
@@ -58,8 +61,12 @@ export const AdminDashboardPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8" data-testid="admin-dashboard-page">
       <AdminHeader
-        title="Bảng điều khiển Quản trị Hệ thống & AI Engine"
-        subtitle="Giám sát toàn diện chỉ số vận hành toàn sàn (Users, Companies, Jobs, Applications, Skills) và hiệu năng thuật toán AI Matching thời gian thực."
+        title={isVi ? 'Bảng điều khiển Quản trị Hệ thống & AI Engine' : 'System Governance & AI Engine Dashboard'}
+        subtitle={
+          isVi
+            ? 'Giám sát toàn diện chỉ số vận hành toàn sàn (Users, Companies, Jobs, Applications, Skills) và hiệu năng thuật toán AI Matching thời gian thực.'
+            : 'Real-time operational telemetry across Users, Companies, Jobs, Applications, Skills, and the AI Matching Engine.'
+        }
         rightSlot={
           <button
             type="button"
@@ -67,7 +74,7 @@ export const AdminDashboardPage: React.FC = () => {
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-bold border border-white/20 transition cursor-pointer"
           >
             <RefreshCw className="w-4 h-4" />
-            <span>Làm mới dữ liệu</span>
+            <span>{isVi ? 'Làm mới dữ liệu' : 'Refresh Data'}</span>
           </button>
         }
       />
@@ -77,7 +84,7 @@ export const AdminDashboardPage: React.FC = () => {
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-soft-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Người dùng
+              {isVi ? 'Người dùng' : 'Users'}
             </span>
             <span className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
               <Users className="w-4 h-4" />
@@ -87,16 +94,18 @@ export const AdminDashboardPage: React.FC = () => {
             {data.totalUsers}
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            <span className="font-bold text-emerald-600 dark:text-emerald-400">{data.activeUsers} hoạt động</span>
+            <span className="font-bold text-emerald-600 dark:text-emerald-400">
+              {data.activeUsers} {isVi ? 'hoạt động' : 'active'}
+            </span>
             {' · '}
-            {data.totalCandidates} UV / {data.totalRecruiters} NTD
+            {data.totalCandidates} {isVi ? 'UV' : 'Cand.'} / {data.totalRecruiters} {isVi ? 'NTD' : 'Rec.'}
           </p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-soft-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Doanh nghiệp
+              {isVi ? 'Doanh nghiệp' : 'Companies'}
             </span>
             <span className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
               <Building2 className="w-4 h-4" />
@@ -106,16 +115,20 @@ export const AdminDashboardPage: React.FC = () => {
             {data.totalCompanies}
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            <span className="font-bold text-emerald-600 dark:text-emerald-400">{data.verifiedCompanies} đã xác minh</span>
+            <span className="font-bold text-emerald-600 dark:text-emerald-400">
+              {data.verifiedCompanies} {isVi ? 'đã xác minh' : 'verified'}
+            </span>
             {' · '}
-            <span className="text-amber-600 dark:text-amber-400">{data.pendingCompanies} chờ duyệt</span>
+            <span className="text-amber-600 dark:text-amber-400">
+              {data.pendingCompanies} {isVi ? 'chờ duyệt' : 'pending'}
+            </span>
           </p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-soft-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Tin tuyển dụng
+              {isVi ? 'Tin tuyển dụng' : 'Job Postings'}
             </span>
             <span className="p-2 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400">
               <Briefcase className="w-4 h-4" />
@@ -125,16 +138,18 @@ export const AdminDashboardPage: React.FC = () => {
             {data.totalJobs}
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            <span className="font-bold text-teal-600 dark:text-teal-400">{data.publishedJobs} đang mở</span>
+            <span className="font-bold text-teal-600 dark:text-teal-400">
+              {data.publishedJobs} {isVi ? 'đang mở' : 'open'}
+            </span>
             {' · '}
-            {data.pendingOrDraftJobs} chờ/nháp
+            {data.pendingOrDraftJobs} {isVi ? 'chờ/nháp' : 'draft'}
           </p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-soft-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Đơn ứng tuyển
+              {isVi ? 'Đơn ứng tuyển' : 'Applications'}
             </span>
             <span className="p-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400">
               <FileCheck2 className="w-4 h-4" />
@@ -144,7 +159,9 @@ export const AdminDashboardPage: React.FC = () => {
             {data.totalApplications}
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            <span className="font-bold text-cyan-600 dark:text-cyan-400">{data.totalInterviews} lịch phỏng vấn</span>
+            <span className="font-bold text-cyan-600 dark:text-cyan-400">
+              {data.totalInterviews} {isVi ? 'lịch phỏng vấn' : 'interviews'}
+            </span>
             {' · '}
             Hire: {data.overallHireRate}%
           </p>
@@ -153,7 +170,7 @@ export const AdminDashboardPage: React.FC = () => {
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-soft-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Từ điển Kỹ năng
+              {isVi ? 'Từ điển Kỹ năng' : 'Skill Taxonomy'}
             </span>
             <span className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
               <BookOpen className="w-4 h-4" />
@@ -163,14 +180,14 @@ export const AdminDashboardPage: React.FC = () => {
             {data.totalSkills}
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Chuẩn hóa 8 nhóm công nghệ
+            {isVi ? 'Chuẩn hóa 8 nhóm công nghệ' : 'Standardized across 8 domains'}
           </p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-soft-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Điểm khớp AI TB
+              {isVi ? 'Điểm khớp AI TB' : 'Avg AI Match'}
             </span>
             <span className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400">
               <Sparkles className="w-4 h-4" />
@@ -180,7 +197,7 @@ export const AdminDashboardPage: React.FC = () => {
             {data.averagePlatformMatchScore}%
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {data.aiMetrics.highMatchCount} hồ sơ đạt &ge; 75%
+            {data.aiMetrics.highMatchCount} {isVi ? 'hồ sơ đạt' : 'profiles'} &ge; 75%
           </p>
         </div>
       </div>
@@ -198,7 +215,7 @@ export const AdminDashboardPage: React.FC = () => {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-lg sm:text-xl font-black text-white">
-                  Giám sát Trạng thái AI Matching & ATS Intelligence
+                  {isVi ? 'Giám sát Trạng thái AI Matching & ATS Intelligence' : 'AI Matching Engine & ATS Telemetry'}
                 </h2>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
                   <Activity className="w-3.5 h-3.5 animate-pulse" />
@@ -206,7 +223,8 @@ export const AdminDashboardPage: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-300 mt-1">
-                Mô hình đang kích hoạt: <span className="font-bold text-emerald-300">{data.aiMetrics.activeModelName}</span>
+                {isVi ? 'Mô hình đang kích hoạt: ' : 'Active Model: '}
+                <span className="font-bold text-emerald-300">{data.aiMetrics.activeModelName}</span>
               </p>
             </div>
           </div>
@@ -216,7 +234,7 @@ export const AdminDashboardPage: React.FC = () => {
               to="/admin/skills"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition"
             >
-              <span>Cấu hình Từ điển Kỹ năng AI</span>
+              <span>{isVi ? 'Cấu hình Từ điển Kỹ năng AI' : 'Configure AI Skill Taxonomy'}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -224,32 +242,32 @@ export const AdminDashboardPage: React.FC = () => {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5">
           <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
-            <span className="text-xs text-slate-300">Độ trễ suy luận trung bình</span>
+            <span className="text-xs text-slate-300">{isVi ? 'Độ trễ suy luận trung bình' : 'Average Inference Latency'}</span>
             <div className="mt-1 text-2xl font-black text-emerald-400">
               {data.aiMetrics.averageLatencyMs} ms
             </div>
             <span className="text-[11px] text-slate-400">Real-time CV-to-JD Scoring</span>
           </div>
           <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
-            <span className="text-xs text-slate-300">Tổng lượt chấm điểm ATS</span>
+            <span className="text-xs text-slate-300">{isVi ? 'Tổng lượt chấm điểm ATS' : 'Total ATS Evaluations'}</span>
             <div className="mt-1 text-2xl font-black text-white">
               {data.aiMetrics.totalScoredApplications}
             </div>
-            <span className="text-[11px] text-slate-400">Đơn ứng tuyển đã phân tích</span>
+            <span className="text-[11px] text-slate-400">{isVi ? 'Đơn ứng tuyển đã phân tích' : 'Scored applications'}</span>
           </div>
           <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
-            <span className="text-xs text-slate-300">Ứng viên Độ khớp Cao (&ge;75%)</span>
+            <span className="text-xs text-slate-300">{isVi ? 'Ứng viên Độ khớp Cao (≥75%)' : 'High-Match Candidates (≥75%)'}</span>
             <div className="mt-1 text-2xl font-black text-cyan-300">
               {data.aiMetrics.highMatchCount}
             </div>
-            <span className="text-[11px] text-slate-400">Khớp kỹ năng cốt lõi & năm KN</span>
+            <span className="text-[11px] text-slate-400">{isVi ? 'Khớp kỹ năng cốt lõi & năm KN' : 'Strong core skill & seniority fit'}</span>
           </div>
           <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
-            <span className="text-xs text-slate-300">Kho Ứng viên Mở (Talent Pool)</span>
+            <span className="text-xs text-slate-300">{isVi ? 'Kho Ứng viên Mở (Talent Pool)' : 'Open Talent Pool'}</span>
             <div className="mt-1 text-2xl font-black text-amber-300">
               {data.aiMetrics.openToWorkCandidates}
             </div>
-            <span className="text-[11px] text-slate-400">Sẵn sàng nhận lời mời săn đầu người</span>
+            <span className="text-[11px] text-slate-400">{isVi ? 'Sẵn sàng nhận lời mời săn đầu người' : 'Ready for direct recruiter invites'}</span>
           </div>
         </div>
       </div>
@@ -262,10 +280,12 @@ export const AdminDashboardPage: React.FC = () => {
             <div>
               <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                <span>Phễu Chuyển đổi Ứng tuyển Toàn sàn</span>
+                <span>{isVi ? 'Phễu Chuyển đổi Ứng tuyển Toàn sàn' : 'Platform Recruitment Funnel'}</span>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Phân bổ {data.totalApplications} hồ sơ ứng tuyển theo 6 giai đoạn ATS
+                {isVi
+                  ? `Phân bổ ${data.totalApplications} hồ sơ ứng tuyển theo 6 giai đoạn ATS`
+                  : `Distribution of ${data.totalApplications} applications across 6 ATS stages`}
               </p>
             </div>
             <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300">
@@ -295,7 +315,7 @@ export const AdminDashboardPage: React.FC = () => {
                       <span className="text-xs font-normal text-slate-400">({st.stage})</span>
                     </span>
                     <span className="font-bold text-slate-900 dark:text-white">
-                      {st.count} hồ sơ ({st.percentage}%)
+                      {st.count} {isVi ? 'hồ sơ' : 'apps'} ({st.percentage}%)
                     </span>
                   </div>
                   <div className="w-full h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
@@ -316,17 +336,19 @@ export const AdminDashboardPage: React.FC = () => {
             <div>
               <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <Award className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                <span>Top Doanh nghiệp Tuyển dụng Sôi động</span>
+                <span>{isVi ? 'Top Doanh nghiệp Tuyển dụng Sôi động' : 'Top Hiring Partner Enterprises'}</span>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Xếp hạng theo số lượng tin đăng và lưu lượng ứng viên nộp đơn
+                {isVi
+                  ? 'Xếp hạng theo số lượng tin đăng và lưu lượng ứng viên nộp đơn'
+                  : 'Ranked by active job postings and candidate application volume'}
               </p>
             </div>
             <Link
               to="/admin/moderation"
               className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
             >
-              <span>Kiểm duyệt</span>
+              <span>{isVi ? 'Kiểm duyệt' : 'Moderate'}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -344,15 +366,15 @@ export const AdminDashboardPage: React.FC = () => {
                         {comp.companyName}
                       </p>
                       {comp.verificationStatus === 'VERIFIED' ? (
-                        <span title="Đã xác minh"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /></span>
+                        <span title="Verified"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /></span>
                       ) : comp.verificationStatus === 'PENDING' ? (
-                        <span title="Chờ xác minh"><Clock className="w-4 h-4 text-amber-500 shrink-0" /></span>
+                        <span title="Pending"><Clock className="w-4 h-4 text-amber-500 shrink-0" /></span>
                       ) : (
-                        <span title="Đã từ chối"><ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" /></span>
+                        <span title="Rejected"><ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" /></span>
                       )}
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                      {comp.industry || 'Công nghệ thông tin'}
+                      {comp.industry || 'Software & IT Services'}
                     </p>
                   </div>
                 </div>
@@ -366,7 +388,9 @@ export const AdminDashboardPage: React.FC = () => {
                     <span className="text-xs font-black text-emerald-700 dark:text-emerald-300">
                       {comp.applicationCount}
                     </span>
-                    <span className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 ml-1">Đơn</span>
+                    <span className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 ml-1">
+                      {isVi ? 'Đơn' : 'Apps'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -381,17 +405,19 @@ export const AdminDashboardPage: React.FC = () => {
           <div>
             <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-amber-500" />
-              <span>Ma trận Cung - Cầu Kỹ năng Công nghệ Toàn sàn</span>
+              <span>{isVi ? 'Ma trận Cung - Cầu Kỹ năng Công nghệ Toàn sàn' : 'Platform Tech Skill Supply vs. Demand Matrix'}</span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              So sánh nhu cầu tuyển dụng (Job Skills) và nguồn cung ứng viên (Candidate Skills)
+              {isVi
+                ? 'So sánh nhu cầu tuyển dụng (Job Skills) và nguồn cung ứng viên (Candidate Skills)'
+                : 'Comparing employer job demand (Job Skills) against candidate talent supply (Candidate Skills)'}
             </p>
           </div>
           <Link
             to="/admin/skills"
             className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
           >
-            <span>Quản lý toàn bộ {data.totalSkills} kỹ năng</span>
+            <span>{isVi ? `Quản lý toàn bộ ${data.totalSkills} kỹ năng` : `Manage all ${data.totalSkills} skills`}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -412,10 +438,14 @@ export const AdminDashboardPage: React.FC = () => {
               </div>
               <div className="mt-3 flex items-center justify-between text-xs">
                 <span className="text-slate-500 dark:text-slate-400">
-                  Cầu: <strong className="text-emerald-600 dark:text-emerald-400">{sk.jobCount} Jobs</strong>
+                  {isVi ? 'Cầu:' : 'Demand:'}{' '}
+                  <strong className="text-emerald-600 dark:text-emerald-400">{sk.jobCount} Jobs</strong>
                 </span>
                 <span className="text-slate-500 dark:text-slate-400">
-                  Cung: <strong className="text-indigo-600 dark:text-indigo-400">{sk.candidateCount} Hồ sơ</strong>
+                  {isVi ? 'Cung:' : 'Supply:'}{' '}
+                  <strong className="text-indigo-600 dark:text-indigo-400">
+                    {sk.candidateCount} {isVi ? 'Hồ sơ' : 'Profiles'}
+                  </strong>
                 </span>
               </div>
             </div>

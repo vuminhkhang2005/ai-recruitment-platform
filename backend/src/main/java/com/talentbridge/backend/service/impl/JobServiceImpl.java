@@ -153,7 +153,7 @@ public class JobServiceImpl implements JobService {
                 .maxSalary(request.getMaxSalary())
                 .currency(StringUtils.hasText(request.getCurrency()) ? request.getCurrency() : "VND")
                 .isSalaryNegotiable(Boolean.TRUE.equals(request.getIsSalaryNegotiable()))
-                .locationCity(StringUtils.hasText(request.getLocationCity()) ? request.getLocationCity() : "TP. Hồ Chí Minh")
+                .locationCity(StringUtils.hasText(request.getLocationCity()) ? request.getLocationCity() : "Ho Chi Minh City")
                 .locationAddress(request.getLocationAddress())
                 .status("PUBLISHED")
                 .deadline(request.getDeadline() != null ? request.getDeadline() : LocalDateTime.now().plusDays(30))
@@ -361,9 +361,28 @@ public class JobServiceImpl implements JobService {
                 predicates.add(cb.or(titleMatch, descMatch, companyMatch, skillMatch));
             }
 
-            // City location filter
+            // City location filter (supports both English and Vietnamese city names)
             if (filter.getCity() != null && !filter.getCity().trim().isEmpty() && !"All".equalsIgnoreCase(filter.getCity())) {
-                predicates.add(cb.like(cb.lower(root.get("locationCity")), "%" + filter.getCity().trim().toLowerCase() + "%"));
+                String rawCity = filter.getCity().trim().toLowerCase();
+                if (rawCity.contains("hồ chí minh") || rawCity.contains("ho chi minh") || rawCity.contains("hcmc")) {
+                    predicates.add(cb.or(
+                            cb.like(cb.lower(root.get("locationCity")), "%ho chi minh%"),
+                            cb.like(cb.lower(root.get("locationCity")), "%hồ chí minh%")
+                    ));
+                } else if (rawCity.contains("hà nội") || rawCity.contains("ha noi") || rawCity.contains("hanoi")) {
+                    predicates.add(cb.or(
+                            cb.like(cb.lower(root.get("locationCity")), "%ha noi%"),
+                            cb.like(cb.lower(root.get("locationCity")), "%hanoi%"),
+                            cb.like(cb.lower(root.get("locationCity")), "%hà nội%")
+                    ));
+                } else if (rawCity.contains("đà nẵng") || rawCity.contains("da nang") || rawCity.contains("danang")) {
+                    predicates.add(cb.or(
+                            cb.like(cb.lower(root.get("locationCity")), "%da nang%"),
+                            cb.like(cb.lower(root.get("locationCity")), "%đà nẵng%")
+                    ));
+                } else {
+                    predicates.add(cb.like(cb.lower(root.get("locationCity")), "%" + rawCity + "%"));
+                }
             }
 
             // Experience level filter
@@ -451,13 +470,13 @@ public class JobServiceImpl implements JobService {
     }
 
     private String calculateTimeAgo(LocalDateTime createdAt) {
-        if (createdAt == null) return "Vừa đăng";
+        if (createdAt == null) return "Just posted";
         Duration duration = Duration.between(createdAt, LocalDateTime.now());
         long hours = duration.toHours();
-        if (hours < 1) return "Vừa đăng";
-        if (hours < 24) return hours + " giờ trước";
+        if (hours < 1) return "Just posted";
+        if (hours < 24) return hours + "h ago";
         long days = duration.toDays();
-        return days + " ngày trước";
+        return days + "d ago";
     }
 
     private String toSlug(String input) {

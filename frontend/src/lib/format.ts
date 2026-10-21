@@ -1,6 +1,6 @@
 import type { Stage } from './types';
 
-export const CITIES = ['TP. Hồ Chí Minh', 'Hà Nội', 'Đà Nẵng'];
+export const CITIES = ['Ho Chi Minh City', 'Ha Noi', 'Da Nang'];
 
 export const EXP_LEVELS_VI: Record<string, string> = {
   INTERN: 'Thực tập sinh',
@@ -141,9 +141,16 @@ export function formatSalary(value?: string | null, lang: 'vi' | 'en' = 'vi') {
     return value
       .replace(/triệu/gi, 'M VND')
       .replace(/Thoả thuận|Thỏa thuận/gi, 'Negotiable')
-      .replace(/Cạnh tranh/gi, 'Competitive');
+      .replace(/Cạnh tranh/gi, 'Competitive')
+      .replace(/^Từ\s+/i, 'From ')
+      .replace(/^Lên đến\s+/i, 'Up to ');
   }
-  return value;
+  return value
+    .replace(/M VND/gi, ' triệu')
+    .replace(/^Negotiable$/i, 'Thỏa thuận')
+    .replace(/^Competitive$/i, 'Cạnh tranh')
+    .replace(/^From\s+/i, 'Từ ')
+    .replace(/^Up to\s+/i, 'Lên đến ');
 }
 
 /** Days left until a deadline; negative if already passed, null if no deadline. */

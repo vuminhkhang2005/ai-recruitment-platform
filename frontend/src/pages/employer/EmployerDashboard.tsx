@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { BarChart3, Plus, Sparkles } from 'lucide-react';
 import { applicationApi, jobApi, userApi } from '../../lib/api';
 import type { Application, Job, UserProfile } from '../../lib/types';
-import { JOB_STATUS, daysLeft, formatDate, label } from '../../lib/format';
+import { getJobStatus, daysLeft, formatDate, formatSalary, label } from '../../lib/format';
 import { useToast } from '../../context/ToastContext';
 import { EmptyState, ErrorBox, PageLoader, btnPrimary, btnSecondary } from '../../components/ui/primitives';
 import { usePageTitle } from '../../lib/usePageTitle';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const STATUS_STYLE: Record<string, string> = {
   PUBLISHED: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300',
@@ -31,7 +32,11 @@ const Stat: React.FC<{ label: string; value: number; to?: string }> = ({ label: 
 };
 
 export const EmployerDashboard: React.FC = () => {
-  usePageTitle('Quản lý tin tuyển dụng');
+  const { language } = useLanguage();
+  const lang: 'vi' | 'en' = language === 'en' ? 'en' : 'vi';
+  const isVi = lang === 'vi';
+  const jobStatusMap = getJobStatus(lang);
+  usePageTitle(isVi ? 'Quản lý tin tuyển dụng' : 'Manage Job Postings');
   const toast = useToast();
   const [me, setMe] = useState<UserProfile | null>(null);
   const [jobs, setJobs] = useState<Job[] | null>(null);
@@ -69,7 +74,11 @@ export const EmployerDashboard: React.FC = () => {
     setBusyId(job.id);
     try {
       await jobApi.setStatus(job.id, status);
-      toast(`Đã chuyển tin "${job.title}" sang ${label(JOB_STATUS, status).toLowerCase()}`);
+      toast(
+        isVi
+          ? `Đã chuyển tin "${job.title}" sang ${label(jobStatusMap, status).toLowerCase()}`
+          : `Updated "${job.title}" to ${label(jobStatusMap, status)}`
+      );
       load();
     } catch (err) {
       toast((err as Error).message, 'error');
@@ -79,11 +88,18 @@ export const EmployerDashboard: React.FC = () => {
   };
 
   const remove = async (job: Job) => {
-    if (!window.confirm(`Xóa tin "${job.title}"? Tin sẽ bị gỡ khỏi trang tìm việc.`)) return;
+    if (
+      !window.confirm(
+        isVi
+          ? `Xóa tin "${job.title}"? Tin sẽ bị gỡ khỏi trang tìm việc.`
+          : `Delete "${job.title}"? This posting will be removed from the job board.`
+      )
+    )
+      return;
     setBusyId(job.id);
     try {
       await jobApi.remove(job.id);
-      toast('Đã xóa tin tuyển dụng');
+      toast(isVi ? 'Đã xóa tin tuyển dụng' : 'Job posting deleted');
       load();
     } catch (err) {
       toast((err as Error).message, 'error');
@@ -108,43 +124,45 @@ export const EmployerDashboard: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">Tin tuyển dụng</h1>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+            {isVi ? 'Tin tuyển dụng' : 'Job Postings'}
+          </h1>
           {me?.companyName && (
             <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
               {me.companyName} ·{' '}
               <Link to={`/companies/${me.companyId}`} className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
-                Xem trang công ty
+                {isVi ? 'Xem trang công ty' : 'View Company Page'}
               </Link>
             </p>
           )}
         </div>
         <div className="flex items-center gap-2">
           <Link to="/employer/talent-pool" className={`${btnSecondary} text-xs sm:text-sm font-bold text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800`} data-testid="btn-employer-talent-pool">
-            <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> Săn ứng viên
+            <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> {isVi ? 'Săn ứng viên' : 'Talent Pool'}
           </Link>
           <Link to="/employer/analytics" className={`${btnSecondary} text-xs sm:text-sm font-bold`} data-testid="btn-employer-analytics">
-            <BarChart3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Thống kê tuyển dụng
+            <BarChart3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> {isVi ? 'Thống kê tuyển dụng' : 'Analytics'}
           </Link>
           <Link to="/employer/jobs/new" className={btnPrimary}>
-            <Plus className="w-4 h-4" /> Đăng tin mới
+            <Plus className="w-4 h-4" /> {isVi ? 'Đăng tin mới' : 'Post a Job'}
           </Link>
         </div>
       </div>
 
       <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat label="Tin đang tuyển" value={open} />
-        <Stat label="Tổng hồ sơ" value={apps.length} to="/employer/applicants" />
-        <Stat label="Hồ sơ mới chưa xem" value={fresh} to="/employer/applicants?stage=APPLIED" />
-        <Stat label="Đang phỏng vấn" value={interviewing} to="/employer/applicants?stage=INTERVIEW" />
+        <Stat label={isVi ? 'Tin đang tuyển' : 'Active Jobs'} value={open} />
+        <Stat label={isVi ? 'Tổng hồ sơ' : 'Total Applications'} value={apps.length} to="/employer/applicants" />
+        <Stat label={isVi ? 'Hồ sơ mới chưa xem' : 'New Applications'} value={fresh} to="/employer/applicants?stage=APPLIED" />
+        <Stat label={isVi ? 'Đang phỏng vấn' : 'In Interview'} value={interviewing} to="/employer/applicants?stage=INTERVIEW" />
       </div>
 
       <div className="mt-6">
         {jobs.length === 0 ? (
           <EmptyState
-            title="Bạn chưa đăng tin tuyển dụng nào"
+            title={isVi ? 'Bạn chưa đăng tin tuyển dụng nào' : 'You have not posted any jobs yet'}
             action={
               <Link to="/employer/jobs/new" className={btnPrimary}>
-                Đăng tin đầu tiên
+                {isVi ? 'Đăng tin đầu tiên' : 'Post Your First Job'}
               </Link>
             }
           />
@@ -153,12 +171,12 @@ export const EmployerDashboard: React.FC = () => {
             <table className="w-full text-sm" data-testid="my-jobs">
               <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-left text-xs uppercase tracking-wider">
                 <tr>
-                  <th className="px-4 py-3.5 font-black">Vị trí</th>
-                  <th className="px-4 py-3.5 font-black">Trạng thái</th>
-                  <th className="px-4 py-3.5 font-black">Hồ sơ</th>
-                  <th className="px-4 py-3.5 font-black">Lượt xem</th>
-                  <th className="px-4 py-3.5 font-black">Hạn nộp</th>
-                  <th className="px-4 py-3.5 font-black text-right">Thao tác</th>
+                  <th className="px-4 py-3.5 font-black">{isVi ? 'Vị trí' : 'Position'}</th>
+                  <th className="px-4 py-3.5 font-black">{isVi ? 'Trạng thái' : 'Status'}</th>
+                  <th className="px-4 py-3.5 font-black">{isVi ? 'Hồ sơ' : 'Applicants'}</th>
+                  <th className="px-4 py-3.5 font-black">{isVi ? 'Lượt xem' : 'Views'}</th>
+                  <th className="px-4 py-3.5 font-black">{isVi ? 'Hạn nộp' : 'Deadline'}</th>
+                  <th className="px-4 py-3.5 font-black text-right">{isVi ? 'Thao tác' : 'Actions'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -174,55 +192,77 @@ export const EmployerDashboard: React.FC = () => {
                           {j.title}
                         </Link>
                         <p className="text-xs text-slate-500">
-                          {j.locationCity} · {j.salaryFormatted} · Đăng {formatDate(j.createdAt)}
+                          {j.locationCity} · {formatSalary(j.salaryFormatted, lang)} · {isVi ? 'Đăng ' : 'Posted '}
+                          {formatDate(j.createdAt, lang)}
                         </p>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${expired && j.status === 'PUBLISHED' ? 'bg-slate-100 text-slate-600' : STATUS_STYLE[j.status] ?? ''}`}>
-                          {expired && j.status === 'PUBLISHED' ? 'Hết hạn' : label(JOB_STATUS, j.status)}
+                          {expired && j.status === 'PUBLISHED' ? (isVi ? 'Hết hạn' : 'Expired') : label(jobStatusMap, j.status)}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <Link to={`/employer/applicants?job=${j.id}`} className="text-slate-900 dark:text-white hover:text-emerald-600">
                           <span className="font-semibold">{c.total}</span>
-                          {c.fresh > 0 && <span className="ml-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">({c.fresh} mới)</span>}
+                          {c.fresh > 0 && (
+                            <span className="ml-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                              ({c.fresh} {isVi ? 'mới' : 'new'})
+                            </span>
+                          )}
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-slate-600">{j.viewsCount}</td>
-                      <td className="px-4 py-3 text-slate-600">{formatDate(j.deadline)}</td>
+                      <td className="px-4 py-3 text-slate-600">{formatDate(j.deadline, lang)}</td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1 whitespace-nowrap">
                           <Link to={`/employer/applicants?job=${j.id}`} className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-300">
-                            Ứng viên
+                            {isVi ? 'Ứng viên' : 'Applicants'}
                           </Link>
                           <Link to={`/employer/jobs/${j.id}/edit`} className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-300">
-                            Sửa
+                            {isVi ? 'Sửa' : 'Edit'}
                           </Link>
                           {j.status === 'PUBLISHED' && !expired && (
                             <>
                               <button disabled={busy} onClick={() => setStatus(j, 'PAUSED')} className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-300">
-                                Tạm dừng
+                                {isVi ? 'Tạm dừng' : 'Pause'}
                               </button>
                               <button
                                 disabled={busy}
-                                onClick={() => setStatus(j, 'CLOSED', `Đóng tin "${j.title}"? Ứng viên sẽ không thể nộp hồ sơ nữa.`)}
+                                onClick={() =>
+                                  setStatus(
+                                    j,
+                                    'CLOSED',
+                                    isVi
+                                      ? `Đóng tin "${j.title}"? Ứng viên sẽ không thể nộp hồ sơ nữa.`
+                                      : `Close "${j.title}"? Candidates will no longer be able to apply.`
+                                  )
+                                }
                                 className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-300"
                               >
-                                Đóng tin
+                                {isVi ? 'Đóng tin' : 'Close'}
                               </button>
                             </>
                           )}
                           {(j.status !== 'PUBLISHED' || expired) && (
                             <button
                               disabled={busy}
-                              onClick={() => (expired ? toast('Tin đã hết hạn. Hãy sửa tin và gia hạn hạn nộp để mở lại.', 'info') : setStatus(j, 'PUBLISHED'))}
+                              onClick={() =>
+                                expired
+                                  ? toast(
+                                      isVi
+                                        ? 'Tin đã hết hạn. Hãy sửa tin và gia hạn hạn nộp để mở lại.'
+                                        : 'Job has expired. Please edit and extend the deadline to reopen.',
+                                      'info'
+                                    )
+                                  : setStatus(j, 'PUBLISHED')
+                              }
                               className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
                             >
-                              Mở lại
+                              {isVi ? 'Mở lại' : 'Reopen'}
                             </button>
                           )}
                           <button disabled={busy} onClick={() => remove(j)} className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40">
-                            Xóa
+                            {isVi ? 'Xóa' : 'Delete'}
                           </button>
                         </div>
                       </td>

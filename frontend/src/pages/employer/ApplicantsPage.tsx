@@ -23,24 +23,37 @@ import {
 } from 'lucide-react';
 import { applicationApi, jobApi, interviewApi, noteApi, messageApi, teamApi, openCvFile } from '../../lib/api';
 import type { Application, Job, Stage, InterviewDto, NoteDto, MessageDto, TeamMember } from '../../lib/types';
-import { STAGES, STAGE_LABELS, formatDate, formatDateTime, timeAgo } from '../../lib/format';
+import { STAGES, getStageLabels, formatDate, formatDateTime, timeAgo } from '../../lib/format';
 import { useToast } from '../../context/ToastContext';
 import { EmptyState, ErrorBox, PageLoader, btnPrimary, btnSecondary, inputCls } from '../../components/ui/primitives';
 import { Avatar } from '../../components/layout/Navbar';
 import { StageBadge } from '../MyApplicationsPage';
 import { usePageTitle } from '../../lib/usePageTitle';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 
-const NEXT_STEP: Partial<Record<Stage, { stage: Stage; label: string }>> = {
+const NEXT_STEP_VI: Partial<Record<Stage, { stage: Stage; label: string }>> = {
   APPLIED: { stage: 'SCREENING', label: 'Chuyển sang xem xét' },
   SCREENING: { stage: 'INTERVIEW', label: 'Mời phỏng vấn' },
   INTERVIEW: { stage: 'OFFERED', label: 'Gửi offer' },
   OFFERED: { stage: 'HIRED', label: 'Xác nhận đã tuyển' },
 };
 
+const NEXT_STEP_EN: Partial<Record<Stage, { stage: Stage; label: string }>> = {
+  APPLIED: { stage: 'SCREENING', label: 'Move to Screening' },
+  SCREENING: { stage: 'INTERVIEW', label: 'Invite to Interview' },
+  INTERVIEW: { stage: 'OFFERED', label: 'Send Offer' },
+  OFFERED: { stage: 'HIRED', label: 'Confirm Hired' },
+};
+
 const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) => void }> = ({ app, onUpdated }) => {
   const toast = useToast();
   const { user } = useAuth();
+  const { language } = useLanguage();
+  const lang: 'vi' | 'en' = language === 'en' ? 'en' : 'vi';
+  const isVi = lang === 'vi';
+  const stageLabels = getStageLabels(lang);
+  const nextStepMap = isVi ? NEXT_STEP_VI : NEXT_STEP_EN;
   const [activeTab, setActiveTab] = useState<'profile' | 'interviews' | 'notes' | 'messages'>('profile');
 
   // Profile Tab state
@@ -144,7 +157,11 @@ const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) =
       const updated = await applicationApi.updateStage(app.id, stage, rejectionReason);
       onUpdated(updated);
       setRejecting(false);
-      toast(`${app.candidateName}: ${STAGE_LABELS[stage]}. Ứng viên đã được thông báo.`);
+      toast(
+        isVi
+          ? `${app.candidateName}: ${stageLabels[stage]}. Ứng viên đã được thông báo.`
+          : `${app.candidateName}: ${stageLabels[stage]}. Candidate notified.`
+      );
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -278,7 +295,7 @@ const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) =
     }
   };
 
-  const next = NEXT_STEP[app.currentStage];
+  const next = nextStepMap[app.currentStage];
   const finished = app.currentStage === 'HIRED' || app.currentStage === 'REJECTED';
   const history = [...(app.history ?? [])].sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -300,14 +317,14 @@ const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) =
               <p className="text-sm text-slate-600 dark:text-slate-300">{app.candidateHeadline}</p>
             )}
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Ứng tuyển{' '}
+              {isVi ? 'Ứng tuyển ' : 'Applied for '}
               <Link
                 to={`/jobs/${app.jobId}`}
                 className="font-semibold text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400"
               >
                 {app.jobTitle}
               </Link>{' '}
-              · {formatDate(app.appliedAt)}
+              · {formatDate(app.appliedAt, lang)}
             </p>
           </div>
           <StageBadge stage={app.currentStage} />
@@ -345,7 +362,7 @@ const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) =
           }`}
         >
           <FileText className="w-3.5 h-3.5" />
-          Hồ sơ
+          {isVi ? 'Hồ sơ' : 'Profile'}
         </button>
         <button
           type="button"
@@ -358,7 +375,7 @@ const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) =
           }`}
         >
           <Calendar className="w-3.5 h-3.5" />
-          Phỏng vấn {interviews.length > 0 && `(${interviews.length})`}
+          {isVi ? 'Phỏng vấn' : 'Interviews'} {interviews.length > 0 && `(${interviews.length})`}
         </button>
         <button
           type="button"
@@ -371,7 +388,7 @@ const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) =
           }`}
         >
           <StickyNote className="w-3.5 h-3.5" />
-          Ghi chú {notes.length > 0 && `(${notes.length})`}
+          {isVi ? 'Ghi chú' : 'Notes'} {notes.length > 0 && `(${notes.length})`}
         </button>
         <button
           type="button"
@@ -384,7 +401,7 @@ const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) =
           }`}
         >
           <MessageSquare className="w-3.5 h-3.5" />
-          Tin nhắn
+          {isVi ? 'Tin nhắn' : 'Messages'}
         </button>
       </div>
 
@@ -394,21 +411,32 @@ const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) =
           <div className="flex flex-wrap items-center gap-3">
             {app.cvDownloadable ? (
               <button onClick={viewCv} className={btnSecondary} data-testid="view-cv">
-                Xem CV{app.cvFileName ? ` (${app.cvFileName})` : ''}
+                {isVi ? 'Xem CV' : 'View CV'}
+                {app.cvFileName ? ` (${app.cvFileName})` : ''}
               </button>
             ) : (
-              <span className="text-xs text-slate-500">CV mẫu từ dữ liệu demo — không có file đính kèm.</span>
+              <span className="text-xs text-slate-500">
+                {isVi ? 'CV mẫu từ dữ liệu demo — không có file đính kèm.' : 'Demo CV record — no file attachment.'}
+              </span>
             )}
             {app.matchScore !== null && app.matchScore !== undefined && (
               <span className="text-xs text-slate-600 dark:text-slate-400">
-                Khớp <span className="font-semibold">{Math.round(app.matchScore)}%</span> kỹ năng yêu cầu
+                {isVi ? (
+                  <>
+                    Khớp <span className="font-semibold">{Math.round(app.matchScore)}%</span> kỹ năng yêu cầu
+                  </>
+                ) : (
+                  <>
+                    Matched <span className="font-semibold">{Math.round(app.matchScore)}%</span> of required skills
+                  </>
+                )}
               </span>
             )}
           </div>
 
           {app.candidateSkills?.length > 0 && (
             <div>
-              <p className="font-medium text-slate-900 dark:text-white mb-1.5">Kỹ năng</p>
+              <p className="font-medium text-slate-900 dark:text-white mb-1.5">{isVi ? 'Kỹ năng' : 'Skills'}</p>
               <div className="flex flex-wrap gap-1.5">
                 {app.candidateSkills.map((s) => (
                   <span
@@ -423,29 +451,33 @@ const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) =
           )}
 
           <div>
-            <p className="font-medium text-slate-900 dark:text-white mb-1.5">Thư giới thiệu</p>
+            <p className="font-medium text-slate-900 dark:text-white mb-1.5">{isVi ? 'Thư giới thiệu' : 'Cover Letter'}</p>
             <p className="text-slate-700 dark:text-slate-300 whitespace-pre-line selectable-text">
-              {app.coverLetter?.trim() || <span className="text-slate-400">Ứng viên không gửi thư giới thiệu.</span>}
+              {app.coverLetter?.trim() || (
+                <span className="text-slate-400">
+                  {isVi ? 'Ứng viên không gửi thư giới thiệu.' : 'No cover letter provided.'}
+                </span>
+              )}
             </p>
           </div>
 
           {app.currentStage === 'REJECTED' && app.rejectionReason && (
             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2 text-slate-700 dark:text-slate-300">
-              <span className="font-medium">Lý do từ chối: </span>
+              <span className="font-medium">{isVi ? 'Lý do từ chối: ' : 'Rejection reason: '}</span>
               {app.rejectionReason}
             </div>
           )}
 
           <div>
-            <p className="font-medium text-slate-900 dark:text-white mb-1.5">Lịch sử</p>
+            <p className="font-medium text-slate-900 dark:text-white mb-1.5">{isVi ? 'Lịch sử' : 'History'}</p>
             <ol className="border-l-2 border-slate-200 dark:border-slate-700 pl-4 space-y-2">
               {history.map((h, i) => (
                 <li key={i} className="relative">
                   <span className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-slate-400" />
                   <span className="text-slate-800 dark:text-slate-200">
-                    {h.fromStage ? `${STAGE_LABELS[h.fromStage]} → ${STAGE_LABELS[h.toStage]}` : 'Nộp hồ sơ'}
+                    {h.fromStage ? `${stageLabels[h.fromStage]} → ${stageLabels[h.toStage]}` : isVi ? 'Nộp hồ sơ' : 'Submitted application'}
                   </span>
-                  <span className="text-xs text-slate-400 ml-2">{formatDateTime(h.createdAt)}</span>
+                  <span className="text-xs text-slate-400 ml-2">{formatDateTime(h.createdAt, lang)}</span>
                 </li>
               ))}
             </ol>
@@ -470,21 +502,21 @@ const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) =
                 onClick={() => setRejecting(true)}
                 className={`${btnSecondary} !text-rose-600 dark:!text-rose-400 hover:!border-rose-300`}
               >
-                Từ chối
+                {isVi ? 'Từ chối' : 'Reject'}
               </button>
             </div>
           )}
           {rejecting && (
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
               <label htmlFor="reject-reason" className="font-medium text-slate-900 dark:text-white">
-                Lý do (ứng viên sẽ nhìn thấy)
+                {isVi ? 'Lý do (ứng viên sẽ nhìn thấy)' : 'Reason (visible to candidate)'}
               </label>
               <textarea
                 id="reject-reason"
                 rows={3}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="VD: Hồ sơ chưa phù hợp với yêu cầu về kinh nghiệm của vị trí."
+                placeholder={isVi ? 'VD: Hồ sơ chưa phù hợp với yêu cầu về kinh nghiệm của vị trí.' : 'e.g. Profile does not meet the seniority requirements for this role.'}
                 className={inputCls}
               />
               <div className="flex gap-2">
@@ -493,10 +525,10 @@ const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) =
                   onClick={() => move('REJECTED', reason.trim())}
                   className={`${btnPrimary}`}
                 >
-                  Xác nhận từ chối
+                  {isVi ? 'Xác nhận từ chối' : 'Confirm Rejection'}
                 </button>
                 <button disabled={busy} onClick={() => setRejecting(false)} className={btnSecondary}>
-                  Hủy
+                  {isVi ? 'Hủy' : 'Cancel'}
                 </button>
               </div>
             </div>
@@ -1038,7 +1070,11 @@ const CandidatePanel: React.FC<{ app: Application; onUpdated: (a: Application) =
 };
 
 export const ApplicantsPage: React.FC = () => {
-  usePageTitle('Ứng viên');
+  const { language } = useLanguage();
+  const lang: 'vi' | 'en' = language === 'en' ? 'en' : 'vi';
+  const isVi = lang === 'vi';
+  const stageLabels = getStageLabels(lang);
+  usePageTitle(isVi ? 'Ứng viên' : 'Applicants');
   const [params, setParams] = useSearchParams();
   const jobFilter = params.get('job') ?? '';
   const stageFilter = params.get('stage') ?? '';
@@ -1106,17 +1142,17 @@ export const ApplicantsPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-        Ứng viên
+        {isVi ? 'Ứng viên' : 'Applicants'}
       </h1>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <select
-          aria-label="Lọc theo tin"
+          aria-label={isVi ? 'Lọc theo tin' : 'Filter by job'}
           value={jobFilter}
           onChange={(e) => update({ job: e.target.value, id: '' })}
           className={`${inputCls} w-auto max-w-xs`}
         >
-          <option value="">Tất cả tin tuyển dụng</option>
+          <option value="">{isVi ? 'Tất cả tin tuyển dụng' : 'All Job Postings'}</option>
           {jobOptions.map((j) => (
             <option key={j.id} value={j.id}>
               {j.title}
@@ -1128,8 +1164,8 @@ export const ApplicantsPage: React.FC = () => {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Tìm theo tên, email"
-            aria-label="Tìm ứng viên"
+            placeholder={isVi ? 'Tìm theo tên, email' : 'Search by name, email'}
+            aria-label={isVi ? 'Tìm ứng viên' : 'Search applicants'}
             className={`${inputCls} pl-9 w-64`}
           />
         </div>
@@ -1148,7 +1184,7 @@ export const ApplicantsPage: React.FC = () => {
                   : 'border-transparent text-slate-600 dark:text-slate-300 hover:text-emerald-600'
               }`}
             >
-              {s ? STAGE_LABELS[s] : 'Tất cả'} ({count})
+              {s ? stageLabels[s] : isVi ? 'Tất cả' : 'All'} ({count})
             </button>
           );
         })}
@@ -1158,11 +1194,15 @@ export const ApplicantsPage: React.FC = () => {
         <div>
           {visible.length === 0 ? (
             <EmptyState
-              title="Không có ứng viên nào"
+              title={isVi ? 'Không có ứng viên nào' : 'No applicants found'}
               description={
                 apps.length === 0
-                  ? 'Hồ sơ ứng tuyển vào tin của bạn sẽ xuất hiện ở đây.'
-                  : 'Thử bỏ bớt bộ lọc.'
+                  ? isVi
+                    ? 'Hồ sơ ứng tuyển vào tin của bạn sẽ xuất hiện ở đây.'
+                    : 'Applications submitted to your job postings will appear here.'
+                  : isVi
+                    ? 'Thử bỏ bớt bộ lọc.'
+                    : 'Try clearing some filters.'
               }
             />
           ) : (
@@ -1184,14 +1224,14 @@ export const ApplicantsPage: React.FC = () => {
                         {a.candidateName}
                       </span>
                       <span className="block text-xs text-slate-500 dark:text-slate-400 truncate">
-                        {a.jobTitle} · {timeAgo(a.appliedAt)}
+                        {a.jobTitle} · {timeAgo(a.appliedAt, lang)}
                       </span>
                     </span>
                     <span className="flex flex-col items-end gap-1 shrink-0">
                       <StageBadge stage={a.currentStage} />
                       {a.matchScore !== null && a.matchScore !== undefined && (
                         <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                          Khớp {Math.round(a.matchScore)}%
+                          {isVi ? `Khớp ${Math.round(a.matchScore)}%` : `${Math.round(a.matchScore)}% Match`}
                         </span>
                       )}
                     </span>
@@ -1211,7 +1251,7 @@ export const ApplicantsPage: React.FC = () => {
             />
           ) : (
             <div className="hidden lg:block border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl p-10 text-center text-sm text-slate-500 dark:text-slate-400">
-              Chọn một ứng viên để xem hồ sơ.
+              {isVi ? 'Chọn một ứng viên để xem hồ sơ.' : 'Select an applicant to view their profile.'}
             </div>
           )}
         </div>

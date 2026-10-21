@@ -19,9 +19,12 @@ import type { AdminCompany, AdminJob } from '../../lib/types';
 import { ErrorBox, PageLoader, inputCls } from '../../components/ui/primitives';
 import { usePageTitle } from '../../lib/usePageTitle';
 import { AdminHeader } from './AdminHeader';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export const AdminModerationPage: React.FC = () => {
-  usePageTitle('Kiểm duyệt Doanh nghiệp & Tin tuyển dụng');
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
+  usePageTitle(isVi ? 'Kiểm duyệt Doanh nghiệp & Tin tuyển dụng' : 'Company Verification & Job Moderation');
   const [activeTab, setActiveTab] = useState<'companies' | 'jobs'>('companies');
   const [companies, setCompanies] = useState<AdminCompany[]>([]);
   const [jobs, setJobs] = useState<AdminJob[]>([]);
@@ -99,8 +102,12 @@ export const AdminModerationPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8" data-testid="admin-moderation-page">
       <AdminHeader
-        title="Trung tâm Kiểm duyệt Doanh nghiệp & Tin tuyển dụng"
-        subtitle="Thẩm định hồ sơ pháp lý doanh nghiệp đối tác (Tax Code, Website) và kiểm duyệt chất lượng tin đăng tuyển dụng trên toàn hệ thống."
+        title={isVi ? 'Trung tâm Kiểm duyệt Doanh nghiệp & Tin tuyển dụng' : 'Company Verification & Job Moderation Center'}
+        subtitle={
+          isVi
+            ? 'Thẩm định hồ sơ pháp lý doanh nghiệp đối tác (Tax Code, Website) và kiểm duyệt chất lượng tin đăng tuyển dụng trên toàn hệ thống.'
+            : 'Verify partner company legal profiles (Tax Code, Website) and moderate job postings across the platform.'
+        }
         rightSlot={
           <button
             type="button"
@@ -108,7 +115,7 @@ export const AdminModerationPage: React.FC = () => {
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-bold border border-white/20 transition cursor-pointer"
           >
             <RefreshCw className="w-4 h-4" />
-            <span>Đồng bộ dữ liệu</span>
+            <span>{isVi ? 'Đồng bộ dữ liệu' : 'Sync Data'}</span>
           </button>
         }
       />
@@ -144,7 +151,9 @@ export const AdminModerationPage: React.FC = () => {
           }`}
         >
           <Building2 className="w-4 h-4" />
-          <span>Xác minh Doanh nghiệp ({companies.length})</span>
+          <span>
+            {isVi ? `Xác minh Doanh nghiệp (${companies.length})` : `Company Verification (${companies.length})`}
+          </span>
         </button>
 
         <button
@@ -158,7 +167,7 @@ export const AdminModerationPage: React.FC = () => {
           }`}
         >
           <Briefcase className="w-4 h-4" />
-          <span>Kiểm duyệt Tin tuyển dụng ({jobs.length})</span>
+          <span>{isVi ? `Kiểm duyệt Tin tuyển dụng (${jobs.length})` : `Job Moderation (${jobs.length})`}</span>
         </button>
       </div>
 
@@ -181,7 +190,7 @@ export const AdminModerationPage: React.FC = () => {
                   type="text"
                   value={companyKeyword}
                   onChange={(e) => setCompanyKeyword(e.target.value)}
-                  placeholder="Tìm doanh nghiệp theo tên, mã số thuế, ngành nghề hoặc thành phố..."
+                  placeholder={isVi ? 'Tìm doanh nghiệp theo tên, mã số thuế, ngành nghề hoặc thành phố...' : 'Search companies by name, tax code, industry, or city...'}
                   className={`${inputCls} pl-10`}
                 />
               </div>
@@ -192,10 +201,10 @@ export const AdminModerationPage: React.FC = () => {
                   className={inputCls}
                   data-testid="company-verification-filter"
                 >
-                  <option value="ALL">Tất cả trạng thái xác minh</option>
-                  <option value="VERIFIED">VERIFIED (Đã xác minh)</option>
-                  <option value="PENDING">PENDING (Chờ thẩm định)</option>
-                  <option value="REJECTED">REJECTED (Từ chối)</option>
+                  <option value="ALL">{isVi ? 'Tất cả trạng thái xác minh' : 'All Verification Statuses'}</option>
+                  <option value="VERIFIED">{isVi ? 'VERIFIED (Đã xác minh)' : 'VERIFIED'}</option>
+                  <option value="PENDING">{isVi ? 'PENDING (Chờ thẩm định)' : 'PENDING'}</option>
+                  <option value="REJECTED">{isVi ? 'REJECTED (Từ chối)' : 'REJECTED'}</option>
                 </select>
               </div>
               <div className="md:col-span-2">
@@ -203,7 +212,7 @@ export const AdminModerationPage: React.FC = () => {
                   type="submit"
                   className="w-full h-full px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition cursor-pointer"
                 >
-                  Lọc danh sách
+                  {isVi ? 'Lọc danh sách' : 'Filter'}
                 </button>
               </div>
             </form>
@@ -226,13 +235,14 @@ export const AdminModerationPage: React.FC = () => {
                         <Link
                           to={`/companies/${comp.slug}`}
                           className="text-slate-400 hover:text-emerald-600"
-                          title="Xem trang công ty"
+                          title={isVi ? 'Xem trang công ty' : 'View company page'}
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                         </Link>
                       </div>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        {comp.industry || 'Công nghệ'} · Quy mô {comp.companySize || '100-500'} · {comp.city || 'Việt Nam'}
+                        {comp.industry || 'Software & IT Services'} · {isVi ? 'Quy mô ' : 'Size '}
+                        {comp.companySize || '100-500'} · {comp.city || 'Vietnam'}
                       </p>
                     </div>
 
@@ -256,11 +266,11 @@ export const AdminModerationPage: React.FC = () => {
 
                   <div className="mt-4 grid grid-cols-3 gap-2 text-xs bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3">
                     <div>
-                      <span className="text-slate-400 block">Mã số thuế</span>
+                      <span className="text-slate-400 block">{isVi ? 'Mã số thuế' : 'Tax Code'}</span>
                       <strong className="text-slate-800 dark:text-slate-200">{comp.taxCode || '0101248141'}</strong>
                     </div>
                     <div>
-                      <span className="text-slate-400 block">Tin tuyển dụng</span>
+                      <span className="text-slate-400 block">{isVi ? 'Tin tuyển dụng' : 'Job Postings'}</span>
                       <strong className="text-emerald-600 dark:text-emerald-400">{comp.jobCount} Jobs</strong>
                     </div>
                     <div>
@@ -279,7 +289,7 @@ export const AdminModerationPage: React.FC = () => {
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition cursor-pointer"
                     >
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>Xác minh (VERIFIED)</span>
+                      <span>{isVi ? 'Xác minh (VERIFIED)' : 'Verify (VERIFIED)'}</span>
                     </button>
                   )}
                   {comp.verificationStatus !== 'PENDING' && (
@@ -290,7 +300,7 @@ export const AdminModerationPage: React.FC = () => {
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition cursor-pointer"
                     >
                       <Clock className="w-3.5 h-3.5" />
-                      <span>Chuyển Chờ duyệt</span>
+                      <span>{isVi ? 'Chuyển Chờ duyệt' : 'Set Pending'}</span>
                     </button>
                   )}
                   {comp.verificationStatus !== 'REJECTED' && (
@@ -301,7 +311,7 @@ export const AdminModerationPage: React.FC = () => {
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 transition cursor-pointer"
                     >
                       <XCircle className="w-3.5 h-3.5" />
-                      <span>Từ chối</span>
+                      <span>{isVi ? 'Từ chối' : 'Reject'}</span>
                     </button>
                   )}
                 </div>
@@ -326,7 +336,7 @@ export const AdminModerationPage: React.FC = () => {
                   type="text"
                   value={jobKeyword}
                   onChange={(e) => setJobKeyword(e.target.value)}
-                  placeholder="Tìm tin tuyển dụng theo tiêu đề, công ty hoặc địa điểm..."
+                  placeholder={isVi ? 'Tìm tin tuyển dụng theo tiêu đề, công ty hoặc địa điểm...' : 'Search jobs by title, company, or location...'}
                   className={`${inputCls} pl-10`}
                 />
               </div>
@@ -337,12 +347,12 @@ export const AdminModerationPage: React.FC = () => {
                   className={inputCls}
                   data-testid="job-moderation-status-filter"
                 >
-                  <option value="ALL">Mọi trạng thái tin đăng</option>
-                  <option value="PUBLISHED">PUBLISHED (Đang hiển thị)</option>
-                  <option value="PENDING_APPROVAL">PENDING_APPROVAL (Chờ duyệt)</option>
-                  <option value="PAUSED">PAUSED (Tạm dừng)</option>
-                  <option value="CLOSED">CLOSED (Đã đóng)</option>
-                  <option value="DRAFT">DRAFT (Bản nháp)</option>
+                  <option value="ALL">{isVi ? 'Mọi trạng thái tin đăng' : 'All Job Statuses'}</option>
+                  <option value="PUBLISHED">{isVi ? 'PUBLISHED (Đang hiển thị)' : 'PUBLISHED'}</option>
+                  <option value="PENDING_APPROVAL">{isVi ? 'PENDING_APPROVAL (Chờ duyệt)' : 'PENDING_APPROVAL'}</option>
+                  <option value="PAUSED">{isVi ? 'PAUSED (Tạm dừng)' : 'PAUSED'}</option>
+                  <option value="CLOSED">{isVi ? 'CLOSED (Đã đóng)' : 'CLOSED'}</option>
+                  <option value="DRAFT">{isVi ? 'DRAFT (Bản nháp)' : 'DRAFT'}</option>
                 </select>
               </div>
               <div className="md:col-span-2">
@@ -350,7 +360,7 @@ export const AdminModerationPage: React.FC = () => {
                   type="submit"
                   className="w-full h-full px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition cursor-pointer"
                 >
-                  Lọc tin đăng
+                  {isVi ? 'Lọc tin đăng' : 'Filter'}
                 </button>
               </div>
             </form>
@@ -361,11 +371,11 @@ export const AdminModerationPage: React.FC = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    <th className="py-3.5 px-4">Tin tuyển dụng</th>
-                    <th className="py-3.5 px-4">Doanh nghiệp</th>
-                    <th className="py-3.5 px-4">Thống kê</th>
-                    <th className="py-3.5 px-4">Trạng thái</th>
-                    <th className="py-3.5 px-4 text-right">Kiểm duyệt</th>
+                    <th className="py-3.5 px-4">{isVi ? 'Tin tuyển dụng' : 'Job Posting'}</th>
+                    <th className="py-3.5 px-4">{isVi ? 'Doanh nghiệp' : 'Company'}</th>
+                    <th className="py-3.5 px-4">{isVi ? 'Thống kê' : 'Metrics'}</th>
+                    <th className="py-3.5 px-4">{isVi ? 'Trạng thái' : 'Status'}</th>
+                    <th className="py-3.5 px-4 text-right">{isVi ? 'Kiểm duyệt' : 'Moderate'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
@@ -381,7 +391,7 @@ export const AdminModerationPage: React.FC = () => {
                           <Link
                             to={`/jobs/${job.id}`}
                             className="text-slate-400 hover:text-emerald-600"
-                            title="Xem chi tiết việc làm"
+                            title={isVi ? 'Xem chi tiết việc làm' : 'View job details'}
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
                           </Link>
@@ -398,9 +408,11 @@ export const AdminModerationPage: React.FC = () => {
                       </td>
 
                       <td className="py-3.5 px-4 text-xs text-slate-600 dark:text-slate-300">
-                        <div>{job.viewsCount ?? 0} lượt xem</div>
+                        <div>
+                          {job.viewsCount ?? 0} {isVi ? 'lượt xem' : 'views'}
+                        </div>
                         <div className="font-bold text-emerald-600 dark:text-emerald-400">
-                          {job.applicationsCount ?? 0} đơn ứng tuyển
+                          {job.applicationsCount ?? 0} {isVi ? 'đơn ứng tuyển' : 'applications'}
                         </div>
                       </td>
 
@@ -428,7 +440,7 @@ export const AdminModerationPage: React.FC = () => {
                               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition cursor-pointer"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>Duyệt đăng</span>
+                              <span>{isVi ? 'Duyệt đăng' : 'Publish'}</span>
                             </button>
                           )}
                           {job.status === 'PUBLISHED' && (
@@ -439,7 +451,7 @@ export const AdminModerationPage: React.FC = () => {
                               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition cursor-pointer"
                             >
                               <PauseCircle className="w-3.5 h-3.5" />
-                              <span>Tạm dừng</span>
+                              <span>{isVi ? 'Tạm dừng' : 'Pause'}</span>
                             </button>
                           )}
                           {job.status !== 'CLOSED' && (
@@ -450,7 +462,7 @@ export const AdminModerationPage: React.FC = () => {
                               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-rose-50 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 transition cursor-pointer"
                             >
                               <XCircle className="w-3.5 h-3.5" />
-                              <span>Đóng tin</span>
+                              <span>{isVi ? 'Đóng tin' : 'Close'}</span>
                             </button>
                           )}
                         </div>

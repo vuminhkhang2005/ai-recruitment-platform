@@ -14,20 +14,23 @@ import type { AdminSkill, SaveSkillInput } from '../../lib/types';
 import { ErrorBox, PageLoader, inputCls } from '../../components/ui/primitives';
 import { usePageTitle } from '../../lib/usePageTitle';
 import { AdminHeader } from './AdminHeader';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const SKILL_CATEGORIES = [
-  { code: 'PROGRAMMING_LANGUAGE', label: 'Ngôn ngữ lập trình (PROGRAMMING_LANGUAGE)' },
-  { code: 'FRAMEWORK', label: 'Framework / Library (FRAMEWORK)' },
-  { code: 'DATABASE', label: 'Cơ sở dữ liệu (DATABASE)' },
-  { code: 'CLOUD_DEVOPS', label: 'Cloud & DevOps (CLOUD_DEVOPS)' },
-  { code: 'TESTING', label: 'Kiểm thử phần mềm (TESTING)' },
-  { code: 'METHODOLOGY', label: 'Phương pháp luận (METHODOLOGY)' },
-  { code: 'SOFT_SKILL', label: 'Kỹ năng mềm (SOFT_SKILL)' },
-  { code: 'OTHER', label: 'Khác (OTHER)' },
+  { code: 'PROGRAMMING_LANGUAGE', labelVi: 'Ngôn ngữ lập trình (PROGRAMMING_LANGUAGE)', labelEn: 'Programming Language (PROGRAMMING_LANGUAGE)' },
+  { code: 'FRAMEWORK', labelVi: 'Framework / Library (FRAMEWORK)', labelEn: 'Framework / Library (FRAMEWORK)' },
+  { code: 'DATABASE', labelVi: 'Cơ sở dữ liệu (DATABASE)', labelEn: 'Database (DATABASE)' },
+  { code: 'CLOUD_DEVOPS', labelVi: 'Cloud & DevOps (CLOUD_DEVOPS)', labelEn: 'Cloud & DevOps (CLOUD_DEVOPS)' },
+  { code: 'TESTING', labelVi: 'Kiểm thử phần mềm (TESTING)', labelEn: 'Software Testing (TESTING)' },
+  { code: 'METHODOLOGY', labelVi: 'Phương pháp luận (METHODOLOGY)', labelEn: 'Methodology (METHODOLOGY)' },
+  { code: 'SOFT_SKILL', labelVi: 'Kỹ năng mềm (SOFT_SKILL)', labelEn: 'Soft Skill (SOFT_SKILL)' },
+  { code: 'OTHER', labelVi: 'Khác (OTHER)', labelEn: 'Other (OTHER)' },
 ];
 
 export const AdminSkillsPage: React.FC = () => {
-  usePageTitle('Từ điển Kỹ năng Chuẩn (Master Skill Taxonomy)');
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
+  usePageTitle(isVi ? 'Từ điển Kỹ năng Chuẩn (Master Skill Taxonomy)' : 'Master AI Skill Taxonomy');
   const [skills, setSkills] = useState<AdminSkill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -134,8 +137,12 @@ export const AdminSkillsPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8" data-testid="admin-skills-page">
       <AdminHeader
-        title="Quản lý Từ điển Kỹ năng Chuẩn AI (Skill Taxonomy)"
-        subtitle="Chuẩn hóa danh mục kỹ năng phục vụ thuật toán bóc tách CV (AI Resume Parser) và chấm điểm độ khớp ATS (Job-Candidate Matching)."
+        title={isVi ? 'Quản lý Từ điển Kỹ năng Chuẩn AI (Skill Taxonomy)' : 'Master AI Skill Taxonomy Management'}
+        subtitle={
+          isVi
+            ? 'Chuẩn hóa danh mục kỹ năng phục vụ thuật toán bóc tách CV (AI Resume Parser) và chấm điểm độ khớp ATS (Job-Candidate Matching).'
+            : 'Standardize the skill ontology powering AI Resume Parsing and ATS Job-Candidate Matching.'
+        }
         rightSlot={
           <div className="flex items-center gap-2">
             <button
@@ -145,7 +152,7 @@ export const AdminSkillsPage: React.FC = () => {
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-black shadow-lg shadow-emerald-500/25 transition cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>Thêm Kỹ năng mới</span>
+              <span>{isVi ? 'Thêm Kỹ năng mới' : 'Add New Skill'}</span>
             </button>
             <button
               type="button"
@@ -191,7 +198,7 @@ export const AdminSkillsPage: React.FC = () => {
               type="text"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              placeholder="Tìm kỹ năng theo tên, slug hoặc mô tả (VD: Java, React, Kubernetes)..."
+              placeholder={isVi ? 'Tìm kỹ năng theo tên, slug hoặc mô tả (VD: Java, React, Kubernetes)...' : 'Search skills by name, slug, or description (e.g. Java, React, Kubernetes)...'}
               className={`${inputCls} pl-10`}
               data-testid="admin-skill-search-input"
             />
@@ -204,10 +211,12 @@ export const AdminSkillsPage: React.FC = () => {
               className={inputCls}
               data-testid="admin-skill-category-filter"
             >
-              <option value="ALL">Tất cả 8 nhóm kỹ năng ({skills.length})</option>
+              <option value="ALL">
+                {isVi ? `Tất cả 8 nhóm kỹ năng (${skills.length})` : `All 8 Skill Categories (${skills.length})`}
+              </option>
               {SKILL_CATEGORIES.map((c) => (
                 <option key={c.code} value={c.code}>
-                  {c.label}
+                  {isVi ? c.labelVi : c.labelEn}
                 </option>
               ))}
             </select>
@@ -218,7 +227,7 @@ export const AdminSkillsPage: React.FC = () => {
               type="submit"
               className="w-full h-full px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition cursor-pointer"
             >
-              Tìm kiếm
+              {isVi ? 'Tìm kiếm' : 'Search'}
             </button>
           </div>
         </form>
@@ -266,7 +275,7 @@ export const AdminSkillsPage: React.FC = () => {
                 </div>
 
                 <p className="mt-3 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
-                  {sk.description || `Kỹ năng chuẩn thuộc phân nhóm ${sk.category} trong hệ thống AI Matching.`}
+                  {sk.description || `Standardized ${sk.category} skill in the TalentBridge AI Matching taxonomy.`}
                 </p>
               </div>
 
@@ -276,7 +285,8 @@ export const AdminSkillsPage: React.FC = () => {
                     Jobs: <strong className="text-emerald-600 dark:text-emerald-400">{sk.jobCount}</strong>
                   </span>
                   <span className="text-slate-500 dark:text-slate-400">
-                    UV: <strong className="text-indigo-600 dark:text-indigo-400">{sk.candidateCount}</strong>
+                    {isVi ? 'UV:' : 'Cand.:'}{' '}
+                    <strong className="text-indigo-600 dark:text-indigo-400">{sk.candidateCount}</strong>
                   </span>
                 </div>
 
@@ -285,7 +295,7 @@ export const AdminSkillsPage: React.FC = () => {
                     type="button"
                     onClick={() => openEditModal(sk)}
                     className="p-1.5 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition cursor-pointer"
-                    title="Chỉnh sửa kỹ năng"
+                    title={isVi ? 'Chỉnh sửa kỹ năng' : 'Edit skill'}
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
@@ -293,7 +303,7 @@ export const AdminSkillsPage: React.FC = () => {
                     type="button"
                     onClick={() => handleToggleSkill(sk)}
                     className="p-1.5 rounded-xl text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/50 transition cursor-pointer"
-                    title={sk.isActive ? 'Tạm ẩn kỹ năng' : 'Kích hoạt kỹ năng'}
+                    title={sk.isActive ? (isVi ? 'Tạm ẩn kỹ năng' : 'Deactivate skill') : isVi ? 'Kích hoạt kỹ năng' : 'Activate skill'}
                   >
                     <Power className="w-4 h-4" />
                   </button>
@@ -312,7 +322,13 @@ export const AdminSkillsPage: React.FC = () => {
               <div className="flex items-center gap-2.5">
                 <BookOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 <h3 className="text-lg font-black text-slate-900 dark:text-white">
-                  {editingSkill ? `Chỉnh sửa kỹ năng: ${editingSkill.name}` : 'Thêm Kỹ năng mới vào Từ điển AI'}
+                  {editingSkill
+                    ? isVi
+                      ? `Chỉnh sửa kỹ năng: ${editingSkill.name}`
+                      : `Edit Skill: ${editingSkill.name}`
+                    : isVi
+                      ? 'Thêm Kỹ năng mới vào Từ điển AI'
+                      : 'Add New Skill to AI Taxonomy'}
                 </h3>
               </div>
               <button
@@ -327,14 +343,14 @@ export const AdminSkillsPage: React.FC = () => {
             <form onSubmit={handleSaveSkill} className="mt-4 space-y-4">
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                  Tên kỹ năng chuẩn *
+                  {isVi ? 'Tên kỹ năng chuẩn *' : 'Canonical Skill Name *'}
                 </label>
                 <input
                   type="text"
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="VD: LangChain, Vector Database, Terraform..."
+                  placeholder="e.g. LangChain, Vector Database, Terraform..."
                   className={`${inputCls} mt-1`}
                   data-testid="input-skill-name"
                 />
@@ -342,7 +358,7 @@ export const AdminSkillsPage: React.FC = () => {
 
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                  Danh mục phân loại *
+                  {isVi ? 'Danh mục phân loại *' : 'Category *'}
                 </label>
                 <select
                   value={form.category}
@@ -352,7 +368,7 @@ export const AdminSkillsPage: React.FC = () => {
                 >
                   {SKILL_CATEGORIES.map((c) => (
                     <option key={c.code} value={c.code}>
-                      {c.label}
+                      {isVi ? c.labelVi : c.labelEn}
                     </option>
                   ))}
                 </select>
@@ -360,13 +376,13 @@ export const AdminSkillsPage: React.FC = () => {
 
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                  Mô tả kỹ năng
+                  {isVi ? 'Mô tả kỹ năng' : 'Skill Description'}
                 </label>
                 <textarea
                   rows={3}
                   value={form.description || ''}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="Mô tả ngắn gọn ứng dụng của kỹ năng trong tuyển dụng..."
+                  placeholder={isVi ? 'Mô tả ngắn gọn ứng dụng của kỹ năng trong tuyển dụng...' : 'Briefly describe how this skill is used in technical roles...'}
                   className={`${inputCls} mt-1`}
                   data-testid="input-skill-description"
                 />
@@ -378,7 +394,7 @@ export const AdminSkillsPage: React.FC = () => {
                   onClick={() => setModalOpen(false)}
                   className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100"
                 >
-                  Hủy
+                  {isVi ? 'Hủy' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
@@ -386,7 +402,17 @@ export const AdminSkillsPage: React.FC = () => {
                   data-testid="btn-submit-skill"
                   className="px-5 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white transition cursor-pointer"
                 >
-                  {saving ? 'Đang lưu...' : editingSkill ? 'Lưu thay đổi' : 'Tạo kỹ năng mới'}
+                  {saving
+                    ? isVi
+                      ? 'Đang lưu...'
+                      : 'Saving...'
+                    : editingSkill
+                      ? isVi
+                        ? 'Lưu thay đổi'
+                        : 'Save Changes'
+                      : isVi
+                        ? 'Tạo kỹ năng mới'
+                        : 'Create Skill'}
                 </button>
               </div>
             </form>

@@ -92,10 +92,16 @@ public class AiService {
         SKILL_TAXONOMY.put("Machine Learning", List.of("machine learning", "ml", "scikit-learn", "llm", "nlp"));
         SKILL_TAXONOMY.put("Teamwork", List.of("teamwork", "team project", "team of", "collaborated", "agile team", "làm việc nhóm", "phối hợp nhóm", "code reviews"));
         SKILL_TAXONOMY.put("Communication", List.of("communication", "giao tiếp", "ielts", "toeic", "english", "proficient in reading", "thuyết trình", "đàm phán"));
-        SKILL_TAXONOMY.put("Tuyển dụng nhân sự", List.of("tuyển dụng", "talent acquisition", "recruiter", "recruitment", "headhunt", "sàng lọc ứng viên"));
+        SKILL_TAXONOMY.put("Talent Acquisition", List.of("tuyển dụng", "talent acquisition", "recruiter", "recruitment", "headhunt", "sàng lọc ứng viên"));
         SKILL_TAXONOMY.put("HR Business Partner", List.of("hrbp", "hr business partner", "nhân sự", "hrm"));
         SKILL_TAXONOMY.put("B2B Sales", List.of("b2b sales", "kinh doanh b2b", "tư vấn giải pháp", "phát triển khách hàng"));
         SKILL_TAXONOMY.put("Digital Marketing", List.of("digital marketing", "marketing", "seo", "sem", "google ads", "facebook ads"));
+        SKILL_TAXONOMY.put("Financial Accounting", List.of("accounting", "kế toán", "vas", "ifrs", "tax", "misa", "sap"));
+        SKILL_TAXONOMY.put("Financial Analysis", List.of("financial analysis", "phân tích tài chính", "fp&a", "forecasting", "budgeting"));
+        SKILL_TAXONOMY.put("Customer Success", List.of("customer success", "chăm sóc khách hàng", "crm", "zendesk", "hubspot"));
+        SKILL_TAXONOMY.put("Category Management", List.of("category management", "quản lý ngành hàng", "e-commerce", "assortment", "gmv"));
+        SKILL_TAXONOMY.put("Commercial Negotiation", List.of("commercial negotiation", "đàm phán thương mại", "vendor", "b2b contract"));
+        SKILL_TAXONOMY.put("Risk Management", List.of("risk management", "quản trị rủi ro", "aml", "kyc", "fraud", "basel"));
     }
 
     /**
@@ -182,7 +188,7 @@ public class AiService {
                 .map(SkillItem::getName)
                 .toList();
 
-        String companyName = job.getCompany() != null ? job.getCompany().getName() : "Quý công ty";
+        String companyName = job.getCompany() != null ? job.getCompany().getName() : "Your Company";
         String tone = StringUtils.hasText(req.getTone()) ? req.getTone().toUpperCase() : "PROFESSIONAL";
 
         List<String> matched = new ArrayList<>();
@@ -196,13 +202,13 @@ public class AiService {
         }
 
         String matchedStr = String.join(", ", matched);
-        String subject = String.format("Thư ứng tuyển vị trí %s - %s", job.getTitle(), user.getFullName());
+        String subject = String.format("Application for %s - %s", job.getTitle(), user.getFullName());
 
         String letterBody = buildCoverLetterTemplate(
                 user.getFullName(),
                 job.getTitle(),
                 companyName,
-                profile != null ? profile.getHeadline() : "Chuyên viên công nghệ",
+                profile != null && StringUtils.hasText(profile.getHeadline()) ? profile.getHeadline() : "Software Engineer",
                 matchedStr,
                 req.getCandidateHighlights(),
                 tone
@@ -243,11 +249,11 @@ public class AiService {
 
         // 1. Resolve Selected CV (Uploaded File OR Selected cvId OR Default CV)
         Long resolvedCvId = cvId;
-        String analyzedCvName = "Hồ sơ năng lực (TalentBridge Profile)";
+        String analyzedCvName = "TalentBridge Candidate Profile";
         String extractedFileText = "";
 
         if (file != null && !file.isEmpty()) {
-            analyzedCvName = StringUtils.hasText(file.getOriginalFilename()) ? file.getOriginalFilename() : "CV_Moi_Tai_Len.pdf";
+            analyzedCvName = StringUtils.hasText(file.getOriginalFilename()) ? file.getOriginalFilename() : "Uploaded_Resume.pdf";
             try {
                 extractedFileText = extractDocumentText(file.getBytes(), analyzedCvName);
             } catch (IOException ignored) {}
@@ -302,10 +308,10 @@ public class AiService {
                         .orElse(0);
         String parsedCvHeadline = hasRealCvFileText
                 ? extractHeadlineFromCvText(cvRawText)
-                : (profile != null && StringUtils.hasText(profile.getHeadline()) ? profile.getHeadline() : "Ứng viên");
+                : (profile != null && StringUtils.hasText(profile.getHeadline()) ? profile.getHeadline() : "Candidate");
         String parsedCvCity = hasRealCvFileText
                 ? extractCityFromCvText(cvTextLower)
-                : (profile != null && StringUtils.hasText(profile.getCity()) ? profile.getCity() : "TP. Hồ Chí Minh");
+                : (profile != null && StringUtils.hasText(profile.getCity()) ? profile.getCity() : "Ho Chi Minh City");
 
         // 2. Experience & Level requirement of the target JD
         int requiredExpYears = switch (job.getExpLevel() != null ? job.getExpLevel().toUpperCase() : "JUNIOR") {
@@ -355,7 +361,7 @@ public class AiService {
                         .candidateYears(haveYears)
                         .isMatched(true)
                         .isRequired(isReq)
-                        .recommendation("Đã tìm thấy trong CV (" + analyzedCvName + "). Hãy làm nổi bật kết quả đạt được với " + skillName + " trong phần dự án.")
+                        .recommendation("Verified in CV (" + analyzedCvName + "). Highlight quantifiable impact achieved with " + skillName + " in your project descriptions.")
                         .build());
             } else {
                 missingList.add(AtsSkillBreakdownItem.builder()
@@ -365,8 +371,8 @@ public class AiService {
                         .isMatched(false)
                         .isRequired(isReq)
                         .recommendation(isReq
-                                ? "JD yêu cầu bắt buộc kỹ năng " + skillName + " nhưng chưa xuất hiện trong CV. Hãy bổ sung nếu bạn đã từng làm việc với công nghệ này."
-                                : "Kỹ năng cộng điểm ưu tiên trong JD. Bổ sung từ khóa " + skillName + " vào CV sẽ giúp tăng điểm lọc hồ sơ.")
+                                ? "Required by JD (" + skillName + ") but not detected in your CV. Add this keyword if you have practical or project experience with it."
+                                : "Preferred bonus skill in JD. Including " + skillName + " in your CV will further boost your ATS ranking.")
                         .build());
             }
         }
@@ -487,16 +493,16 @@ public class AiService {
         String rating;
         String color;
         if (score >= 85) {
-            rating = "RẤT PHÙ HỢP";
+            rating = "STRONG MATCH";
             color = "emerald";
         } else if (score >= 70) {
-            rating = "KHÁ PHÙ HỢP";
+            rating = "GOOD MATCH";
             color = "teal";
         } else if (score >= 50) {
-            rating = "TIỀM NĂNG";
+            rating = "POTENTIAL FIT";
             color = "amber";
         } else {
-            rating = "CẦN TỐI ƯU CV";
+            rating = "NEEDS OPTIMIZATION";
             color = "rose";
         }
 
@@ -507,21 +513,21 @@ public class AiService {
                 : allDetectedCvSkills.stream().limit(7).collect(Collectors.joining(", "));
         String cvSkillSummary;
         if (!matchedList.isEmpty()) {
-            cvSkillSummary = "Khớp " + matchedList.size() + "/" + Math.max(1, jobSkills.size()) + " kỹ năng JD ("
+            cvSkillSummary = "Matched " + matchedList.size() + "/" + Math.max(1, jobSkills.size()) + " JD skills ("
                     + matchedList.stream().limit(4).map(AtsSkillBreakdownItem::getName).collect(Collectors.joining(", ")) + ")"
-                    + (StringUtils.hasText(detectedCvSkillsStr) ? " · Kỹ năng trong CV: " + detectedCvSkillsStr : "");
+                    + (StringUtils.hasText(detectedCvSkillsStr) ? " · CV Skills: " + detectedCvSkillsStr : "");
         } else if (StringUtils.hasText(detectedCvSkillsStr)) {
-            cvSkillSummary = "Kỹ năng trong CV: " + detectedCvSkillsStr + " (Chưa trùng với nhóm kỹ năng đặc thù của JD)";
+            cvSkillSummary = "CV Skills: " + detectedCvSkillsStr + " (Different from primary JD skill stack)";
         } else {
-            cvSkillSummary = "Chưa phát hiện kỹ năng trùng khớp trong CV";
+            cvSkillSummary = "No matching technical skills detected in CV";
         }
 
         String jdSkillSummary = jobSkills.isEmpty()
-                ? "Theo mô tả công việc (JD)"
-                : "Yêu cầu " + jobSkills.size() + " kỹ năng ("
+                ? "As specified in Job Description (JD)"
+                : "Requires " + jobSkills.size() + " skills ("
                 + jobSkills.stream().limit(5).map(js -> js.getSkill().getName()).collect(Collectors.joining(", ")) + ")";
         criteriaList.add(JdCriterionComparisonItem.builder()
-                .criterion("Kỹ năng chuyên môn")
+                .criterion("Technical Skills")
                 .cvValue(cvSkillSummary)
                 .jdValue(jdSkillSummary)
                 .status((skillMatchRatio >= 0.70 || skillScore >= 72) ? "MATCH" : (skillMatchRatio >= 0.40 || skillScore >= 48) ? "PARTIAL" : "GAP")
@@ -529,27 +535,30 @@ public class AiService {
 
         String cvExpSummary;
         if (maxCandidateYears > 0) {
-            cvExpSummary = "~" + maxCandidateYears + " năm kinh nghiệm · " + parsedCvHeadline;
+            cvExpSummary = "~" + maxCandidateYears + " yrs experience · " + parsedCvHeadline;
         } else {
             boolean isInternOrStudent = cvTextLower.contains("intern") || cvTextLower.contains("thực tập")
                     || cvTextLower.contains("student") || cvTextLower.contains("sinh viên") || cvTextLower.contains("fresher");
-            String levelPrefix = isInternOrStudent ? "Intern / Fresher (Sinh viên năm cuối)" : "Fresher / Dưới 1 năm KN";
+            String levelPrefix = isInternOrStudent ? "Intern / Fresher (Final-year Student)" : "Fresher / Entry-level (<1 yr)";
             cvExpSummary = levelPrefix + (StringUtils.hasText(parsedCvHeadline) ? " · " + parsedCvHeadline : "");
         }
-        String jdExpSummary = "Cấp bậc " + (job.getExpLevel() != null ? job.getExpLevel() : "JUNIOR")
-                + (requiredExpYears > 0 ? " (tối thiểu " + requiredExpYears + "+ năm)" : " (Không yêu cầu số năm)");
+        String jdExpSummary = (job.getExpLevel() != null ? job.getExpLevel() : "JUNIOR") + " Level"
+                + (requiredExpYears > 0 ? " (Min " + requiredExpYears + "+ yrs)" : " (No prior years required)");
         criteriaList.add(JdCriterionComparisonItem.builder()
-                .criterion("Kinh nghiệm & Cấp bậc")
+                .criterion("Experience & Seniority")
                 .cvValue(cvExpSummary)
                 .jdValue(jdExpSummary)
                 .status((expFulfilled || expScore >= 78) ? "MATCH" : expScore >= 60 ? "PARTIAL" : "GAP")
                 .build());
 
         String candCity = parsedCvCity;
-        String jobCity = StringUtils.hasText(job.getLocationCity()) ? job.getLocationCity() : "Toàn quốc";
-        boolean cityMatch = candCity.equalsIgnoreCase(jobCity) || "REMOTE".equalsIgnoreCase(job.getJobType());
+        String jobCity = StringUtils.hasText(job.getLocationCity()) ? job.getLocationCity() : "Vietnam";
+        boolean cityMatch = candCity.equalsIgnoreCase(jobCity)
+                || (candCity.toLowerCase().contains("ho chi minh") && jobCity.toLowerCase().contains("hồ chí minh"))
+                || (candCity.toLowerCase().contains("ha noi") && jobCity.toLowerCase().contains("hà nội"))
+                || "REMOTE".equalsIgnoreCase(job.getJobType());
         criteriaList.add(JdCriterionComparisonItem.builder()
-                .criterion("Địa điểm & Hình thức")
+                .criterion("Location & Work Mode")
                 .cvValue(candCity)
                 .jdValue(jobCity + (job.getJobType() != null ? " · " + job.getJobType() : ""))
                 .status(cityMatch ? "MATCH" : "PARTIAL")
@@ -557,26 +566,26 @@ public class AiService {
 
         List<String> strengths = new ArrayList<>();
         if (!matchedList.isEmpty()) {
-            strengths.add("CV của bạn thể hiện rõ các kỹ năng trọng tâm mà JD yêu cầu: "
+            strengths.add("Your CV demonstrates strong alignment with core JD requirements: "
                     + matchedList.stream().limit(4).map(AtsSkillBreakdownItem::getName).collect(Collectors.joining(", ")) + ".");
             if (expScore >= 80) {
-                strengths.add("Số năm kinh nghiệm và định hướng chuyên môn trong CV tương thích tốt với cấp bậc " + job.getExpLevel() + " của vị trí " + job.getTitle() + ".");
+                strengths.add("Your experience level and technical focus align well with the " + job.getExpLevel() + " seniority required for " + job.getTitle() + ".");
             }
         } else {
-            strengths.add("CV có cấu trúc rõ ràng, phù hợp để bổ sung thêm các từ khóa chuyên môn theo JD.");
+            strengths.add("Your CV has a clear structure and can be tailored with domain-specific keywords from the JD.");
         }
 
         List<String> tips = new ArrayList<>();
         if (!missingList.isEmpty()) {
-            tips.add("Bổ sung vào CV các từ khóa kỹ năng mà JD đang tìm kiếm: "
+            tips.add("Consider incorporating missing JD keywords into your CV: "
                     + missingList.stream().limit(3).map(AtsSkillBreakdownItem::getName).collect(Collectors.joining(", "))
-                    + " (nếu bạn đã từng sử dụng trong dự án hoặc đồ án).");
+                    + " (if you have relevant project or academic experience).");
         }
-        tips.add("Nhấn mạnh các con số định lượng kết quả dự án trong CV và Thư giới thiệu để gây ấn tượng với HR "
-                + (job.getCompany() != null ? job.getCompany().getName() : "") + ".");
+        tips.add("Highlight quantifiable project metrics and engineering outcomes in your CV and Cover Letter to stand out to "
+                + (job.getCompany() != null ? job.getCompany().getName() : "the hiring team") + ".");
 
-        String companyName = job.getCompany() != null ? job.getCompany().getName() : "Nhà tuyển dụng";
-        String comment = String.format("Kết quả AI đối chiếu CV [%s] với JD [%s tại %s]: Đạt %d%% (%s).",
+        String companyName = job.getCompany() != null ? job.getCompany().getName() : "Employer";
+        String comment = String.format("AI CV vs JD Analysis [%s -> %s at %s]: %d%% Match (%s).",
                 analyzedCvName, job.getTitle(), companyName, score, rating);
 
         return AtsMatchAnalysisResponseDto.builder()
@@ -700,10 +709,10 @@ public class AiService {
         String fullName = user != null ? user.getFullName() : extractFullName(content);
 
         // 2. City
-        String city = "TP. Hồ Chí Minh";
-        if (lower.contains("hà nội") || lower.contains("ha noi")) city = "Hà Nội";
-        else if (lower.contains("đà nẵng") || lower.contains("da nang")) city = "Đà Nẵng";
-        else if (lower.contains("cần thơ") || lower.contains("can tho")) city = "Cần Thơ";
+        String city = "Ho Chi Minh City";
+        if (lower.contains("hà nội") || lower.contains("ha noi") || lower.contains("hanoi")) city = "Ha Noi";
+        else if (lower.contains("đà nẵng") || lower.contains("da nang") || lower.contains("danang")) city = "Da Nang";
+        else if (lower.contains("cần thơ") || lower.contains("can tho")) city = "Can Tho";
 
         // 3. Skills extraction
         List<ExtractedSkillItem> skills = new ArrayList<>();
@@ -740,30 +749,30 @@ public class AiService {
         else if (lower.contains("ai") || lower.contains("data")) headline = "AI / Data Systems Engineer";
 
         // 5. Summary
-        String summary = String.format("Kỹ sư phần mềm nhiệt huyết với kinh nghiệm thực tế về %s. Từng tham gia thiết kế, phát triển và tối ưu hệ thống có tính sẵn sàng cao, luôn tuân thủ chuẩn clean code và bảo mật.",
+        String summary = String.format("Passionate Software Engineer with hands-on experience in %s. Proven track record in designing, building, and optimizing high-availability systems following clean architecture and security best practices.",
                 skills.stream().limit(3).map(ExtractedSkillItem::getName).collect(Collectors.joining(", ")));
 
         // 6. Experiences
         List<ExtractedExperienceItem> experiences = new ArrayList<>();
         experiences.add(ExtractedExperienceItem.builder()
                 .role(headline)
-                .company("Doanh nghiệp Công nghệ Thông tin")
-                .period("2023 - Nay")
+                .company("Technology Enterprise")
+                .period("2023 - Present")
                 .location(city)
                 .highlights(List.of(
-                        "Phát triển các dịch vụ backend RESTful phục vụ hàng triệu lượt gọi API mỗi ngày.",
-                        "Tối ưu hóa hiệu năng truy vấn cơ sở dữ liệu và quản lý giao dịch với tính tin cậy cao.",
-                        "Phối hợp cùng đội ngũ kỹ thuật triển khai CI/CD và kiến trúc containerized Docker."
+                        "Developed scalable RESTful backend services handling high daily API throughput.",
+                        "Optimized database queries and transaction management for mission-critical reliability.",
+                        "Collaborated in Agile/Scrum teams to deliver containerized Docker & CI/CD deployments."
                 ))
                 .build());
 
         // 7. Educations
         List<ExtractedEducationItem> educations = new ArrayList<>();
         educations.add(ExtractedEducationItem.builder()
-                .school("Đại học Chuyên ngành Công nghệ Thông tin")
-                .degree("Cử nhân Kỹ thuật Phần mềm")
+                .school("University of Information Technology & Engineering")
+                .degree("B.S. in Software Engineering")
                 .year("2019 - 2023")
-                .details("GPA: 3.5/4.0 • Hoàn thành tốt đồ án tốt nghiệp ứng dụng công nghệ hiện đại.")
+                .details("GPA: 3.5/4.0 • Completed Capstone Project on modern distributed web architecture.")
                 .build());
 
         // 8. Quality Score
@@ -886,60 +895,60 @@ public class AiService {
         if (lower.contains("ho chi minh") || lower.contains("hcmc") || lower.contains("hcmute")
                 || lower.contains("hồ chí minh") || lower.contains("tp.hcm") || lower.contains("tphcm")
                 || lower.contains("sài gòn") || lower.contains("saigon") || lower.contains("thủ đức")) {
-            return "TP. Hồ Chí Minh";
+            return "Ho Chi Minh City";
         }
         if (lower.contains("hà nội") || lower.contains("ha noi") || lower.contains("hanoi")
                 || lower.contains("cầu giấy") || lower.contains("đống đa") || lower.contains("bách khoa hà nội")) {
-            return "Hà Nội";
+            return "Ha Noi";
         }
         if (lower.contains("đà nẵng") || lower.contains("da nang") || lower.contains("danang")) {
-            return "Đà Nẵng";
+            return "Da Nang";
         }
         if (lower.contains("cần thơ") || lower.contains("can tho")) {
-            return "Cần Thơ";
+            return "Can Tho";
         }
-        return "TP. Hồ Chí Minh";
+        return "Ho Chi Minh City";
     }
 
     private String buildCoverLetterTemplate(String candidateName, String jobTitle, String companyName,
                                             String candidateHeadline, String skills, String highlights, String tone) {
         if ("CONFIDENT".equalsIgnoreCase(tone)) {
             return String.format(
-                    "Kính gửi Ban Tuyển dụng %s,\n\n" +
-                    "Tôi viết thư này để khẳng định sự quan tâm và tự tin ứng tuyển vào vị trí %s. " +
-                    "Với năng lực chuyên môn vững vàng trong vai trò %s cùng bề dày kinh nghiệm với các công nghệ lõi như %s, " +
-                    "tôi hoàn toàn tin tưởng sẽ đóng góp hiệu quả vào các mục tiêu kỹ thuật chiến lược của Quý công ty ngay từ những ngày đầu nhận việc.\n\n" +
+                    "Dear %s Hiring Team,\n\n" +
+                    "I am writing to express my strong interest in the %s position. " +
+                    "With a solid background as a %s and hands-on experience in core technologies including %s, " +
+                    "I am confident in my ability to deliver immediate impact to your engineering initiatives.\n\n" +
                     "%s" +
-                    "Tôi rất mong có cơ hội trao đổi trực tiếp trong buổi phỏng vấn để làm rõ hơn giá trị tôi có thể mang lại cho đội ngũ %s.\n\n" +
-                    "Trân trọng,\n%s",
+                    "I welcome the opportunity to discuss how my technical expertise can contribute to %s's continued growth.\n\n" +
+                    "Sincerely,\n%s",
                     companyName, jobTitle, candidateHeadline, skills,
-                    StringUtils.hasText(highlights) ? "Thế mạnh nổi bật: " + highlights.trim() + "\n\n" : "",
+                    StringUtils.hasText(highlights) ? "Key Highlights: " + highlights.trim() + "\n\n" : "",
                     companyName, candidateName
             );
         }
 
         if ("ENTHUSIASTIC".equalsIgnoreCase(tone)) {
             return String.format(
-                    "Kính gửi Ban Tuyển dụng %s,\n\n" +
-                    "Tôi vô cùng hào hứng khi tìm hiểu về cơ hội việc làm %s tại %s. " +
-                    "Là một %s đầy nhiệt huyết, tôi luôn theo dõi sự phát triển ấn tượng của công ty và mong muốn được cống hiến năng lực của mình.\n\n" +
-                    "Nền tảng kỹ năng của tôi đặc biệt tương thích với yêu cầu của vị trí này, bao gồm %s. " +
+                    "Dear %s Hiring Team,\n\n" +
+                    "I am thrilled to apply for the %s opening at %s. " +
+                    "As a passionate %s, I have closely followed your company's technical innovations and would love to contribute to your team.\n\n" +
+                    "My technical foundation aligns closely with this role, particularly in %s. " +
                     "%s" +
-                    "Tôi tin rằng tinh thần ham học hỏi cùng niềm say mê giải quyết bài toán lớn sẽ giúp tôi hòa nhập và phát triển vượt bậc cùng %s.\n\n" +
-                    "Chân thành cảm ơn Quý công ty,\n%s",
+                    "I am eager to bring my problem-solving mindset and collaborative energy to %s.\n\n" +
+                    "Warm regards,\n%s",
                     companyName, jobTitle, companyName, candidateHeadline, skills,
-                    StringUtils.hasText(highlights) ? "Điểm nổi bật: " + highlights.trim() + "\n\n" : "",
+                    StringUtils.hasText(highlights) ? "Key Highlights: " + highlights.trim() + "\n\n" : "",
                     companyName, candidateName
             );
         }
 
         if ("CONCISE".equalsIgnoreCase(tone)) {
             return String.format(
-                    "Kính gửi Ban Tuyển dụng %s,\n\n" +
-                    "Tôi xin ứng tuyển vị trí %s. Tôi hiện là %s với kinh nghiệm vững chắc về %s.\n\n" +
+                    "Dear %s Hiring Team,\n\n" +
+                    "I am applying for the %s position. I am currently a %s with practical experience in %s.\n\n" +
                     "%s" +
-                    "Tôi hy vọng có dịp trao đổi chi tiết hơn về hồ sơ năng lực trong buổi phỏng vấn sắp tới.\n\n" +
-                    "Trân trọng,\n%s",
+                    "I look forward to discussing my qualifications in an upcoming interview.\n\n" +
+                    "Best regards,\n%s",
                     companyName, jobTitle, candidateHeadline, skills,
                     StringUtils.hasText(highlights) ? highlights.trim() + "\n\n" : "",
                     candidateName
@@ -948,17 +957,17 @@ public class AiService {
 
         // Default PROFESSIONAL tone
         return String.format(
-                "Kính gửi Ban Tuyển dụng %s,\n\n" +
-                "Tôi xin gửi hồ sơ ứng tuyển vị trí %s tại Quý công ty. " +
-                "Với định hướng chuyên môn là %s, tôi nhận thấy các yêu cầu công việc tại %s rất tương đồng với kinh nghiệm và thế mạnh mà tôi đã tích lũy.\n\n" +
-                "Trong quá trình làm việc, tôi đã phát triển năng lực chuyên sâu về %s, " +
-                "đồng thời chú trọng xây dựng các giải pháp phần mềm ổn định, có khả năng mở rộng cao và tuân thủ các chuẩn mực kỹ thuật khắt khe.\n\n" +
+                "Dear %s Hiring Team,\n\n" +
+                "Please accept my application for the %s role at %s. " +
+                "With my background as a %s, I find that the technical requirements at %s align closely with my hands-on experience.\n\n" +
+                "Throughout my projects and engineering work, I have built strong proficiency in %s, " +
+                "with a focus on developing scalable, maintainable, and reliable software systems.\n\n" +
                 "%s" +
-                "Tôi rất mong có cơ hội được tham gia phỏng vấn để trình bày chi tiết hơn về những đóng góp cụ thể mà tôi có thể mang lại cho %s.\n\n" +
-                "Xin chân thành cảm ơn Quý công ty đã dành thời gian xem xét hồ sơ của tôi.\n\n" +
-                "Trân trọng,\n%s",
-                companyName, jobTitle, candidateHeadline, companyName, skills,
-                StringUtils.hasText(highlights) ? "Điểm nổi bật: " + highlights.trim() + "\n\n" : "",
+                "I would welcome the opportunity to discuss how my skills and experience can contribute to %s.\n\n" +
+                "Thank you for your time and consideration.\n\n" +
+                "Sincerely,\n%s",
+                companyName, jobTitle, companyName, candidateHeadline, companyName, skills,
+                StringUtils.hasText(highlights) ? "Key Highlights: " + highlights.trim() + "\n\n" : "",
                 companyName, candidateName
         );
     }
@@ -996,11 +1005,11 @@ public class AiService {
                 recommendations.add(RecommendedJobDto.builder()
                         .job(jobService.toDto(job))
                         .matchScore(50)
-                        .matchRating("TIỀM NĂNG")
+                        .matchRating("POTENTIAL FIT")
                         .ratingColor("amber")
                         .matchedSkills(List.of())
                         .missingSkills(List.of())
-                        .recommendationReason("Tin tuyển dụng tiềm năng phù hợp với chuyên môn của bạn.")
+                        .recommendationReason("Promising opportunity aligned with your engineering background.")
                         .build());
                 continue;
             }
@@ -1024,26 +1033,26 @@ public class AiService {
             String rating;
             String color;
             if (score >= 75) {
-                rating = "XUẤT SẮC";
+                rating = "STRONG MATCH";
                 color = "emerald";
             } else if (score >= 50) {
-                rating = "PHÙ HỢP";
+                rating = "GOOD MATCH";
                 color = "sky";
             } else if (score >= 30) {
-                rating = "TIỀM NĂNG";
+                rating = "POTENTIAL FIT";
                 color = "amber";
             } else {
-                rating = "CẦN BỔ SUNG";
+                rating = "SKILL GAP";
                 color = "rose";
             }
 
             String reason;
             if (!matched.isEmpty()) {
-                reason = String.format("Khớp %d/%d kỹ năng yêu cầu (%s)",
+                reason = String.format("Matched %d/%d required skills (%s)",
                         matched.size(), jobSkills.size(),
                         matched.stream().limit(4).collect(Collectors.joining(", ")));
             } else {
-                reason = "Vị trí tuyển dụng cùng lĩnh vực công nghệ với hồ sơ của bạn.";
+                reason = "Role within the same technology domain as your profile.";
             }
 
             recommendations.add(RecommendedJobDto.builder()

@@ -13,9 +13,12 @@ import type { AuditLogEntry, EmailLogEntry } from '../../lib/types';
 import { ErrorBox, PageLoader, inputCls } from '../../components/ui/primitives';
 import { usePageTitle } from '../../lib/usePageTitle';
 import { AdminHeader } from './AdminHeader';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export const AdminAuditLogsPage: React.FC = () => {
-  usePageTitle('Nhật ký Hệ thống Audit Trail & Email Logs');
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
+  usePageTitle(isVi ? 'Nhật ký Hệ thống Audit Trail & Email Logs' : 'System Audit Trail & Email Logs');
   const [activeTab, setActiveTab] = useState<'audit' | 'email'>('audit');
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [emailLogs, setEmailLogs] = useState<EmailLogEntry[]>([]);
@@ -59,8 +62,12 @@ export const AdminAuditLogsPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8" data-testid="admin-audit-logs-page">
       <AdminHeader
-        title="Nhật ký Truy vết Hệ thống (Audit Trail) & Email Giao dịch"
-        subtitle="Giám sát minh bạch mọi thao tác quản trị, thay đổi dữ liệu nhạy cảm (JSON Old/New Values), địa chỉ IP và lịch sử gửi email tự động."
+        title={isVi ? 'Nhật ký Truy vết Hệ thống (Audit Trail) & Email Giao dịch' : 'System Audit Trail & Transactional Email Logs'}
+        subtitle={
+          isVi
+            ? 'Giám sát minh bạch mọi thao tác quản trị, thay đổi dữ liệu nhạy cảm (JSON Old/New Values), địa chỉ IP và lịch sử gửi email tự động.'
+            : 'Transparently monitor administrative actions, sensitive data changes (JSON Old/New Values), IP addresses, and automated email delivery.'
+        }
         rightSlot={
           <button
             type="button"
@@ -68,7 +75,7 @@ export const AdminAuditLogsPage: React.FC = () => {
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-bold border border-white/20 transition cursor-pointer"
           >
             <RefreshCw className="w-4 h-4" />
-            <span>Làm mới nhật ký</span>
+            <span>{isVi ? 'Làm mới nhật ký' : 'Refresh Logs'}</span>
           </button>
         }
       />
@@ -92,7 +99,7 @@ export const AdminAuditLogsPage: React.FC = () => {
           }`}
         >
           <FileSearch className="w-4 h-4" />
-          <span>Nhật ký Thao tác Hệ thống ({auditLogs.length})</span>
+          <span>{isVi ? `Nhật ký Thao tác Hệ thống (${auditLogs.length})` : `System Audit Logs (${auditLogs.length})`}</span>
         </button>
 
         <button
@@ -106,7 +113,7 @@ export const AdminAuditLogsPage: React.FC = () => {
           }`}
         >
           <Mail className="w-4 h-4" />
-          <span>Nhật ký Email Giao dịch ({emailLogs.length})</span>
+          <span>{isVi ? `Nhật ký Email Giao dịch (${emailLogs.length})` : `Transactional Email Logs (${emailLogs.length})`}</span>
         </button>
       </div>
 
@@ -128,7 +135,7 @@ export const AdminAuditLogsPage: React.FC = () => {
                   type="text"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
-                  placeholder="Tìm theo hành động, người thực hiện, email hoặc nội dung JSON..."
+                  placeholder={isVi ? 'Tìm theo hành động, người thực hiện, email hoặc nội dung JSON...' : 'Search by action, actor name, email, or JSON payload...'}
                   className={`${inputCls} pl-10`}
                   data-testid="audit-search-input"
                 />
@@ -141,12 +148,12 @@ export const AdminAuditLogsPage: React.FC = () => {
                   className={inputCls}
                   data-testid="audit-entity-filter"
                 >
-                  <option value="ALL">Mọi phân hệ dữ liệu (All Entities)</option>
-                  <option value="users">users (Tài khoản & RBAC)</option>
-                  <option value="companies">companies (Doanh nghiệp)</option>
-                  <option value="jobs">jobs (Tin tuyển dụng)</option>
-                  <option value="skills">skills (Từ điển Kỹ năng)</option>
-                  <option value="job_applications">job_applications (Đơn ứng tuyển)</option>
+                  <option value="ALL">{isVi ? 'Mọi phân hệ dữ liệu (All Entities)' : 'All Data Entities'}</option>
+                  <option value="users">{isVi ? 'users (Tài khoản & RBAC)' : 'users (Accounts & RBAC)'}</option>
+                  <option value="companies">{isVi ? 'companies (Doanh nghiệp)' : 'companies (Enterprises)'}</option>
+                  <option value="jobs">{isVi ? 'jobs (Tin tuyển dụng)' : 'jobs (Job Postings)'}</option>
+                  <option value="skills">{isVi ? 'skills (Từ điển Kỹ năng)' : 'skills (Skill Taxonomy)'}</option>
+                  <option value="job_applications">{isVi ? 'job_applications (Đơn ứng tuyển)' : 'job_applications (Applications)'}</option>
                 </select>
               </div>
 
@@ -155,7 +162,7 @@ export const AdminAuditLogsPage: React.FC = () => {
                   type="submit"
                   className="w-full h-full px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition cursor-pointer"
                 >
-                  Truy vết
+                  {isVi ? 'Truy vết' : 'Search'}
                 </button>
               </div>
             </form>
@@ -166,11 +173,11 @@ export const AdminAuditLogsPage: React.FC = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    <th className="py-3.5 px-4">Thời gian / IP</th>
-                    <th className="py-3.5 px-4">Người thực hiện</th>
-                    <th className="py-3.5 px-4">Sự kiện (Action)</th>
-                    <th className="py-3.5 px-4">Đối tượng</th>
-                    <th className="py-3.5 px-4">Dữ liệu thay đổi (Old &rarr; New JSON)</th>
+                    <th className="py-3.5 px-4">{isVi ? 'Thời gian / IP' : 'Timestamp / IP'}</th>
+                    <th className="py-3.5 px-4">{isVi ? 'Người thực hiện' : 'Actor'}</th>
+                    <th className="py-3.5 px-4">{isVi ? 'Sự kiện (Action)' : 'Action'}</th>
+                    <th className="py-3.5 px-4">{isVi ? 'Đối tượng' : 'Target Entity'}</th>
+                    <th className="py-3.5 px-4">{isVi ? 'Dữ liệu thay đổi (Old → New JSON)' : 'Changed Payload (Old → New JSON)'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs sm:text-sm">
@@ -182,7 +189,7 @@ export const AdminAuditLogsPage: React.FC = () => {
                     >
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         <div className="font-semibold text-slate-800 dark:text-slate-200">
-                          {log.createdAt ? new Date(log.createdAt).toLocaleString('vi-VN') : 'Vừa xong'}
+                          {log.createdAt ? new Date(log.createdAt).toLocaleString(isVi ? 'vi-VN' : 'en-US') : isVi ? 'Vừa xong' : 'Just now'}
                         </div>
                         <div className="text-[11px] font-mono text-slate-400">
                           IP: {log.ipAddress || '127.0.0.1'}
@@ -229,14 +236,14 @@ export const AdminAuditLogsPage: React.FC = () => {
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl overflow-hidden shadow-soft-xs">
           <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Lịch sử gửi Email Giao dịch (Transactional Emails)
+              {isVi ? 'Lịch sử gửi Email Giao dịch (Transactional Emails)' : 'Transactional Email Delivery History'}
             </span>
             <select
               value={emailStatusFilter}
               onChange={(e) => setEmailStatusFilter(e.target.value)}
               className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
             >
-              <option value="ALL">Mọi trạng thái</option>
+              <option value="ALL">{isVi ? 'Mọi trạng thái' : 'All Statuses'}</option>
               <option value="SENT">SENT</option>
               <option value="DISABLED">DISABLED</option>
               <option value="FAILED">FAILED</option>
@@ -246,25 +253,25 @@ export const AdminAuditLogsPage: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  <th className="py-3.5 px-4">Thời gian</th>
-                  <th className="py-3.5 px-4">Người nhận</th>
-                  <th className="py-3.5 px-4">Tiêu đề Email</th>
+                  <th className="py-3.5 px-4">{isVi ? 'Thời gian' : 'Timestamp'}</th>
+                  <th className="py-3.5 px-4">{isVi ? 'Người nhận' : 'Recipient'}</th>
+                  <th className="py-3.5 px-4">{isVi ? 'Tiêu đề Email' : 'Subject'}</th>
                   <th className="py-3.5 px-4">Template</th>
-                  <th className="py-3.5 px-4">Trạng thái</th>
+                  <th className="py-3.5 px-4">{isVi ? 'Trạng thái' : 'Status'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs sm:text-sm">
                 {emailLogs.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-8 text-center text-slate-400">
-                      Chưa có bản ghi email giao dịch nào trong phiên hiện tại.
+                      {isVi ? 'Chưa có bản ghi email giao dịch nào trong phiên hiện tại.' : 'No transactional email records in the current session.'}
                     </td>
                   </tr>
                 ) : (
                   emailLogs.map((em) => (
                     <tr key={em.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
                       <td className="py-3.5 px-4 whitespace-nowrap text-xs text-slate-500">
-                        {em.createdAt ? new Date(em.createdAt).toLocaleString('vi-VN') : ''}
+                        {em.createdAt ? new Date(em.createdAt).toLocaleString(isVi ? 'vi-VN' : 'en-US') : ''}
                       </td>
                       <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white">
                         {em.toEmail}

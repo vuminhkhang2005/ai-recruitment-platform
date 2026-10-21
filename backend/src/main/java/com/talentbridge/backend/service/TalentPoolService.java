@@ -102,7 +102,7 @@ public class TalentPoolService {
 
                 score = (int) Math.round(((double) matchedSkills.size() / targetJobSkills.size()) * 100);
                 if (score > 100) score = 100;
-                rating = score >= 75 ? "XUẤT SẮC" : score >= 50 ? "PHÙ HỢP" : "TIỀM NĂNG";
+                rating = score >= 75 ? "STRONG MATCH" : score >= 50 ? "GOOD MATCH" : "POTENTIAL FIT";
             }
 
             results.add(TalentPoolCandidateDto.builder()
@@ -112,8 +112,8 @@ public class TalentPoolService {
                     .email(u.getEmail())
                     .phone(u.getPhone())
                     .avatarUrl(u.getAvatarUrl())
-                    .headline(cp.getHeadline() != null ? cp.getHeadline() : "Ứng viên tiềm năng")
-                    .city(cp.getCity() != null ? cp.getCity() : "Toàn quốc")
+                    .headline(cp.getHeadline() != null ? cp.getHeadline() : "Software Engineer")
+                    .city(cp.getCity() != null ? cp.getCity() : "Vietnam")
                     .bio(cp.getBio())
                     .expectedSalaryMin(cp.getExpectedSalaryMin())
                     .expectedSalaryMax(cp.getExpectedSalaryMax())
@@ -152,11 +152,11 @@ public class TalentPoolService {
         User candidate = userRepository.findById(request.getCandidateUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Ứng viên không tồn tại: " + request.getCandidateUserId()));
 
-        String companyName = job.getCompany() != null ? job.getCompany().getName() : "Nhà tuyển dụng";
-        String inviteTitle = "Lời mời ứng tuyển từ " + companyName;
+        String companyName = job.getCompany() != null ? job.getCompany().getName() : "Employer";
+        String inviteTitle = "Job Invitation from " + companyName;
         String inviteContent = StringUtils.hasText(request.getCustomMessage())
                 ? request.getCustomMessage().trim()
-                : String.format("Nhà tuyển dụng từ %s rất ấn tượng với hồ sơ của bạn và trân trọng mời bạn ứng tuyển vào vị trí %s.", companyName, job.getTitle());
+                : String.format("The recruitment team at %s is impressed with your profile and invites you to apply for the %s position.", companyName, job.getTitle());
 
         // Send in-app notification to candidate
         notificationService.notify(
@@ -176,7 +176,7 @@ public class TalentPoolService {
                 .jobTitle(job.getTitle())
                 .candidateName(candidate.getFullName())
                 .status("INVITED")
-                .message("Đã gửi lời mời ứng tuyển thành công tới ứng viên " + candidate.getFullName())
+                .message("Successfully sent job invitation to " + candidate.getFullName())
                 .build();
     }
 }

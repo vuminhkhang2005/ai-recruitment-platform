@@ -13,6 +13,7 @@ import { validateCvFile } from '../components/jobs/ApplyModal';
 import { Avatar } from '../components/layout/Navbar';
 import { usePageTitle } from '../lib/usePageTitle';
 import { AiResumeParserModal } from '../components/career/AiResumeParserModal';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const Card: React.FC<{ id?: string; title: string; description?: string; children: React.ReactNode }> = ({ id, title, description, children }) => (
   <section id={id} className="bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-soft-xs scroll-mt-24">
@@ -39,6 +40,8 @@ const Field: React.FC<{ label: string; htmlFor: string; children: React.ReactNod
 
 const ProfileForm: React.FC<{ profile: UserProfile; onSaved: (p: UserProfile) => void; candidate: boolean }> = ({ profile, onSaved, candidate }) => {
   const toast = useToast();
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
   const [form, setForm] = useState({
     fullName: profile.fullName ?? '',
     phone: profile.phone ?? '',
@@ -62,10 +65,11 @@ const ProfileForm: React.FC<{ profile: UserProfile; onSaved: (p: UserProfile) =>
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!form.fullName.trim()) return setError('Họ tên không được để trống.');
+    if (!form.fullName.trim()) return setError(isVi ? 'Họ tên không được để trống.' : 'Full name is required.');
     const min = form.expectedSalaryMin ? Number(form.expectedSalaryMin) : null;
     const max = form.expectedSalaryMax ? Number(form.expectedSalaryMax) : null;
-    if (min !== null && max !== null && min > max) return setError('Mức lương mong muốn tối thiểu phải nhỏ hơn tối đa.');
+    if (min !== null && max !== null && min > max)
+      return setError(isVi ? 'Mức lương mong muốn tối thiểu phải nhỏ hơn tối đa.' : 'Minimum expected salary must not exceed maximum.');
     setSaving(true);
     try {
       const updated = await userApi.updateMe(
@@ -86,7 +90,7 @@ const ProfileForm: React.FC<{ profile: UserProfile; onSaved: (p: UserProfile) =>
           : { fullName: form.fullName.trim(), phone: form.phone.trim(), jobTitle: form.jobTitle.trim() },
       );
       onSaved(updated);
-      toast('Đã lưu thông tin');
+      toast(isVi ? 'Đã lưu thông tin' : 'Profile updated');
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -97,20 +101,20 @@ const ProfileForm: React.FC<{ profile: UserProfile; onSaved: (p: UserProfile) =>
   return (
     <form onSubmit={submit} className="space-y-4">
       <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="Họ và tên" htmlFor="p-name">
+        <Field label={isVi ? 'Họ và tên' : 'Full Name'} htmlFor="p-name">
           <input id="p-name" value={form.fullName} onChange={set('fullName')} className={inputCls} />
         </Field>
-        <Field label="Số điện thoại" htmlFor="p-phone">
+        <Field label={isVi ? 'Số điện thoại' : 'Phone Number'} htmlFor="p-phone">
           <input id="p-phone" value={form.phone} onChange={set('phone')} className={inputCls} />
         </Field>
         {candidate ? (
           <>
-            <Field label="Vị trí / chức danh" htmlFor="p-headline">
-              <input id="p-headline" value={form.headline} onChange={set('headline')} placeholder="VD: Backend Developer (Java)" className={inputCls} />
+            <Field label={isVi ? 'Vị trí / chức danh' : 'Professional Headline'} htmlFor="p-headline">
+              <input id="p-headline" value={form.headline} onChange={set('headline')} placeholder="e.g. Backend Developer (Java)" className={inputCls} />
             </Field>
-            <Field label="Thành phố" htmlFor="p-city">
+            <Field label={isVi ? 'Thành phố' : 'City'} htmlFor="p-city">
               <select id="p-city" value={form.city} onChange={set('city')} className={inputCls}>
-                <option value="">-- Chọn --</option>
+                <option value="">{isVi ? '-- Chọn --' : '-- Select --'}</option>
                 {[...new Set([...CITIES, ...(form.city ? [form.city] : [])])].map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -120,7 +124,7 @@ const ProfileForm: React.FC<{ profile: UserProfile; onSaved: (p: UserProfile) =>
             </Field>
           </>
         ) : (
-          <Field label="Chức vụ" htmlFor="p-jobtitle">
+          <Field label={isVi ? 'Chức vụ' : 'Job Title'} htmlFor="p-jobtitle">
             <input id="p-jobtitle" value={form.jobTitle} onChange={set('jobTitle')} className={inputCls} />
           </Field>
         )}
@@ -128,7 +132,7 @@ const ProfileForm: React.FC<{ profile: UserProfile; onSaved: (p: UserProfile) =>
 
       {candidate && (
         <>
-          <Field label="Giới thiệu bản thân" htmlFor="p-bio">
+          <Field label={isVi ? 'Giới thiệu bản thân' : 'Professional Bio'} htmlFor="p-bio">
             <textarea id="p-bio" rows={4} value={form.bio} onChange={set('bio')} className={inputCls} />
           </Field>
           <div className="grid sm:grid-cols-3 gap-4">
@@ -143,16 +147,16 @@ const ProfileForm: React.FC<{ profile: UserProfile; onSaved: (p: UserProfile) =>
             </Field>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Lương mong muốn (triệu VND)" htmlFor="p-smin">
+            <Field label={isVi ? 'Lương mong muốn (triệu VND)' : 'Expected Salary (M VND)'} htmlFor="p-smin">
               <div className="flex items-center gap-2">
-                <input id="p-smin" type="number" min={0} value={form.expectedSalaryMin} onChange={set('expectedSalaryMin')} placeholder="Từ" className={inputCls} />
+                <input id="p-smin" type="number" min={0} value={form.expectedSalaryMin} onChange={set('expectedSalaryMin')} placeholder={isVi ? 'Từ' : 'Min'} className={inputCls} />
                 <span className="text-slate-400">–</span>
-                <input aria-label="Lương tối đa" type="number" min={0} value={form.expectedSalaryMax} onChange={set('expectedSalaryMax')} placeholder="Đến" className={inputCls} />
+                <input aria-label={isVi ? 'Lương tối đa' : 'Max salary'} type="number" min={0} value={form.expectedSalaryMax} onChange={set('expectedSalaryMax')} placeholder={isVi ? 'Đến' : 'Max'} className={inputCls} />
               </div>
             </Field>
             <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200 sm:mt-7">
               <input type="checkbox" checked={form.isOpenToWork} onChange={(e) => setForm((f) => ({ ...f, isOpenToWork: e.target.checked }))} className="accent-emerald-600 w-4 h-4" />
-              Tôi đang tìm việc
+              {isVi ? 'Tôi đang tìm việc' : 'Open to work'}
             </label>
           </div>
         </>
@@ -161,7 +165,7 @@ const ProfileForm: React.FC<{ profile: UserProfile; onSaved: (p: UserProfile) =>
       {error && <ErrorBox message={error} />}
       <div className="flex justify-end">
         <button type="submit" disabled={saving} className={btnPrimary}>
-          {saving ? 'Đang lưu…' : 'Lưu thông tin'}
+          {saving ? (isVi ? 'Đang lưu…' : 'Saving…') : isVi ? 'Lưu thông tin' : 'Save Changes'}
         </button>
       </div>
     </form>
@@ -170,10 +174,14 @@ const ProfileForm: React.FC<{ profile: UserProfile; onSaved: (p: UserProfile) =>
 
 // ------------------------------------------------------------------ skills
 
-const PROFICIENCY: Record<string, string> = { BEGINNER: 'Cơ bản', INTERMEDIATE: 'Khá', ADVANCED: 'Thành thạo', EXPERT: 'Chuyên gia' };
+const PROFICIENCY_VI: Record<string, string> = { BEGINNER: 'Cơ bản', INTERMEDIATE: 'Khá', ADVANCED: 'Thành thạo', EXPERT: 'Chuyên gia' };
+const PROFICIENCY_EN: Record<string, string> = { BEGINNER: 'Beginner', INTERMEDIATE: 'Intermediate', ADVANCED: 'Advanced', EXPERT: 'Expert' };
 
 const SkillsEditor: React.FC = () => {
   const toast = useToast();
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
+  const profMap = isVi ? PROFICIENCY_VI : PROFICIENCY_EN;
   const [skills, setSkills] = useState<SkillItem[] | null>(null);
   const [name, setName] = useState('');
   const [years, setYears] = useState('1');
@@ -199,7 +207,7 @@ const SkillsEditor: React.FC = () => {
     const n = name.trim();
     if (!n || !skills) return;
     if (skills.some((s) => s.name.toLowerCase() === n.toLowerCase())) {
-      setError(`Kỹ năng "${n}" đã có trong danh sách.`);
+      setError(isVi ? `Kỹ năng "${n}" đã có trong danh sách.` : `Skill "${n}" is already in your list.`);
       return;
     }
     setError(null);
@@ -220,7 +228,7 @@ const SkillsEditor: React.FC = () => {
     try {
       setSkills(await candidateApi.saveSkills(skills));
       setDirty(false);
-      toast('Đã lưu kỹ năng. Mức độ phù hợp với các tin tuyển dụng đã được cập nhật.');
+      toast(isVi ? 'Đã lưu kỹ năng. Mức độ phù hợp với các tin tuyển dụng đã được cập nhật.' : 'Skills saved. Job match scores have been updated.');
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -233,16 +241,19 @@ const SkillsEditor: React.FC = () => {
   return (
     <div>
       {skills.length === 0 ? (
-        <p className="text-sm text-slate-500">Chưa có kỹ năng nào. Thêm kỹ năng để xem mức độ phù hợp với từng tin tuyển dụng.</p>
+        <p className="text-sm text-slate-500">
+          {isVi ? 'Chưa có kỹ năng nào. Thêm kỹ năng để xem mức độ phù hợp với từng tin tuyển dụng.' : 'No skills added yet. Add skills to see your match score for each job.'}
+        </p>
       ) : (
         <ul className="flex flex-wrap gap-2" data-testid="skill-list">
           {skills.map((s) => (
             <li key={s.name} className="inline-flex items-center gap-2 pl-3 pr-1.5 py-1 rounded-xl border border-emerald-200/90 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/40 text-sm">
               <span className="font-bold text-emerald-800 dark:text-emerald-300">{s.name}</span>
               <span className="text-xs text-slate-500">
-                {s.yearsExperience ?? 0} năm{s.proficiency ? ` · ${PROFICIENCY[s.proficiency] ?? s.proficiency}` : ''}
+                {s.yearsExperience ?? 0} {isVi ? 'năm' : 'yrs'}
+                {s.proficiency ? ` · ${profMap[s.proficiency] ?? s.proficiency}` : ''}
               </span>
-              <button onClick={() => remove(s.name)} aria-label={`Xóa ${s.name}`} className="p-0.5 rounded-full text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40">
+              <button onClick={() => remove(s.name)} aria-label={`Delete ${s.name}`} className="p-0.5 rounded-full text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40">
                 <X className="w-3.5 h-3.5" />
               </button>
             </li>
@@ -253,22 +264,22 @@ const SkillsEditor: React.FC = () => {
       <form onSubmit={add} className="mt-4 flex flex-wrap items-end gap-2">
         <div className="flex-1 min-w-[180px]">
           <label htmlFor="skill-name" className="text-xs font-bold text-slate-600 dark:text-slate-300">
-            Kỹ năng
+            {isVi ? 'Kỹ năng' : 'Skill'}
           </label>
-          <input id="skill-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="VD: Java, ReactJS, Docker" className={`${inputCls} mt-1`} />
+          <input id="skill-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Java, React, Docker" className={`${inputCls} mt-1`} />
         </div>
         <div className="w-24">
           <label htmlFor="skill-years" className="text-xs font-bold text-slate-600 dark:text-slate-300">
-            Số năm
+            {isVi ? 'Số năm' : 'Years'}
           </label>
           <input id="skill-years" type="number" min={0} max={40} value={years} onChange={(e) => setYears(e.target.value)} className={`${inputCls} mt-1`} />
         </div>
         <div className="w-36">
           <label htmlFor="skill-level" className="text-xs font-bold text-slate-600 dark:text-slate-300">
-            Mức độ
+            {isVi ? 'Mức độ' : 'Proficiency'}
           </label>
           <select id="skill-level" value={level} onChange={(e) => setLevel(e.target.value)} className={`${inputCls} mt-1`}>
-            {Object.entries(PROFICIENCY).map(([k, v]) => (
+            {Object.entries(profMap).map(([k, v]) => (
               <option key={k} value={k}>
                 {v}
               </option>
@@ -276,7 +287,7 @@ const SkillsEditor: React.FC = () => {
           </select>
         </div>
         <button type="submit" className={btnSecondary}>
-          Thêm
+          {isVi ? 'Thêm' : 'Add'}
         </button>
         <button
           type="button"
@@ -285,7 +296,7 @@ const SkillsEditor: React.FC = () => {
           className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold shadow-soft flex items-center gap-1.5 cursor-pointer hover:from-emerald-700 hover:to-teal-700 transition-all active:scale-95"
         >
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Bóc tách CV bằng AI</span>
+          <span>{isVi ? 'Bóc tách CV bằng AI' : 'Parse CV with AI'}</span>
         </button>
       </form>
 
@@ -296,7 +307,7 @@ const SkillsEditor: React.FC = () => {
       )}
       <div className="mt-4 flex justify-end">
         <button onClick={save} disabled={!dirty || saving} className={btnPrimary}>
-          {saving ? 'Đang lưu…' : 'Lưu kỹ năng'}
+          {saving ? (isVi ? 'Đang lưu…' : 'Saving…') : isVi ? 'Lưu kỹ năng' : 'Save Skills'}
         </button>
       </div>
 
@@ -314,6 +325,9 @@ const SkillsEditor: React.FC = () => {
 
 const CvManager: React.FC = () => {
   const toast = useToast();
+  const { language } = useLanguage();
+  const lang: 'vi' | 'en' = language === 'en' ? 'en' : 'vi';
+  const isVi = lang === 'vi';
   const [cvs, setCvs] = useState<CvItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -350,9 +364,9 @@ const CvManager: React.FC = () => {
   const onFile = (f?: File) => {
     if (fileRef.current) fileRef.current.value = '';
     if (!f) return;
-    const msg = validateCvFile(f);
+    const msg = validateCvFile(f, lang);
     if (msg) return setError(msg);
-    void run(() => candidateApi.uploadCv(f), `Đã tải lên ${f.name}`);
+    void run(() => candidateApi.uploadCv(f), isVi ? `Đã tải lên ${f.name}` : `Uploaded ${f.name}`);
   };
 
   const view = async (cv: CvItem) => {
@@ -368,7 +382,9 @@ const CvManager: React.FC = () => {
       {!cvs ? (
         <Spinner />
       ) : cvs.length === 0 ? (
-        <p className="text-sm text-slate-500">Bạn chưa có CV nào. Tải CV lên để có thể ứng tuyển.</p>
+        <p className="text-sm text-slate-500">
+          {isVi ? 'Bạn chưa có CV nào. Tải CV lên để có thể ứng tuyển.' : 'You have no CVs uploaded yet. Upload a CV to apply for jobs.'}
+        </p>
       ) : (
         <ul className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden" data-testid="cv-list">
           {cvs.map((cv) => (
@@ -379,38 +395,43 @@ const CvManager: React.FC = () => {
               <div className="flex-1 min-w-[160px]">
                 <p className="text-sm font-bold text-slate-900 dark:text-white">
                   {cv.title || cv.fileName}
-                  {cv.isDefault && <span className="ml-2 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">Mặc định</span>}
+                  {cv.isDefault && (
+                    <span className="ml-2 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                      {isVi ? 'Mặc định' : 'Default'}
+                    </span>
+                  )}
                 </p>
                 <p className="text-xs text-slate-500">
                   {cv.fileName}
-                  {cv.fileSizeBytes ? ` · ${formatFileSize(cv.fileSizeBytes)}` : ''} · {formatDate(cv.createdAt)}
+                  {cv.fileSizeBytes ? ` · ${formatFileSize(cv.fileSizeBytes)}` : ''} · {formatDate(cv.createdAt, lang)}
                 </p>
               </div>
               <div className="flex items-center gap-1">
                 {cv.downloadable ? (
                   <button onClick={() => view(cv)} className="px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/50">
-                    Xem
+                    {isVi ? 'Xem' : 'View'}
                   </button>
                 ) : (
-                  <span className="px-2.5 py-1.5 text-xs text-slate-400" title="CV mẫu từ dữ liệu demo, không có file thật">
-                    Không có file
+                  <span className="px-2.5 py-1.5 text-xs text-slate-400" title={isVi ? 'CV mẫu từ dữ liệu demo, không có file thật' : 'Demo CV metadata'}>
+                    {isVi ? 'Không có file' : 'Demo record'}
                   </span>
                 )}
                 {!cv.isDefault && (
                   <button
-                    onClick={() => run(() => candidateApi.setDefaultCv(cv.id), 'Đã đặt CV mặc định')}
+                    onClick={() => run(() => candidateApi.setDefaultCv(cv.id), isVi ? 'Đã đặt CV mặc định' : 'Default CV updated')}
                     disabled={busy}
                     className="px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 inline-flex items-center gap-1"
                   >
-                    <Star className="w-3.5 h-3.5" /> Đặt mặc định
+                    <Star className="w-3.5 h-3.5" /> {isVi ? 'Đặt mặc định' : 'Set Default'}
                   </button>
                 )}
                 <button
                   onClick={() => {
-                    if (window.confirm(`Xóa CV "${cv.title || cv.fileName}"?`)) void run(() => candidateApi.deleteCv(cv.id), 'Đã xóa CV');
+                    if (window.confirm(isVi ? `Xóa CV "${cv.title || cv.fileName}"?` : `Delete CV "${cv.title || cv.fileName}"?`))
+                      void run(() => candidateApi.deleteCv(cv.id), isVi ? 'Đã xóa CV' : 'CV deleted');
                   }}
                   disabled={busy}
-                  aria-label={`Xóa CV ${cv.title || cv.fileName}`}
+                  aria-label={`Delete CV ${cv.title || cv.fileName}`}
                   className="p-1.5 text-slate-400 rounded-lg hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -426,7 +447,7 @@ const CvManager: React.FC = () => {
         </div>
       )}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-slate-500">PDF, DOC, DOCX · tối đa 5MB</p>
+        <p className="text-xs text-slate-500">{isVi ? 'PDF, DOC, DOCX · tối đa 5MB' : 'PDF, DOC, DOCX · max 5MB'}</p>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -435,10 +456,10 @@ const CvManager: React.FC = () => {
             className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold shadow-soft flex items-center gap-1.5 cursor-pointer hover:from-emerald-700 hover:to-teal-700 transition-all active:scale-95"
           >
             <Sparkles className="w-4 h-4" />
-            <span>Bóc tách CV bằng AI</span>
+            <span>{isVi ? 'Bóc tách CV bằng AI' : 'Parse CV with AI'}</span>
           </button>
           <button onClick={() => fileRef.current?.click()} disabled={busy} className={btnSecondary}>
-            <Upload className="w-4 h-4" /> {busy ? 'Đang xử lý…' : 'Tải CV lên'}
+            <Upload className="w-4 h-4" /> {busy ? (isVi ? 'Đang xử lý…' : 'Uploading…') : isVi ? 'Tải CV lên' : 'Upload CV'}
           </button>
         </div>
         <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" className="hidden" data-testid="cv-upload-input" onChange={(e) => onFile(e.target.files?.[0])} />
@@ -450,7 +471,7 @@ const CvManager: React.FC = () => {
           existingCvs={cvs || []}
           onSkillsSynced={() => {
             void load();
-            toast('Đã cập nhật kỹ năng vào hồ sơ thành công!');
+            toast(isVi ? 'Đã cập nhật kỹ năng vào hồ sơ thành công!' : 'Skills synced to profile!');
           }}
         />
       )}
@@ -462,6 +483,8 @@ const CvManager: React.FC = () => {
 
 const PasswordChangeForm: React.FC = () => {
   const toast = useToast();
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -471,18 +494,18 @@ const PasswordChangeForm: React.FC = () => {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!currentPassword) return setError('Vui lòng nhập mật khẩu hiện tại.');
-    if (newPassword.length < 6) return setError('Mật khẩu mới phải có ít nhất 6 ký tự.');
-    if (newPassword !== confirmPassword) return setError('Mật khẩu xác nhận không khớp.');
+    if (!currentPassword) return setError(isVi ? 'Vui lòng nhập mật khẩu hiện tại.' : 'Please enter your current password.');
+    if (newPassword.length < 6) return setError(isVi ? 'Mật khẩu mới phải có ít nhất 6 ký tự.' : 'New password must be at least 6 characters.');
+    if (newPassword !== confirmPassword) return setError(isVi ? 'Mật khẩu xác nhận không khớp.' : 'Password confirmation does not match.');
     setSaving(true);
     try {
       await userApi.changePassword({ currentPassword, newPassword });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      toast('Đổi mật khẩu thành công');
+      toast(isVi ? 'Đổi mật khẩu thành công' : 'Password updated successfully');
     } catch (err: any) {
-      setError(err.response?.data?.message || (err as Error).message || 'Lỗi đổi mật khẩu');
+      setError(err.response?.data?.message || (err as Error).message || (isVi ? 'Lỗi đổi mật khẩu' : 'Failed to update password'));
     } finally {
       setSaving(false);
     }
@@ -490,7 +513,7 @@ const PasswordChangeForm: React.FC = () => {
 
   return (
     <form onSubmit={submit} className="space-y-4 max-w-lg">
-      <Field label="Mật khẩu hiện tại" htmlFor="current-pw">
+      <Field label={isVi ? 'Mật khẩu hiện tại' : 'Current Password'} htmlFor="current-pw">
         <input
           id="current-pw"
           type="password"
@@ -501,7 +524,7 @@ const PasswordChangeForm: React.FC = () => {
           required
         />
       </Field>
-      <Field label="Mật khẩu mới" htmlFor="new-pw" hint="Tối thiểu 6 ký tự">
+      <Field label={isVi ? 'Mật khẩu mới' : 'New Password'} htmlFor="new-pw" hint={isVi ? 'Tối thiểu 6 ký tự' : 'Minimum 6 characters'}>
         <input
           id="new-pw"
           type="password"
@@ -512,7 +535,7 @@ const PasswordChangeForm: React.FC = () => {
           required
         />
       </Field>
-      <Field label="Xác nhận mật khẩu mới" htmlFor="confirm-pw">
+      <Field label={isVi ? 'Xác nhận mật khẩu mới' : 'Confirm New Password'} htmlFor="confirm-pw">
         <input
           id="confirm-pw"
           type="password"
@@ -528,7 +551,7 @@ const PasswordChangeForm: React.FC = () => {
 
       <div className="flex justify-end pt-2">
         <button type="submit" disabled={saving} className={btnPrimary}>
-          {saving ? 'Đang cập nhật…' : 'Đổi mật khẩu'}
+          {saving ? (isVi ? 'Đang cập nhật…' : 'Updating…') : isVi ? 'Đổi mật khẩu' : 'Change Password'}
         </button>
       </div>
     </form>
@@ -539,12 +562,14 @@ const PasswordChangeForm: React.FC = () => {
 
 export const ProfilePage: React.FC = () => {
   const { isCandidate } = useAuth();
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
   const location = useLocation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { applications } = useMyApplications();
   const { saved } = useSavedJobs();
-  usePageTitle(isCandidate ? 'Hồ sơ & CV' : 'Tài khoản');
+  usePageTitle(isCandidate ? (isVi ? 'Hồ sơ & CV' : 'Profile & CVs') : isVi ? 'Tài khoản' : 'Account');
 
   useEffect(() => {
     userApi.getMe().then(setProfile).catch((e: Error) => setError(e.message));
@@ -567,10 +592,38 @@ export const ProfilePage: React.FC = () => {
   const completeness = Math.round((completenessFields.filter(Boolean).length / completenessFields.length) * 100);
   const stats = isCandidate
     ? [
-        { icon: FileCheck2, value: applications.length, label: 'Việc đã ứng tuyển', sub: 'Theo dõi trạng thái', to: '/applications', tone: 'bg-emerald-600 text-white' },
-        { icon: CalendarCheck, value: interviews, label: 'Vào vòng phỏng vấn', sub: 'Phỏng vấn / offer / nhận việc', to: '/applications', tone: 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300' },
-        { icon: Bookmark, value: saved.length, label: 'Việc đã lưu', sub: 'Xem lại sau', to: '/saved-jobs', tone: 'bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300' },
-        { icon: Gauge, value: `${completeness}%`, label: 'Độ hoàn thiện hồ sơ', sub: 'Thông tin cá nhân & liên kết', to: '#info', tone: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300' },
+        {
+          icon: FileCheck2,
+          value: applications.length,
+          label: isVi ? 'Việc đã ứng tuyển' : 'Applied Jobs',
+          sub: isVi ? 'Theo dõi trạng thái' : 'Track application status',
+          to: '/applications',
+          tone: 'bg-emerald-600 text-white',
+        },
+        {
+          icon: CalendarCheck,
+          value: interviews,
+          label: isVi ? 'Vào vòng phỏng vấn' : 'Interview Stage',
+          sub: isVi ? 'Phỏng vấn / offer / nhận việc' : 'Interviews / offers / hired',
+          to: '/applications',
+          tone: 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
+        },
+        {
+          icon: Bookmark,
+          value: saved.length,
+          label: isVi ? 'Việc đã lưu' : 'Saved Jobs',
+          sub: isVi ? 'Xem lại sau' : 'Review later',
+          to: '/saved-jobs',
+          tone: 'bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300',
+        },
+        {
+          icon: Gauge,
+          value: `${completeness}%`,
+          label: isVi ? 'Độ hoàn thiện hồ sơ' : 'Profile Completeness',
+          sub: isVi ? 'Thông tin cá nhân & liên kết' : 'Personal info & links',
+          to: '#info',
+          tone: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
+        },
       ]
     : [];
 
@@ -582,7 +635,7 @@ export const ProfilePage: React.FC = () => {
           {isCandidate && profile.isOpenToWork && (
             <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/40 backdrop-blur text-white text-[11px] font-bold">
               <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
-              Đang tìm việc
+              {isVi ? 'Đang tìm việc' : 'Open to Work'}
             </span>
           )}
         </div>
@@ -620,7 +673,7 @@ export const ProfilePage: React.FC = () => {
                 to="/applications"
                 className="sm:self-end sm:mb-1 shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-soft-xs transition-colors"
               >
-                Việc đã ứng tuyển →
+                {isVi ? 'Việc đã ứng tuyển →' : 'My Applications →'}
               </Link>
             )}
           </div>
@@ -649,19 +702,35 @@ export const ProfilePage: React.FC = () => {
       </div>
 
       {isCandidate && (
-        <Card id="cv" title="CV của tôi" description="CV mặc định sẽ được chọn sẵn khi bạn ứng tuyển.">
+        <Card
+          id="cv"
+          title={isVi ? 'CV của tôi' : 'My CVs'}
+          description={isVi ? 'CV mặc định sẽ được chọn sẵn khi bạn ứng tuyển.' : 'Your default CV will be pre-selected when you apply for jobs.'}
+        >
           <CvManager />
         </Card>
       )}
       {isCandidate && (
-        <Card id="skills" title="Kỹ năng" description="Dùng để tính mức độ phù hợp giữa hồ sơ của bạn và kỹ năng yêu cầu của từng tin tuyển dụng.">
+        <Card
+          id="skills"
+          title={isVi ? 'Kỹ năng' : 'Skills'}
+          description={
+            isVi
+              ? 'Dùng để tính mức độ phù hợp giữa hồ sơ của bạn và kỹ năng yêu cầu của từng tin tuyển dụng.'
+              : 'Used to compute AI match scores between your profile and job requirements.'
+          }
+        >
           <SkillsEditor />
         </Card>
       )}
-      <Card id="info" title="Thông tin cá nhân">
+      <Card id="info" title={isVi ? 'Thông tin cá nhân' : 'Personal Information'}>
         <ProfileForm profile={profile} onSaved={setProfile} candidate={isCandidate} />
       </Card>
-      <Card id="security" title="Bảo mật & Mật khẩu" description="Cập nhật mật khẩu định kỳ để bảo vệ tài khoản của bạn.">
+      <Card
+        id="security"
+        title={isVi ? 'Bảo mật & Mật khẩu' : 'Security & Password'}
+        description={isVi ? 'Cập nhật mật khẩu định kỳ để bảo vệ tài khoản của bạn.' : 'Update your password regularly to keep your account secure.'}
+      >
         <PasswordChangeForm />
       </Card>
     </div>

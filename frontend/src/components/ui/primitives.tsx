@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 /** Official brand marks shipped in /public/logos. They take precedence over the API logo URL. */
 const BRAND_LOGOS: { match: string[]; src: string; pad?: string }[] = [
@@ -117,22 +118,28 @@ export const EmptyState: React.FC<{ title: string; description?: string; action?
   </div>
 );
 
-export const ErrorBox: React.FC<{ message: string; onRetry?: () => void }> = ({ message, onRetry }) => (
-  <div role="alert" className="rounded-2xl border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 flex items-center justify-between gap-4">
-    <span>{message}</span>
-    {onRetry && (
-      <button onClick={onRetry} className="font-bold underline shrink-0">
-        Thử lại
-      </button>
-    )}
-  </div>
-);
+export const ErrorBox: React.FC<{ message: string; onRetry?: () => void }> = ({ message, onRetry }) => {
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
+  return (
+    <div role="alert" className="rounded-2xl border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 flex items-center justify-between gap-4">
+      <span>{message}</span>
+      {onRetry && (
+        <button onClick={onRetry} className="font-bold underline shrink-0">
+          {isVi ? 'Thử lại' : 'Retry'}
+        </button>
+      )}
+    </div>
+  );
+};
 
 export const Pagination: React.FC<{ page: number; totalPages: number; onChange: (p: number) => void }> = ({
   page,
   totalPages,
   onChange,
 }) => {
+  const { language } = useLanguage();
+  const isVi = language === 'vi';
   if (totalPages <= 1) return null;
   const pages: number[] = [];
   const start = Math.max(0, Math.min(page - 2, totalPages - 5));
@@ -141,8 +148,8 @@ export const Pagination: React.FC<{ page: number; totalPages: number; onChange: 
   const idle =
     'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-400 hover:text-emerald-600';
   return (
-    <nav className="flex items-center justify-center gap-1.5 mt-10" aria-label="Phân trang">
-      <button className={`${btn} ${idle} disabled:opacity-40`} disabled={page === 0} onClick={() => onChange(page - 1)} aria-label="Trang trước">
+    <nav className="flex items-center justify-center gap-1.5 mt-10" aria-label={isVi ? 'Phân trang' : 'Pagination'}>
+      <button className={`${btn} ${idle} disabled:opacity-40`} disabled={page === 0} onClick={() => onChange(page - 1)} aria-label={isVi ? 'Trang trước' : 'Previous page'}>
         <ChevronLeft className="w-4 h-4" />
       </button>
       {pages.map((p) => (
@@ -159,7 +166,7 @@ export const Pagination: React.FC<{ page: number; totalPages: number; onChange: 
         className={`${btn} ${idle} disabled:opacity-40`}
         disabled={page >= totalPages - 1}
         onClick={() => onChange(page + 1)}
-        aria-label="Trang sau"
+        aria-label={isVi ? 'Trang sau' : 'Next page'}
       >
         <ChevronRight className="w-4 h-4" />
       </button>
