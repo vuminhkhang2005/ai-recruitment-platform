@@ -75,20 +75,35 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
   const { isAuthenticated, isCandidate, isRecruiter } = useAuth();
   const { appliedJobIds, applications } = useMyApplications();
   const [applyOpen, setApplyOpen] = useState(false);
+  const [defaultEnableAi, setDefaultEnableAi] = useState(false);
   const [copied, setCopied] = useState(false);
   const [atsData, setAtsData] = useState<AtsMatchAnalysis | null>(null);
+  const [analyzingCvJd, setAnalyzingCvJd] = useState(false);
   const [showTips, setShowTips] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated && isCandidate && job?.id) {
-      aiApi
-        .matchAnalysis(job.id)
-        .then(setAtsData)
-        .catch(() => {});
-    } else {
-      setAtsData(null);
+    setAtsData(null);
+    setAnalyzingCvJd(false);
+    setShowTips(false);
+  }, [job.id]);
+
+  const handleQuickAnalyzeCvJd = async () => {
+    if (!isAuthenticated) {
+      navigate(`/login?next=${encodeURIComponent(location.pathname + location.search)}`);
+      return;
     }
-  }, [isAuthenticated, isCandidate, job.id]);
+    setAnalyzingCvJd(true);
+    try {
+      const res = await aiApi.matchAnalysis(job.id);
+      setAtsData(res);
+    } catch {
+      // fallback to opening ApplyModal with AI enabled
+      setDefaultEnableAi(true);
+      setApplyOpen(true);
+    } finally {
+      setAnalyzingCvJd(false);
+    }
+  };
 
   const left = daysLeft(job.deadline);
   const isOpen = job.status === 'PUBLISHED' && (left === null || left >= 0);
@@ -99,11 +114,12 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
   const salaryDisplay = formatSalary(job.salaryFormatted, language);
   const postedText = timeAgo(job.createdAt, language) || job.postedTimeAgo;
 
-  const onApplyClick = () => {
+  const onApplyClick = (enableAi = false) => {
     if (!isAuthenticated) {
       navigate(`/login?next=${encodeURIComponent(location.pathname + location.search)}`);
       return;
     }
+    setDefaultEnableAi(enableAi);
     setApplyOpen(true);
   };
 
@@ -134,7 +150,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
     } else {
       applyButton = (
         <button
-          onClick={onApplyClick}
+          onClick={() => onApplyClick(false)}
           className={`${ctaBase} bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-soft active:scale-[0.98]`}
           data-testid="apply-button"
         >
@@ -429,47 +445,65 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
             )}
 
             <div className="flex items-center justify-between pt-1">
-              <Link to="/profile#skills" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
-                {language === 'vi' ? 'Quét lại CV & Cập nhật kỹ năng →' : 'Scan CV & Update skills →'}
-              </Link>
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                📄 CV: <strong className="text-slate-700 dark:text-slate-200">{atsData.analyzedCvName || 'CV mặc định'}</strong> ↔ 💼 JD: <strong className="text-slate-700 dark:text-slate-200">{job.title}</strong>
+              </span>
+              {!applied && isOpen && (
+                <button
+                  type="button"
+                  onClick={() => onApplyClick(true)}
+                  className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                >
+                  {language === 'vi' ? 'Đổi CV khác để so sánh →' : 'Compare another CV →'}
+                </button>
+              )}
             </div>
           </div>
-        ) : match && match.score !== null ? (
+        ) : !isRecruiter ? (
           <div
-            className="rounded-2xl p-4 border border-emerald-200/90 dark:border-emerald-800/60 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/40 dark:to-slate-900 shadow-soft-xs"
-            data-testid="match-panel"
+            className="rounded-2xl p-4 border border-emerald-200/90 dark:border-emerald-800/60 bg-gradient-to-br from-emerald-50/70 via-teal-50/30 to-white dark:from-emerald-950/30 dark:via-slate-900 dark:to-slate-900 shadow-soft-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+            data-testid="opt-in-ai-cv-jd-banner"
           >
-            <p className="flex items-center gap-2 font-black text-sm text-slate-900 dark:text-white">
-              <Sparkles className="w-4 h-4 text-emerald-500" />
-              {language === 'vi'
-                ? `Hồ sơ của bạn khớp ${match.score}% kỹ năng yêu cầu`
-                : `Your profile matches ${match.score}% of required skills`}
-            </p>
-            <div className="mt-2.5 h-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950 overflow-hidden">
-              <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500" style={{ width: `${match.score}%` }} />
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-1.5 font-black text-xs sm:text-sm text-slate-900 dark:text-white">
+                <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                {language === 'vi'
+                  ? 'So sánh độ phù hợp giữa CV và JD bằng AI'
+                  : 'Compare your CV with this JD using AI'}
+              </p>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                {language === 'vi'
+                  ? 'Khi ứng tuyển, bạn có thể chọn CV và tích cho phép AI đối chiếu trực tiếp nội dung CV với bản Mô tả công việc (JD) này.'
+                  : 'Select your CV and allow AI to compare your resume directly against this Job Description (JD).'}
+              </p>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
-              {language === 'vi'
-                ? 'Tính từ danh sách kỹ năng trong hồ sơ của bạn so với kỹ năng của tin tuyển dụng.'
-                : 'Calculated by comparing skills from your profile against this job opening.'}
-            </p>
-            <div className="mt-3 grid sm:grid-cols-2 gap-2 text-xs">
-              <div className="rounded-xl bg-white/80 dark:bg-slate-900/60 border border-emerald-200/70 dark:border-emerald-900/60 p-2.5">
-                <p className="text-emerald-700 dark:text-emerald-400 font-bold mb-0.5">
-                  {language === 'vi' ? 'Bạn đã có' : 'Matched Skills'}
-                </p>
-                <p className="text-slate-700 dark:text-slate-300">{match.matchedSkills.length ? match.matchedSkills.join(', ') : '—'}</p>
-              </div>
-              <div className="rounded-xl bg-white/80 dark:bg-slate-900/60 border border-amber-200/70 dark:border-amber-900/60 p-2.5">
-                <p className="text-amber-700 dark:text-amber-400 font-bold mb-0.5">
-                  {language === 'vi' ? 'Còn thiếu' : 'Missing Skills'}
-                </p>
-                <p className="text-slate-700 dark:text-slate-300">{match.missingSkills.length ? match.missingSkills.join(', ') : '—'}</p>
-              </div>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleQuickAnalyzeCvJd}
+                disabled={analyzingCvJd}
+                data-testid="btn-quick-analyze-cv-jd"
+                className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-slate-700 font-bold text-xs transition-all cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Sparkles className={`w-3.5 h-3.5 ${analyzingCvJd ? 'animate-spin' : ''}`} />
+                {analyzingCvJd
+                  ? language === 'vi'
+                    ? 'Đang so sánh CV & JD...'
+                    : 'Comparing CV & JD...'
+                  : language === 'vi'
+                  ? 'Phân tích CV & JD ngay'
+                  : 'Analyze CV & JD Now'}
+              </button>
+              {!applied && isOpen && (
+                <button
+                  type="button"
+                  onClick={() => onApplyClick(true)}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all cursor-pointer"
+                >
+                  {language === 'vi' ? 'Chọn CV & Ứng tuyển' : 'Select CV & Apply'}
+                </button>
+              )}
             </div>
-            <Link to="/profile#skills" className="mt-2.5 inline-block text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline">
-              {language === 'vi' ? 'Cập nhật kỹ năng →' : 'Update your skills →'}
-            </Link>
           </div>
         ) : null}
 
@@ -568,7 +602,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
               </p>
             </div>
             <button
-              onClick={onApplyClick}
+              onClick={() => onApplyClick(false)}
               className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-soft transition-all shrink-0 cursor-pointer inline-flex items-center gap-1.5"
             >
               <Send className="w-3.5 h-3.5" />
@@ -581,6 +615,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
       {applyOpen && (
         <ApplyModal
           job={job}
+          defaultEnableAi={defaultEnableAi}
           onClose={() => setApplyOpen(false)}
           onApplied={() => {
             setApplyOpen(false);

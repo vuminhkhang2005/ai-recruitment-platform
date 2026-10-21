@@ -85,7 +85,15 @@ public class ApplicationServiceImpl implements ApplicationService {
         }
 
         Cv cv = candidateService.resolveCvForApplication(candidateProfile, request.getCvId());
-        MatchScoreDto match = matchingService.computeForJob(candidateProfile.getId(), job.getId());
+        BigDecimal finalMatchScore = null;
+        if (request.getAiMatchScore() != null) {
+            finalMatchScore = BigDecimal.valueOf(Math.max(0, Math.min(100, request.getAiMatchScore())));
+        } else if (!Boolean.FALSE.equals(request.getAllowAiMatching())) {
+            MatchScoreDto match = matchingService.computeForJob(candidateProfile.getId(), job.getId());
+            if (match != null && match.getScore() != null) {
+                finalMatchScore = BigDecimal.valueOf(match.getScore());
+            }
+        }
 
         String coverLetter = StringUtils.hasText(request.getCoverLetter()) ? request.getCoverLetter().trim() : null;
         if (coverLetter != null && coverLetter.length() > 5000) {
@@ -100,7 +108,7 @@ public class ApplicationServiceImpl implements ApplicationService {
                 .cvId(cv.getId())
                 .coverLetter(coverLetter)
                 .currentStage("APPLIED")
-                .matchScore(match != null && match.getScore() != null ? BigDecimal.valueOf(match.getScore()) : null)
+                .matchScore(finalMatchScore)
                 .appliedAt(now)
                 .updatedAt(now)
                 .build());

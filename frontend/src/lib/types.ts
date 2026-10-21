@@ -450,15 +450,28 @@ export interface AtsSkillBreakdown {
   recommendation: string;
 }
 
+export interface JdCriterionComparison {
+  criterion: string;
+  cvValue: string;
+  jdValue: string;
+  status: 'MATCH' | 'PARTIAL' | 'GAP' | string;
+}
+
 export interface AtsMatchAnalysis {
   jobId: number;
   jobTitle: string;
   companyName: string;
+  analyzedCvId?: number | null;
+  analyzedCvName?: string;
   matchScore: number;
+  skillMatchScore?: number;
+  experienceMatchScore?: number;
+  keywordMatchScore?: number;
   matchRating: string;
   ratingColor: string;
   matchedSkills: AtsSkillBreakdown[];
   missingSkills: AtsSkillBreakdown[];
+  jdCriteriaComparison?: JdCriterionComparison[];
   keyStrengths: string[];
   preparationTips: string[];
   summaryComment: string;

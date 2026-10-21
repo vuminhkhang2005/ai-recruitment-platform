@@ -269,8 +269,22 @@ export const companyApi = {
 };
 
 export const applicationApi = {
-  apply: (jobId: number, cvId: number | null, coverLetter: string) =>
-    request<Application>('/applications', { method: 'POST', body: { jobId, cvId, coverLetter } }),
+  apply: (
+    jobId: number,
+    cvId: number | null,
+    coverLetter: string,
+    options?: { allowAiMatching?: boolean; aiMatchScore?: number | null },
+  ) =>
+    request<Application>('/applications', {
+      method: 'POST',
+      body: {
+        jobId,
+        cvId,
+        coverLetter,
+        allowAiMatching: options?.allowAiMatching,
+        aiMatchScore: options?.aiMatchScore ?? undefined,
+      },
+    }),
   mine: () => request<Application[]>('/applications/me'),
   get: (id: number) => request<Application>(`/applications/${id}`),
   forRecruiter: () => request<Application[]>('/applications/recruiter'),
@@ -415,8 +429,20 @@ export const aiApi = {
       method: 'POST',
       body: { jobId, tone, candidateHighlights },
     }),
-  matchAnalysis: (jobId: number) =>
-    request<AtsMatchAnalysis>('/ai/match-analysis', { query: { jobId } }),
+  matchAnalysis: (jobId: number, cvId?: number | null, file?: File | null) => {
+    if (file) {
+      const form = new FormData();
+      form.append('file', file);
+      return request<AtsMatchAnalysis>('/ai/match-analysis', {
+        method: 'POST',
+        query: { jobId, ...(cvId ? { cvId } : {}) },
+        form,
+      });
+    }
+    return request<AtsMatchAnalysis>('/ai/match-analysis', {
+      query: { jobId, ...(cvId ? { cvId } : {}) },
+    });
+  },
   getRecommendedJobs: (limit = 6) =>
     request<RecommendedJob[]>('/ai/recommended-jobs', { query: { limit } }),
 };

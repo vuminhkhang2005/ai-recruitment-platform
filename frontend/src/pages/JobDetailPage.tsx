@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Briefcase, CalendarClock, CheckCircle2, Clock, ExternalLink, MapPin, MessageSquare, Send, Sparkles, Users } from 'lucide-react';
+import { Briefcase, CalendarClock, CheckCircle2, Clock, ExternalLink, MapPin, Send, Sparkles, Users } from 'lucide-react';
 import { ApiError, companyApi, jobApi } from '../lib/api';
 import type { Company, Job } from '../lib/types';
-import { EXP_LEVELS, JOB_TYPES, daysLeft, formatDate, formatSalary, getExpLevels, getJobTypes, label, timeAgo, toLines } from '../lib/format';
+import { daysLeft, formatDate, formatSalary, getExpLevels, getJobTypes, label, timeAgo, toLines } from '../lib/format';
 import { useAuth } from '../context/AuthContext';
 import { useMyApplications } from '../context/MyApplicationsContext';
-import { useMatchScores } from '../lib/useMatchScores';
 import { usePageTitle } from '../lib/usePageTitle';
 import { useLanguage } from '../i18n/LanguageContext';
 import { CompanyAvatar, ErrorBox, PageLoader, Tag, cardCls } from '../components/ui/primitives';
@@ -39,7 +38,7 @@ const Section: React.FC<{ title: string; text: string | null }> = ({ title, text
   );
 };
 
-const ctaBase = 'inline-flex items-center justify-center gap-2 rounded-xl px-8 py-3 text-sm font-bold w-full sm:w-auto transition-all';
+const ctaBase = 'inline-flex items-center justify-center gap-2 rounded-xl px-8 py-3 text-sm font-bold w-full sm:w-auto transition-all cursor-pointer';
 
 export const JobDetailPage: React.FC = () => {
   const { id } = useParams();
@@ -53,10 +52,9 @@ export const JobDetailPage: React.FC = () => {
   const [related, setRelated] = useState<Job[]>([]);
   const [error, setError] = useState<{ status: number; message: string } | null>(null);
   const [applyOpen, setApplyOpen] = useState(false);
-  const scores = useMatchScores(job ? [job.id] : []);
-  const match = job ? scores[job.id] : undefined;
+  const [defaultEnableAi, setDefaultEnableAi] = useState(false);
 
-  usePageTitle(job ? `${job.title} - ${job.companyName}` : (language === 'vi' ? 'Chi tiết việc làm' : 'Job Details'));
+  usePageTitle(job ? `${job.title} - ${job.companyName}` : language === 'vi' ? 'Chi tiết việc làm' : 'Job Details');
 
   useEffect(() => {
     let active = true;
@@ -93,11 +91,12 @@ export const JobDetailPage: React.FC = () => {
   const applied = appliedJobIds.has(job.id);
   const myApp = applications.find((a) => a.jobId === job.id);
 
-  const onApplyClick = () => {
+  const onApplyClick = (enableAi = false) => {
     if (!isAuthenticated) {
       navigate(`/login?next=${encodeURIComponent(location.pathname)}`);
       return;
     }
+    setDefaultEnableAi(enableAi);
     setApplyOpen(true);
   };
 
@@ -122,7 +121,7 @@ export const JobDetailPage: React.FC = () => {
     } else {
       applyButton = (
         <button
-          onClick={onApplyClick}
+          onClick={() => onApplyClick(false)}
           className={`${ctaBase} bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-soft active:scale-[0.98]`}
           data-testid="apply-button"
         >
@@ -187,8 +186,11 @@ export const JobDetailPage: React.FC = () => {
                 <MapPin className="w-4 h-4" />
               </span>
               <span className="pt-1.5">
-                {job.locationAddress ? `${job.locationAddress}, ` : ''}
-                {job.locationCity}
+                {job.locationAddress &&
+                job.locationAddress !== job.locationCity &&
+                !job.locationAddress.includes(job.locationCity || '')
+                  ? `${job.locationAddress}, ${job.locationCity}`
+                  : job.locationAddress || job.locationCity}
               </span>
             </div>
             <div className={metaItem}>
@@ -211,7 +213,9 @@ export const JobDetailPage: React.FC = () => {
                   <CalendarClock className="w-4 h-4" />
                 </span>
                 <span className={`pt-1.5 ${isOpen && left !== null && left <= 7 ? 'text-amber-600 dark:text-amber-400 font-bold' : ''}`}>
-                  {language === 'vi' ? `Hạn nộp ${formatDate(job.deadline, 'vi')}${isOpen && left !== null ? ` (còn ${left} ngày)` : ''}` : `Deadline ${formatDate(job.deadline, 'en')}${isOpen && left !== null ? ` (${left}d left)` : ''}`}
+                  {language === 'vi'
+                    ? `Hạn nộp ${formatDate(job.deadline, 'vi')}${isOpen && left !== null ? ` (còn ${left} ngày)` : ''}`
+                    : `Deadline ${formatDate(job.deadline, 'en')}${isOpen && left !== null ? ` (${left}d left)` : ''}`}
                 </span>
               </div>
             )}
@@ -239,41 +243,39 @@ export const JobDetailPage: React.FC = () => {
           )}
         </div>
 
-        {match && match.score !== null && (
+        {!isRecruiter && isOpen && !applied && (
           <div
-            className="mt-5 rounded-3xl p-6 border border-emerald-200/90 dark:border-emerald-800/60 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/40 dark:to-slate-900"
-            data-testid="match-panel"
+            className="mt-5 rounded-3xl p-5 sm:p-6 border border-emerald-200/90 dark:border-emerald-800/60 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/40 dark:to-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            data-testid="opt-in-ai-cv-jd-banner"
           >
-            <p className="flex items-center gap-2 font-black text-slate-900 dark:text-white">
-              <Sparkles className="w-5 h-5 text-emerald-500" />
-              {language === 'vi' ? `Hồ sơ của bạn khớp ${match.score}% kỹ năng yêu cầu` : `Your profile matches ${match.score}% of required skills`}
-            </p>
-            <div className="mt-3 h-2 rounded-full bg-emerald-100 dark:bg-emerald-950 overflow-hidden">
-              <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500" style={{ width: `${match.score}%` }} />
+            <div>
+              <p className="flex items-center gap-2 font-black text-slate-900 dark:text-white">
+                <Sparkles className="w-5 h-5 text-emerald-500 shrink-0" />
+                {language === 'vi'
+                  ? 'Phân tích độ phù hợp giữa CV và JD bằng AI'
+                  : 'AI CV vs JD Compatibility Analysis'}
+              </p>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
+                {language === 'vi'
+                  ? 'Chọn CV ứng tuyển và cho phép AI lấy nội dung CV so sánh trực tiếp với bản Mô tả công việc (JD) để nhận báo cáo chi tiết.'
+                  : 'Select your CV and allow AI to compare it directly against this Job Description (JD).'}
+              </p>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              {language === 'vi' ? 'Tính từ danh sách kỹ năng trong hồ sơ của bạn so với kỹ năng của tin tuyển dụng.' : 'Calculated by comparing skills in your profile with job requirements.'}
-            </p>
-            <div className="mt-4 grid sm:grid-cols-2 gap-3 text-sm">
-              <div className="rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-emerald-200/70 dark:border-emerald-900/60 p-3">
-                <p className="text-emerald-700 dark:text-emerald-400 font-bold mb-1">{language === 'vi' ? 'Bạn đã có' : 'Matched skills'}</p>
-                <p className="text-slate-700 dark:text-slate-300">{match.matchedSkills.length ? match.matchedSkills.join(', ') : '—'}</p>
-              </div>
-              <div className="rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-amber-200/70 dark:border-amber-900/60 p-3">
-                <p className="text-amber-700 dark:text-amber-400 font-bold mb-1">{language === 'vi' ? 'Còn thiếu' : 'Missing skills'}</p>
-                <p className="text-slate-700 dark:text-slate-300">{match.missingSkills.length ? match.missingSkills.join(', ') : '—'}</p>
-              </div>
-            </div>
-            <Link to="/profile#skills" className="mt-4 inline-block text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline">
-              {language === 'vi' ? 'Cập nhật kỹ năng →' : 'Update skills →'}
-            </Link>
+            <button
+              type="button"
+              onClick={() => onApplyClick(true)}
+              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-soft shrink-0 cursor-pointer inline-flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              {language === 'vi' ? 'Chọn CV & Phân tích bằng AI' : 'Select CV & Analyze with AI'}
+            </button>
           </div>
         )}
 
         <div className={`${cardCls} mt-5 p-6 sm:p-8 job-description-content`}>
-          <Section title={language === 'vi' ? "Mô tả công việc" : "Job Description"} text={job.description} />
-          <Section title={language === 'vi' ? "Yêu cầu" : "Requirements"} text={job.requirements} />
-          <Section title={language === 'vi' ? "Quyền lợi" : "Benefits & Perks"} text={job.benefits} />
+          <Section title={language === 'vi' ? 'Mô tả công việc' : 'Job Description'} text={job.description} />
+          <Section title={language === 'vi' ? 'Yêu cầu' : 'Requirements'} text={job.requirements} />
+          <Section title={language === 'vi' ? 'Quyền lợi' : 'Benefits & Perks'} text={job.benefits} />
         </div>
       </div>
 
@@ -346,7 +348,14 @@ export const JobDetailPage: React.FC = () => {
         )}
       </aside>
 
-      {applyOpen && <ApplyModal job={job} onClose={() => setApplyOpen(false)} onApplied={() => setApplyOpen(false)} />}
+      {applyOpen && (
+        <ApplyModal
+          job={job}
+          defaultEnableAi={defaultEnableAi}
+          onClose={() => setApplyOpen(false)}
+          onApplied={() => setApplyOpen(false)}
+        />
+      )}
     </div>
   );
 };

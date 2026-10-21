@@ -23,4 +23,10 @@ public class ApplicationCreateRequestDto {
 
     @Schema(description = "CV or Resume Document ID", example = "1")
     private Long cvId;
+
+    @Schema(description = "Whether candidate opted in to AI CV-vs-JD match analysis", example = "true")
+    private Boolean allowAiMatching;
+
+    @Schema(description = "Pre-computed AI CV-vs-JD match score when opted in", example = "86")
+    private Integer aiMatchScore;
 }

@@ -141,17 +141,35 @@ public class AiDtos {
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
+    public static class JdCriterionComparisonItem {
+        private String criterion;
+        private String cvValue;
+        private String jdValue;
+        private String status; // MATCH, PARTIAL, GAP
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
     public static class AtsMatchAnalysisResponseDto {
         private Long jobId;
         private String jobTitle;
         private String companyName;
+        private Long analyzedCvId;
+        private String analyzedCvName;
         private Integer matchScore; // 0 - 100
+        private Integer skillMatchScore; // 0 - 100
+        private Integer experienceMatchScore; // 0 - 100
+        private Integer keywordMatchScore; // 0 - 100
         private String matchRating; // XUẤT SẮC, PHÙ HỢP, TIỀM NĂNG, CẦN BỔ SUNG
         private String ratingColor; // emerald, sky, amber, rose
         @Builder.Default
         private List<AtsSkillBreakdownItem> matchedSkills = new ArrayList<>();
         @Builder.Default
         private List<AtsSkillBreakdownItem> missingSkills = new ArrayList<>();
+        @Builder.Default
+        private List<JdCriterionComparisonItem> jdCriteriaComparison = new ArrayList<>();
         @Builder.Default
         private List<String> keyStrengths = new ArrayList<>();
         @Builder.Default

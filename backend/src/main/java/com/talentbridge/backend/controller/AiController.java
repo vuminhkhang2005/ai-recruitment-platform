@@ -80,13 +80,30 @@ public class AiController {
 
     @GetMapping("/match-analysis")
     @PreAuthorize("hasRole('CANDIDATE')")
-    @Operation(summary = "Deep ATS Match Analysis & Skill Gap for a Job")
+    @Operation(summary = "Deep ATS Match Analysis & Skill Gap comparing Candidate CV vs Job JD")
     public ResponseEntity<ApiResponse<AtsMatchAnalysisResponseDto>> analyzeAtsMatch(
             @RequestParam Long jobId,
+            @RequestParam(required = false) Long cvId,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
         Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
-        AtsMatchAnalysisResponseDto analysis = aiService.analyzeAtsMatch(userId, jobId);
+        AtsMatchAnalysisResponseDto analysis = cvId != null
+                ? aiService.analyzeAtsMatch(userId, jobId, cvId, null)
+                : aiService.analyzeAtsMatch(userId, jobId);
+        return ResponseEntity.ok(ApiResponse.ok(analysis));
+    }
+
+    @PostMapping(value = "/match-analysis", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('CANDIDATE')")
+    @Operation(summary = "Deep ATS Match Analysis comparing an uploaded or selected CV file against Job JD")
+    public ResponseEntity<ApiResponse<AtsMatchAnalysisResponseDto>> analyzeAtsMatchWithCv(
+            @RequestParam Long jobId,
+            @RequestParam(required = false) Long cvId,
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
+        AtsMatchAnalysisResponseDto analysis = aiService.analyzeAtsMatch(userId, jobId, cvId, file);
         return ResponseEntity.ok(ApiResponse.ok(analysis));
     }
 

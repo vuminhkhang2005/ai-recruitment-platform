@@ -186,6 +186,15 @@ public class AiService {
      */
     @Transactional(readOnly = true)
     public AtsMatchAnalysisResponseDto analyzeAtsMatch(Long candidateUserId, Long jobId) {
+        return analyzeAtsMatch(candidateUserId, jobId, null, null);
+    }
+
+    /**
+     * TopCV-style CV vs JD Comparison: reads the candidate's selected CV (by cvId or uploaded file)
+     * plus profile context and compares it directly against the target Job Description (JD).
+     */
+    @Transactional(readOnly = true)
+    public AtsMatchAnalysisResponseDto analyzeAtsMatch(Long candidateUserId, Long jobId, Long cvId, MultipartFile file) {
         Job job = jobRepository.findByIdWithCompany(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tin tuyển dụng #" + jobId));
 
@@ -194,11 +203,55 @@ public class AiService {
                 : candidateSkillRepository.findByCandidateProfileId(profile.getId()).stream()
                 .collect(Collectors.toMap(cs -> cs.getSkill().getId(), cs -> cs, (a, b) -> a));
 
+        // 1. Resolve Selected CV (Uploaded File OR Selected cvId OR Default CV)
+        Long resolvedCvId = cvId;
+        String analyzedCvName = "Hồ sơ năng lực (TalentBridge Profile)";
+        StringBuilder cvContentBuilder = new StringBuilder();
+
+        if (file != null && !file.isEmpty()) {
+            analyzedCvName = StringUtils.hasText(file.getOriginalFilename()) ? file.getOriginalFilename() : "CV_Moi_Tai_Len.pdf";
+            cvContentBuilder.append(analyzedCvName).append("\n");
+            try {
+                cvContentBuilder.append(new String(file.getBytes(), StandardCharsets.UTF_8)).append("\n");
+            } catch (IOException ignored) {}
+        } else {
+            Cv targetCv = null;
+            if (cvId != null) {
+                targetCv = cvRepository.findById(cvId).orElse(null);
+            } else if (profile != null) {
+                List<Cv> cvs = cvRepository.findByCandidateProfileIdAndDeletedAtIsNullOrderByIsDefaultDescCreatedAtDesc(profile.getId());
+                if (!cvs.isEmpty()) {
+                    targetCv = cvs.get(0);
+                }
+            }
+            if (targetCv != null) {
+                resolvedCvId = targetCv.getId();
+                analyzedCvName = StringUtils.hasText(targetCv.getTitle())
+                        ? targetCv.getTitle() + " (" + targetCv.getFileName() + ")"
+                        : targetCv.getFileName();
+                cvContentBuilder.append(targetCv.getTitle()).append(" ").append(targetCv.getFileName()).append("\n");
+                Path localFile = candidateService.resolveLocalFile(targetCv);
+                if (localFile != null && Files.exists(localFile)) {
+                    try {
+                        cvContentBuilder.append(Files.readString(localFile)).append("\n");
+                    } catch (IOException ignored) {}
+                }
+            }
+        }
+
+        if (profile != null) {
+            if (StringUtils.hasText(profile.getHeadline())) cvContentBuilder.append(profile.getHeadline()).append("\n");
+            if (StringUtils.hasText(profile.getBio())) cvContentBuilder.append(profile.getBio()).append("\n");
+        }
+        String cvTextLower = cvContentBuilder.toString().toLowerCase();
+
+        // 2. Compare CV Skills vs JD Required Skills
         List<JobSkill> jobSkills = jobSkillRepository.findByJobId(jobId);
         List<AtsSkillBreakdownItem> matchedList = new ArrayList<>();
         List<AtsSkillBreakdownItem> missingList = new ArrayList<>();
         double totalWeight = 0;
         double gainedWeight = 0;
+        int maxCandidateYears = 0;
 
         for (JobSkill js : jobSkills) {
             double w = js.getWeight() != null ? js.getWeight().doubleValue() : 1.0;
@@ -206,85 +259,189 @@ public class AiService {
             if (!isReq) w *= 0.5;
             totalWeight += w;
 
+            String skillName = js.getSkill().getName();
+            String skillLower = skillName.toLowerCase();
             CandidateSkill cs = candidateSkillMap.get(js.getSkill().getId());
+            boolean foundInCvText = cvTextLower.contains(skillLower)
+                    || SKILL_TAXONOMY.getOrDefault(skillName, List.of()).stream().anyMatch(cvTextLower::contains);
+
             int needYears = js.getMinYearsExp() != null ? js.getMinYearsExp() : 0;
 
-            if (cs != null) {
-                int haveYears = cs.getYearsExperience() != null ? cs.getYearsExperience() : 0;
-                double earned = haveYears >= needYears ? w : w * 0.7;
+            if (cs != null || foundInCvText) {
+                int haveYears = cs != null && cs.getYearsExperience() != null
+                        ? cs.getYearsExperience()
+                        : Math.max(1, estimateSkillYears(cvTextLower, skillName));
+                maxCandidateYears = Math.max(maxCandidateYears, haveYears);
+                double earned = haveYears >= needYears ? w : w * 0.75;
                 gainedWeight += earned;
 
                 matchedList.add(AtsSkillBreakdownItem.builder()
-                        .name(js.getSkill().getName())
+                        .name(skillName)
                         .requiredYears(needYears)
                         .candidateYears(haveYears)
                         .isMatched(true)
                         .isRequired(isReq)
-                        .recommendation("Đã đạt yêu cầu. Hãy chuẩn bị các ví dụ thực tế trong dự án để làm nổi bật kỹ năng này trong phỏng vấn.")
+                        .recommendation("Đã khớp trong CV (" + analyzedCvName + "). Hãy làm nổi bật kết quả đạt được với " + skillName + " trong phần dự án.")
                         .build());
             } else {
                 missingList.add(AtsSkillBreakdownItem.builder()
-                        .name(js.getSkill().getName())
+                        .name(skillName)
                         .requiredYears(needYears)
                         .candidateYears(0)
                         .isMatched(false)
                         .isRequired(isReq)
                         .recommendation(isReq
-                                ? "Kỹ năng cốt lõi bắt buộc của JD. Nên tự ôn tập hoặc chuẩn bị dự án cá nhân liên quan để sẵn sàng trao đổi."
-                                : "Kỹ năng cộng điểm ưu tiên. Nếu có kinh nghiệm tương đương hãy bổ sung vào hồ sơ trước khi ứng tuyển.")
+                                ? "JD yêu cầu bắt buộc kỹ năng " + skillName + " nhưng chưa xuất hiện trong CV. Hãy bổ sung nếu bạn đã từng làm việc với công nghệ này."
+                                : "Kỹ năng cộng điểm ưu tiên trong JD. Bổ sung từ khóa " + skillName + " vào CV sẽ giúp tăng điểm lọc hồ sơ.")
                         .build());
             }
         }
 
-        int score = totalWeight > 0 ? (int) Math.round(100.0 * gainedWeight / totalWeight) : 75;
-        score = Math.max(10, Math.min(100, score));
+        for (CandidateSkill cs : candidateSkillMap.values()) {
+            if (cs.getYearsExperience() != null) {
+                maxCandidateYears = Math.max(maxCandidateYears, cs.getYearsExperience());
+            }
+        }
+
+        int skillScore = totalWeight > 0 ? (int) Math.round(100.0 * gainedWeight / totalWeight) : 75;
+        skillScore = Math.max(15, Math.min(100, skillScore));
+
+        // 3. Experience & Level Match Score (CV vs JD expLevel)
+        int requiredExpYears = switch (job.getExpLevel() != null ? job.getExpLevel().toUpperCase() : "JUNIOR") {
+            case "INTERN", "FRESHER" -> 0;
+            case "JUNIOR" -> 1;
+            case "MIDDLE" -> 2;
+            case "SENIOR" -> 4;
+            case "LEAD", "MANAGER" -> 5;
+            default -> 1;
+        };
+        int expScore;
+        if (maxCandidateYears >= requiredExpYears) {
+            expScore = Math.min(100, 88 + Math.min(12, (maxCandidateYears - requiredExpYears) * 4));
+        } else if (requiredExpYears - maxCandidateYears == 1) {
+            expScore = 72;
+        } else {
+            expScore = 55;
+        }
+
+        // 4. Keyword & JD Content Match Score
+        String jdCombined = ((job.getTitle() != null ? job.getTitle() : "") + " "
+                + (job.getDescription() != null ? job.getDescription() : "") + " "
+                + (job.getRequirements() != null ? job.getRequirements() : "")).toLowerCase();
+        int jdKeywordHits = 0;
+        int jdKeywordTotal = 0;
+        for (Map.Entry<String, List<String>> entry : SKILL_TAXONOMY.entrySet()) {
+            boolean inJd = entry.getValue().stream().anyMatch(jdCombined::contains);
+            if (inJd) {
+                jdKeywordTotal++;
+                boolean inCv = entry.getValue().stream().anyMatch(cvTextLower::contains)
+                        || matchedList.stream().anyMatch(m -> m.getName().equalsIgnoreCase(entry.getKey()));
+                if (inCv) jdKeywordHits++;
+            }
+        }
+        int keywordScore = jdKeywordTotal > 0
+                ? (int) Math.round(100.0 * jdKeywordHits / jdKeywordTotal)
+                : skillScore;
+        keywordScore = Math.max(25, Math.min(100, (keywordScore + skillScore) / 2));
+
+        // Weighted Overall Score (60% Skills + 25% Experience + 15% JD Keywords)
+        int score = (int) Math.round(skillScore * 0.60 + expScore * 0.25 + keywordScore * 0.15);
+        score = Math.max(15, Math.min(100, score));
 
         String rating;
         String color;
         if (score >= 85) {
-            rating = "XUẤT SẮC";
+            rating = "RẤT PHÙ HỢP";
             color = "emerald";
         } else if (score >= 70) {
-            rating = "PHÙ HỢP";
+            rating = "KHÁ PHÙ HỢP";
             color = "teal";
         } else if (score >= 50) {
             rating = "TIỀM NĂNG";
             color = "amber";
         } else {
-            rating = "CẦN BỔ SUNG";
+            rating = "CẦN TỐI ƯU CV";
             color = "rose";
         }
 
+        // 5. Direct CV <-> JD Criteria Comparison Rows
+        List<JdCriterionComparisonItem> criteriaList = new ArrayList<>();
+        String cvSkillSummary = matchedList.isEmpty()
+                ? "Chưa phát hiện kỹ năng trùng khớp trong CV"
+                : "Đáp ứng " + matchedList.size() + "/" + Math.max(1, jobSkills.size()) + " kỹ năng ("
+                + matchedList.stream().limit(4).map(AtsSkillBreakdownItem::getName).collect(Collectors.joining(", ")) + ")";
+        String jdSkillSummary = jobSkills.isEmpty()
+                ? "Theo mô tả công việc (JD)"
+                : "Yêu cầu " + jobSkills.size() + " kỹ năng ("
+                + jobSkills.stream().limit(4).map(js -> js.getSkill().getName()).collect(Collectors.joining(", ")) + ")";
+        criteriaList.add(JdCriterionComparisonItem.builder()
+                .criterion("Kỹ năng chuyên môn")
+                .cvValue(cvSkillSummary)
+                .jdValue(jdSkillSummary)
+                .status(skillScore >= 75 ? "MATCH" : skillScore >= 50 ? "PARTIAL" : "GAP")
+                .build());
+
+        String cvExpSummary = maxCandidateYears > 0
+                ? "~" + maxCandidateYears + " năm kinh nghiệm thực tế" + (profile != null && StringUtils.hasText(profile.getHeadline()) ? " · " + profile.getHeadline() : "")
+                : (profile != null && StringUtils.hasText(profile.getHeadline()) ? profile.getHeadline() : "Fresher / Mới tốt nghiệp");
+        String jdExpSummary = "Cấp bậc " + (job.getExpLevel() != null ? job.getExpLevel() : "JUNIOR")
+                + (requiredExpYears > 0 ? " (tối thiểu " + requiredExpYears + "+ năm)" : " (Không yêu cầu số năm)");
+        criteriaList.add(JdCriterionComparisonItem.builder()
+                .criterion("Kinh nghiệm & Cấp bậc")
+                .cvValue(cvExpSummary)
+                .jdValue(jdExpSummary)
+                .status(expScore >= 80 ? "MATCH" : expScore >= 65 ? "PARTIAL" : "GAP")
+                .build());
+
+        String candCity = profile != null && StringUtils.hasText(profile.getCity()) ? profile.getCity() : "Linh hoạt";
+        String jobCity = StringUtils.hasText(job.getLocationCity()) ? job.getLocationCity() : "Toàn quốc";
+        boolean cityMatch = candCity.equalsIgnoreCase(jobCity) || "REMOTE".equalsIgnoreCase(job.getJobType());
+        criteriaList.add(JdCriterionComparisonItem.builder()
+                .criterion("Địa điểm & Hình thức")
+                .cvValue(candCity)
+                .jdValue(jobCity + (job.getJobType() != null ? " · " + job.getJobType() : ""))
+                .status(cityMatch ? "MATCH" : "PARTIAL")
+                .build());
+
         List<String> strengths = new ArrayList<>();
         if (!matchedList.isEmpty()) {
-            strengths.add("Nền tảng vững chắc với các công nghệ lõi: " + matchedList.stream().limit(4).map(AtsSkillBreakdownItem::getName).collect(Collectors.joining(", ")) + ".");
-            if (matchedList.size() >= 3) {
-                strengths.add("Đáp ứng phần lớn bộ khung công nghệ mà nhà tuyển dụng yêu cầu cho vị trí " + job.getTitle() + ".");
+            strengths.add("CV của bạn thể hiện rõ các kỹ năng trọng tâm mà JD yêu cầu: "
+                    + matchedList.stream().limit(4).map(AtsSkillBreakdownItem::getName).collect(Collectors.joining(", ")) + ".");
+            if (expScore >= 80) {
+                strengths.add("Số năm kinh nghiệm và định hướng chuyên môn trong CV tương thích tốt với cấp bậc " + job.getExpLevel() + " của vị trí " + job.getTitle() + ".");
             }
         } else {
-            strengths.add("Hồ sơ thể hiện tinh thần học hỏi và sẵn sàng tiếp cận công nghệ mới.");
+            strengths.add("CV có cấu trúc rõ ràng, phù hợp để bổ sung thêm các từ khóa chuyên môn theo JD.");
         }
 
         List<String> tips = new ArrayList<>();
         if (!missingList.isEmpty()) {
-            tips.add("Nắm vững các câu hỏi phỏng vấn cơ bản về: " + missingList.stream().limit(3).map(AtsSkillBreakdownItem::getName).collect(Collectors.joining(", ")) + ".");
+            tips.add("Bổ sung vào CV các từ khóa kỹ năng mà JD đang tìm kiếm: "
+                    + missingList.stream().limit(3).map(AtsSkillBreakdownItem::getName).collect(Collectors.joining(", "))
+                    + " (nếu bạn đã từng sử dụng trong dự án hoặc đồ án).");
         }
-        tips.add("Chuẩn bị câu chuyện STAR (Situation, Task, Action, Result) chứng minh khả năng giải quyết vấn đề kỹ thuật phức tạp.");
-        tips.add("Xem xét kỹ bản mô tả công việc (JD) để đối chiếu kinh nghiệm thực tế với định hướng của công ty.");
+        tips.add("Nhấn mạnh các con số định lượng kết quả dự án trong CV và Thư giới thiệu để gây ấn tượng với HR "
+                + (job.getCompany() != null ? job.getCompany().getName() : "") + ".");
 
         String companyName = job.getCompany() != null ? job.getCompany().getName() : "Nhà tuyển dụng";
-        String comment = String.format("Hồ sơ của bạn đạt mức độ tương thích %d%% (%s) cho vị trí %s tại %s.",
-                score, rating, job.getTitle(), companyName);
+        String comment = String.format("Kết quả AI đối chiếu CV [%s] với JD [%s tại %s]: Đạt %d%% (%s).",
+                analyzedCvName, job.getTitle(), companyName, score, rating);
 
         return AtsMatchAnalysisResponseDto.builder()
                 .jobId(job.getId())
                 .jobTitle(job.getTitle())
                 .companyName(companyName)
+                .analyzedCvId(resolvedCvId)
+                .analyzedCvName(analyzedCvName)
                 .matchScore(score)
+                .skillMatchScore(skillScore)
+                .experienceMatchScore(expScore)
+                .keywordMatchScore(keywordScore)
                 .matchRating(rating)
                 .ratingColor(color)
                 .matchedSkills(matchedList)
                 .missingSkills(missingList)
+                .jdCriteriaComparison(criteriaList)
                 .keyStrengths(strengths)
                 .preparationTips(tips)
                 .summaryComment(comment)
