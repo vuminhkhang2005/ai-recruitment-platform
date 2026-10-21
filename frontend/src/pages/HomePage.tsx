@@ -392,20 +392,21 @@ export const HomePage: React.FC = () => {
       .then((p) => {
         setAllJobs(p.items);
         setTotal(p.totalElements);
+        const counts: Record<string, number> = {};
+        for (const s of specialties) {
+          const kw = s.keyword.toLowerCase();
+          counts[s.keyword] = p.items.filter((j) => {
+            const haystack = `${j.title ?? ''} ${j.description ?? ''} ${(j.skills ?? []).join(' ')}`.toLowerCase();
+            return haystack.includes(kw);
+          }).length;
+        }
+        setSpecialtyCounts(counts);
       })
       .catch((e: Error) => setError(e.message));
     companyApi
       .list()
       .then((list) => setAllCompanies(list))
       .catch(() => setAllCompanies([]));
-    Promise.all(
-      specialties.map((s) =>
-        jobApi
-          .search({ keyword: s.keyword, page: 0, size: 1 })
-          .then((p) => [s.keyword, p.totalElements] as const)
-          .catch(() => [s.keyword, -1] as const),
-      ),
-    ).then((entries) => setSpecialtyCounts(Object.fromEntries(entries)));
   };
 
   useEffect(load, [specialties]);
