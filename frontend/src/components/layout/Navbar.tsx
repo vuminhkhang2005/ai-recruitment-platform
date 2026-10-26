@@ -76,10 +76,10 @@ export const Logo: React.FC<{ to?: string; iconOnly?: boolean }> = ({ to = '/', 
 );
 
 const linkCls = ({ isActive }: { isActive: boolean }) =>
-  `inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-xl transition-all whitespace-nowrap shrink-0 ${
+  `inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-xl transition-all whitespace-nowrap shrink-0 ${
     isActive
-      ? 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/50 shadow-soft-xs'
-      : 'text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800/80'
+      ? 'bg-emerald-500/10 dark:bg-emerald-400/12 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/25 dark:ring-emerald-400/25'
+      : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-300 hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
   }`;
 
 const ThemeSwitch: React.FC = () => {
@@ -111,43 +111,42 @@ const ThemeSwitch: React.FC = () => {
   );
 };
 
-export const LanguageSwitch: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
+export const LanguageSwitch: React.FC<{ compact?: boolean }> = () => {
   const { language, setLanguage } = useLanguage();
   return (
     <div
-      className="bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl flex items-center border border-slate-200/80 dark:border-slate-700 shadow-soft-xs"
+      className="bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl inline-flex items-center border border-slate-200/80 dark:border-slate-700 shadow-soft-xs"
       data-testid="language-switcher"
       aria-label="Chuyển đổi ngôn ngữ / Switch Language"
     >
       <button
         type="button"
         onClick={() => setLanguage('vi')}
-        className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+        className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold tracking-wide transition-all cursor-pointer flex items-center justify-center ${
           language === 'vi'
-            ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-soft-xs ring-1 ring-slate-200/80 dark:ring-slate-600'
+            ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-300 shadow-soft-xs ring-1 ring-slate-200/80 dark:ring-slate-600'
             : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
         }`}
         title="Tiếng Việt (VI)"
         aria-label="Tiếng Việt"
         aria-pressed={language === 'vi'}
       >
-        <span className="text-xs">🇻🇳</span>
-        {!compact && <span className="text-[11px] font-extrabold tracking-wide">VI</span>}
+        VI
       </button>
+      <span className="text-[10px] font-bold text-slate-300 dark:text-slate-600 select-none px-0.5">|</span>
       <button
         type="button"
         onClick={() => setLanguage('en')}
-        className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+        className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold tracking-wide transition-all cursor-pointer flex items-center justify-center ${
           language === 'en'
-            ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-soft-xs ring-1 ring-slate-200/80 dark:ring-slate-600'
+            ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-300 shadow-soft-xs ring-1 ring-slate-200/80 dark:ring-slate-600'
             : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
         }`}
         title="English (EN)"
         aria-label="English"
         aria-pressed={language === 'en'}
       >
-        <span className="text-xs">🇬🇧</span>
-        {!compact && <span className="text-[11px] font-extrabold tracking-wide">EN</span>}
+        EN
       </button>
     </div>
   );
@@ -626,7 +625,7 @@ export const Avatar: React.FC<{ name: string; url?: string | null; size?: string
 
   return (
     <span
-      className={`relative ${size} ${size.includes('text-') ? '' : 'text-xs'} rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-black inline-flex items-center justify-center ring-1 ring-emerald-500/60 shrink-0 overflow-hidden select-none`}
+      className={`relative ${size} ${size.includes('text-') ? '' : 'text-xs'} rounded-lg bg-emerald-600/80 dark:bg-emerald-500/25 text-white dark:text-emerald-200 font-bold inline-flex items-center justify-center ring-1 ring-emerald-500/30 dark:ring-emerald-400/30 shrink-0 overflow-hidden select-none`}
     >
       <span>{initials}</span>
       {showRemoteImg && (
