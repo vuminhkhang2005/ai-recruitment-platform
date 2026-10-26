@@ -105,7 +105,7 @@ app:
     enabled: ${APP_MAIL_ENABLED:true}
     from: ${APP_MAIL_FROM:TalentBridge <no-reply@talentbridge.vn>}
     # Default Free Production Email Relay: Google Apps Script (works on Render/Railway where SMTP is blocked, 0 third-party registration)
-    google-script-url: ${GOOGLE_SCRIPT_MAIL_URL:https://script.google.com/macros/s/AKfycbx7LgR2YaragbesI-BTZ8RMCqTdvN1Xah0aii1C6gMN5qKEuP2eTGIKzOPSvPiwy4Bm/exec}
+    google-script-url: ${GOOGLE_SCRIPT_MAIL_URL:https://script.google.com/macros/s/AKfycbxDT8ftlo9hRmyVVLFl7Y1073lNp5IjpXwF-i4d1E0ujk0TBth9Ed-hKdMLzcMsX960jA/exec}
     google-script-secret: ${GOOGLE_SCRIPT_MAIL_SECRET:minlish_mail_secret_2026}
     # Optional alternative providers:
     brevo-api-key: ${BREVO_API_KEY:}
