@@ -53,6 +53,24 @@ public class MatchingService {
             double total = 0;
             double gained = 0;
 
+            int maxHaveYears = candidateSkills.values().stream()
+                    .map(CandidateSkill::getYearsExperience)
+                    .filter(Objects::nonNull)
+                    .max(Integer::compareTo)
+                    .orElse(0);
+
+            String expLevel = !jobSkills.isEmpty() && jobSkills.get(0).getJob() != null && jobSkills.get(0).getJob().getExpLevel() != null
+                    ? jobSkills.get(0).getJob().getExpLevel().toUpperCase()
+                    : "JUNIOR";
+            int reqYears = switch (expLevel) {
+                case "INTERN", "FRESHER" -> 0;
+                case "JUNIOR" -> 1;
+                case "MIDDLE" -> 2;
+                case "SENIOR" -> 4;
+                case "LEAD", "MANAGER" -> 5;
+                default -> 1;
+            };
+
             for (JobSkill js : jobSkills) {
                 double w = (js.getWeight() != null ? js.getWeight() : BigDecimal.ONE).doubleValue();
                 if (!Boolean.TRUE.equals(js.getIsRequired())) {
@@ -62,9 +80,9 @@ public class MatchingService {
                 CandidateSkill cs = candidateSkills.get(js.getSkill().getId());
                 if (cs != null) {
                     matched.add(js.getSkill().getName());
-                    int need = js.getMinYearsExp() != null ? js.getMinYearsExp() : 0;
+                    int need = reqYears == 0 ? 0 : Math.max(reqYears, js.getMinYearsExp() != null ? js.getMinYearsExp() : reqYears);
                     int have = cs.getYearsExperience() != null ? cs.getYearsExperience() : 0;
-                    gained += have >= need ? w : w * 0.7;
+                    gained += have >= need ? w : w * 0.68;
                 } else {
                     missing.add(js.getSkill().getName());
                 }
@@ -72,7 +90,11 @@ public class MatchingService {
 
             Integer score = null;
             if (total > 0 && !candidateSkills.isEmpty()) {
-                score = (int) Math.round(100.0 * gained / total);
+                int rawSkillScore = (int) Math.round(100.0 * gained / total);
+                int deficit = Math.max(0, reqYears - maxHaveYears);
+                int cap = deficit == 0 ? 97 : deficit == 1 ? 68 : deficit == 2 ? 54 : 40;
+                int expComponent = deficit == 0 ? 94 : deficit == 1 ? 48 : deficit == 2 ? 32 : 20;
+                score = Math.min(cap, (int) Math.round(rawSkillScore * 0.70 + expComponent * 0.30));
             }
 
             result.put(jobId, MatchScoreDto.builder()

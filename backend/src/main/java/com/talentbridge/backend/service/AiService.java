@@ -65,42 +65,58 @@ public class AiService {
         SKILL_TAXONOMY.put("Java", List.of("java", "jvm", "jdk", "j2ee", "jakarta ee"));
         SKILL_TAXONOMY.put("Spring Boot", List.of("spring boot", "springboot", "spring mvc", "spring data", "spring framework", "spring security"));
         SKILL_TAXONOMY.put("C#", List.of("c#", "csharp", "c-sharp"));
-        SKILL_TAXONOMY.put(".NET Core", List.of(".net core", "asp.net core", "asp.net", "entity framework", "ado.net", ".net 8", ".net 6"));
+        SKILL_TAXONOMY.put(".NET Core", List.of(".net core", "entity framework", "ado.net", ".net 8", ".net 6"));
+        SKILL_TAXONOMY.put("ASP.NET Core", List.of("asp.net core", "asp.net", "web api"));
         SKILL_TAXONOMY.put("Python", List.of("python", "python3", "django", "fastapi", "flask"));
-        SKILL_TAXONOMY.put("TypeScript", List.of("typescript", "ts"));
-        SKILL_TAXONOMY.put("JavaScript", List.of("javascript", "js", "es6", "ecmascript"));
-        SKILL_TAXONOMY.put("React", List.of("react", "reactjs", "react.js", "next.js", "nextjs", "vite", "redux"));
-        SKILL_TAXONOMY.put("Node.js", List.of("node.js", "nodejs", "express", "express.js", "nestjs"));
-        SKILL_TAXONOMY.put("C++", List.of("c++", "cpp", "stl"));
-        SKILL_TAXONOMY.put("Go", List.of("golang", "go ", "grpc"));
+        SKILL_TAXONOMY.put("TypeScript", List.of("typescript"));
+        SKILL_TAXONOMY.put("JavaScript", List.of("javascript", "es6", "ecmascript"));
+        SKILL_TAXONOMY.put("React", List.of("react", "reactjs", "react.js", "vite", "redux"));
+        SKILL_TAXONOMY.put("Next.js", List.of("next.js", "nextjs"));
+        SKILL_TAXONOMY.put("Node.js", List.of("node.js", "nodejs", "express.js", "expressjs", "nestjs"));
+        SKILL_TAXONOMY.put("Flutter", List.of("flutter"));
+        SKILL_TAXONOMY.put("Dart", List.of("dart"));
+        SKILL_TAXONOMY.put("Kotlin", List.of("kotlin"));
+        SKILL_TAXONOMY.put("Android", List.of("android", "jetpack compose", "android sdk"));
+        SKILL_TAXONOMY.put("C++", List.of("c++", "cpp"));
+        SKILL_TAXONOMY.put("Go", List.of("golang", "go developer", "go engineer", "gin-gonic", "grpc"));
         SKILL_TAXONOMY.put("SQL", List.of("sql", "mysql", "postgresql", "postgres", "sql server", "rdbms", "stored procedures"));
         SKILL_TAXONOMY.put("MySQL", List.of("mysql", "mariadb"));
         SKILL_TAXONOMY.put("SQL Server", List.of("sql server", "mssql", "t-sql", "ado.net"));
         SKILL_TAXONOMY.put("PostgreSQL", List.of("postgresql", "postgres"));
         SKILL_TAXONOMY.put("MongoDB", List.of("mongodb", "nosql", "mongoose"));
-        SKILL_TAXONOMY.put("Redis", List.of("redis", "caching", "in-memory"));
+        SKILL_TAXONOMY.put("Redis", List.of("redis"));
         SKILL_TAXONOMY.put("Docker", List.of("docker", "containerization", "docker-compose", "containerized"));
         SKILL_TAXONOMY.put("Kubernetes", List.of("kubernetes", "k8s", "helm"));
         SKILL_TAXONOMY.put("Git", List.of("git", "github", "gitlab", "git flow", "version control"));
         SKILL_TAXONOMY.put("CI/CD", List.of("ci/cd", "continuous integration", "github actions", "jenkins", "gitlab ci"));
         SKILL_TAXONOMY.put("RESTful API", List.of("restful", "rest api", "web api", "openapi", "swagger", "postman"));
         SKILL_TAXONOMY.put("Microservices", List.of("microservices", "microservice", "distributed systems"));
-        SKILL_TAXONOMY.put("AWS", List.of("aws", "amazon web services", "ec2", "s3", "lambda"));
+        SKILL_TAXONOMY.put("AWS", List.of("aws", "amazon web services", "ec2", "lambda"));
+        SKILL_TAXONOMY.put("Azure", List.of("azure", "microsoft azure"));
+        SKILL_TAXONOMY.put("Terraform", List.of("terraform", "infrastructure as code"));
+        SKILL_TAXONOMY.put("Kafka", List.of("kafka", "apache kafka", "rabbitmq"));
+        SKILL_TAXONOMY.put("Linux", List.of("linux", "ubuntu", "bash"));
         SKILL_TAXONOMY.put("Tailwind CSS", List.of("tailwind", "tailwindcss", "bootstrap", "css3", "html5"));
-        SKILL_TAXONOMY.put("Unit Testing", List.of("unit test", "unit testing", "junit", "junit 5", "mockmvc", "integration testing", "jest", "playwright", "selenium"));
+        SKILL_TAXONOMY.put("Unit Testing", List.of("unit test", "unit testing", "junit", "junit 5", "mockmvc", "integration testing", "jest"));
+        SKILL_TAXONOMY.put("Selenium", List.of("selenium", "playwright", "cypress", "automation test"));
         SKILL_TAXONOMY.put("Agile/Scrum", List.of("agile", "scrum", "kanban", "jira"));
-        SKILL_TAXONOMY.put("PyTorch", List.of("pytorch", "torch", "deep learning"));
-        SKILL_TAXONOMY.put("Machine Learning", List.of("machine learning", "ml", "scikit-learn", "llm", "nlp"));
+        SKILL_TAXONOMY.put("PyTorch", List.of("pytorch", "deep learning"));
+        SKILL_TAXONOMY.put("Machine Learning", List.of("machine learning", "scikit-learn", "computer vision", "nlp"));
+        SKILL_TAXONOMY.put("UI/UX Design", List.of("ui/ux", "ux design", "ui design", "product design", "wireframe"));
+        SKILL_TAXONOMY.put("Figma", List.of("figma"));
         SKILL_TAXONOMY.put("Teamwork", List.of("teamwork", "team project", "team of", "collaborated", "agile team", "làm việc nhóm", "phối hợp nhóm", "code reviews"));
         SKILL_TAXONOMY.put("Communication", List.of("communication", "giao tiếp", "ielts", "toeic", "english", "proficient in reading", "thuyết trình", "đàm phán"));
+        SKILL_TAXONOMY.put("English Professional", List.of("ielts", "toeic", "english", "proficient in reading"));
+        SKILL_TAXONOMY.put("Problem Solving", List.of("problem solving", "problem-solving", "giải quyết vấn đề", "algorithm", "optimization", "reduced api response"));
         SKILL_TAXONOMY.put("Talent Acquisition", List.of("tuyển dụng", "talent acquisition", "recruiter", "recruitment", "headhunt", "sàng lọc ứng viên"));
-        SKILL_TAXONOMY.put("HR Business Partner", List.of("hrbp", "hr business partner", "nhân sự", "hrm"));
+        SKILL_TAXONOMY.put("HR Business Partner", List.of("hrbp", "hr business partner"));
         SKILL_TAXONOMY.put("B2B Sales", List.of("b2b sales", "kinh doanh b2b", "tư vấn giải pháp", "phát triển khách hàng"));
         SKILL_TAXONOMY.put("Digital Marketing", List.of("digital marketing", "marketing", "seo", "sem", "google ads", "facebook ads"));
-        SKILL_TAXONOMY.put("Financial Accounting", List.of("accounting", "kế toán", "vas", "ifrs", "tax", "misa", "sap"));
+        SKILL_TAXONOMY.put("Content Marketing", List.of("content marketing", "copywriting", "storytelling", "quản trị cộng đồng"));
+        SKILL_TAXONOMY.put("Financial Accounting", List.of("accounting", "kế toán", "vas", "ifrs", "misa"));
         SKILL_TAXONOMY.put("Financial Analysis", List.of("financial analysis", "phân tích tài chính", "fp&a", "forecasting", "budgeting"));
         SKILL_TAXONOMY.put("Customer Success", List.of("customer success", "chăm sóc khách hàng", "crm", "zendesk", "hubspot"));
-        SKILL_TAXONOMY.put("Category Management", List.of("category management", "quản lý ngành hàng", "e-commerce", "assortment", "gmv"));
+        SKILL_TAXONOMY.put("Category Management", List.of("category management", "quản lý ngành hàng", "assortment", "gmv"));
         SKILL_TAXONOMY.put("Commercial Negotiation", List.of("commercial negotiation", "đàm phán thương mại", "vendor", "b2b contract"));
         SKILL_TAXONOMY.put("Risk Management", List.of("risk management", "quản trị rủi ro", "aml", "kyc", "fraud", "basel"));
     }
@@ -248,7 +264,7 @@ public class AiService {
                 : candidateSkillRepository.findByCandidateProfileId(profile.getId()).stream()
                 .collect(Collectors.toMap(cs -> cs.getSkill().getId(), cs -> cs, (a, b) -> a));
 
-        // 1. Resolve Selected CV (Uploaded File OR Selected cvId OR Default CV)
+        // 1. Resolve Selected CV (Uploaded File OR Selected cvId OR Best Real CV)
         Long resolvedCvId = cvId;
         String analyzedCvName = "TalentBridge Candidate Profile";
         String extractedFileText = "";
@@ -259,32 +275,19 @@ public class AiService {
                 extractedFileText = extractDocumentText(file.getBytes(), analyzedCvName);
             } catch (IOException ignored) {}
         } else {
-            Cv targetCv = null;
-            if (cvId != null) {
-                targetCv = cvRepository.findById(cvId).orElse(null);
-            } else if (profile != null) {
-                List<Cv> cvs = cvRepository.findByCandidateProfileIdAndDeletedAtIsNullOrderByIsDefaultDescCreatedAtDesc(profile.getId());
-                if (!cvs.isEmpty()) {
-                    targetCv = cvs.get(0);
-                }
-            }
+            Cv targetCv = resolveBestCandidateCv(profile, cvId);
             if (targetCv != null) {
                 resolvedCvId = targetCv.getId();
                 analyzedCvName = StringUtils.hasText(targetCv.getTitle())
                         ? targetCv.getTitle() + " (" + targetCv.getFileName() + ")"
                         : targetCv.getFileName();
-                Path localFile = candidateService.resolveLocalFile(targetCv);
-                if (localFile != null && Files.exists(localFile)) {
-                    try {
-                        extractedFileText = extractDocumentText(Files.readAllBytes(localFile), targetCv.getFileName());
-                    } catch (IOException ignored) {}
-                }
+                extractedFileText = readCvDocumentText(targetCv);
             }
         }
 
-        // If the selected CV file contains real readable text (> 40 chars), analyze ONLY the CV file content
+        // If the selected CV file contains real readable text (>= 220 chars with detected skills), analyze ONLY the CV file content
         // without polluting it with the demo database profile!
-        boolean hasRealCvFileText = StringUtils.hasText(extractedFileText) && extractedFileText.trim().length() > 40;
+        boolean hasRealCvFileText = isRealReadableCvText(extractedFileText);
         StringBuilder cvContentBuilder = new StringBuilder();
         if (hasRealCvFileText) {
             cvContentBuilder.append(extractedFileText.trim());
@@ -300,13 +303,22 @@ public class AiService {
 
         // Extract pure CV metadata directly from the CV text when available
         List<String> allDetectedCvSkills = extractAllSkillsFromCvText(cvTextLower);
+        Set<String> allDetectedLower = allDetectedCvSkills.stream().map(String::toLowerCase).collect(Collectors.toSet());
+        if (!hasRealCvFileText) {
+            candidateSkillMap.values().forEach(cs -> {
+                if (cs.getSkill() != null && StringUtils.hasText(cs.getSkill().getName())) {
+                    allDetectedLower.add(cs.getSkill().getName().toLowerCase());
+                }
+            });
+        }
+
         int parsedCvYears = hasRealCvFileText
                 ? extractExperienceYearsFromCvText(cvTextLower)
-                : candidateSkillMap.values().stream()
+                : (isInternOrFresherText(cvTextLower) ? 0 : candidateSkillMap.values().stream()
                         .map(CandidateSkill::getYearsExperience)
                         .filter(Objects::nonNull)
                         .max(Integer::compareTo)
-                        .orElse(0);
+                        .orElse(0));
         String parsedCvHeadline = hasRealCvFileText
                 ? extractHeadlineFromCvText(cvRawText)
                 : (profile != null && StringUtils.hasText(profile.getHeadline()) ? profile.getHeadline() : "Candidate");
@@ -315,7 +327,8 @@ public class AiService {
                 : (profile != null && StringUtils.hasText(profile.getCity()) ? profile.getCity() : "Ho Chi Minh City");
 
         // 2. Experience & Level requirement of the target JD
-        int requiredExpYears = switch (job.getExpLevel() != null ? job.getExpLevel().toUpperCase() : "JUNIOR") {
+        String jdLevelUpper = job.getExpLevel() != null ? job.getExpLevel().toUpperCase() : "JUNIOR";
+        int requiredExpYears = switch (jdLevelUpper) {
             case "INTERN", "FRESHER" -> 0;
             case "JUNIOR" -> 1;
             case "MIDDLE" -> 2;
@@ -324,13 +337,15 @@ public class AiService {
             default -> 1;
         };
 
-        // 3. Compare CV Skills vs JD Required Skills
+        // 3. Compare CV Skills vs JD Required Skills (with word-boundary matching & seniority depth attenuation)
         List<JobSkill> jobSkills = jobSkillRepository.findByJobId(jobId);
         List<AtsSkillBreakdownItem> matchedList = new ArrayList<>();
         List<AtsSkillBreakdownItem> missingList = new ArrayList<>();
         double totalWeight = 0;
         double gainedWeight = 0;
         int maxCandidateYears = parsedCvYears;
+
+        SeniorityCalibration senCal = computeSeniorityCalibration(parsedCvYears, jdLevelUpper, requiredExpYears);
 
         for (JobSkill js : jobSkills) {
             double w = js.getWeight() != null ? js.getWeight().doubleValue() : 1.0;
@@ -339,21 +354,21 @@ public class AiService {
             totalWeight += w;
 
             String skillName = js.getSkill().getName();
-            String skillLower = skillName.toLowerCase();
             CandidateSkill cs = hasRealCvFileText ? null : candidateSkillMap.get(js.getSkill().getId());
-            boolean foundInCvText = cvTextLower.contains(skillLower)
-                    || SKILL_TAXONOMY.getOrDefault(skillName, List.of()).stream().anyMatch(cvTextLower::contains);
+            boolean foundInCvText = skillMatchesCvText(cvTextLower, skillName);
 
-            // For INTERN/FRESHER jobs (requiredExpYears == 0), do not penalize 0 years of experience on individual skills
-            int rawNeedYears = js.getMinYearsExp() != null ? js.getMinYearsExp() : 0;
-            int needYears = requiredExpYears == 0 ? 0 : rawNeedYears;
+            int rawNeedYears = js.getMinYearsExp() != null ? js.getMinYearsExp() : requiredExpYears;
+            int needYears = requiredExpYears == 0 ? 0 : Math.max(requiredExpYears, rawNeedYears);
 
             if (cs != null || foundInCvText) {
                 int haveYears = cs != null && cs.getYearsExperience() != null
                         ? cs.getYearsExperience()
                         : Math.max(parsedCvYears, estimateSkillYears(cvTextLower, skillName, parsedCvYears));
+                if (parsedCvYears == 0 && isInternOrFresherText(cvTextLower)) {
+                    haveYears = 0;
+                }
                 maxCandidateYears = Math.max(maxCandidateYears, haveYears);
-                double earned = haveYears >= needYears ? w : w * 0.85;
+                double earned = haveYears >= needYears ? w : w * senCal.skillDepthFactor;
                 gainedWeight += earned;
 
                 matchedList.add(AtsSkillBreakdownItem.builder()
@@ -362,7 +377,9 @@ public class AiService {
                         .candidateYears(haveYears)
                         .isMatched(true)
                         .isRequired(isReq)
-                        .recommendation("Verified in CV (" + analyzedCvName + "). Highlight quantifiable impact achieved with " + skillName + " in your project descriptions.")
+                        .recommendation(haveYears >= needYears
+                                ? "Verified in CV (" + analyzedCvName + "). Highlight quantifiable impact achieved with " + skillName + "."
+                                : String.format("Keyword %s matched in CV projects (%d yr commercial exp vs %d+ yr required for %s level).", skillName, haveYears, needYears, jdLevelUpper))
                         .build());
             } else {
                 missingList.add(AtsSkillBreakdownItem.builder()
@@ -378,22 +395,33 @@ public class AiService {
             }
         }
 
-        double skillMatchRatio = jobSkills.isEmpty() ? 0.75 : (double) matchedList.size() / jobSkills.size();
-        int bonusDepth = (!matchedList.isEmpty() && allDetectedCvSkills.size() >= 6) ? 6 : 0;
-        int skillScore = totalWeight > 0
-                ? (int) Math.round(100.0 * gainedWeight / totalWeight) + bonusDepth
-                : 50;
-        skillScore = Math.max(10, Math.min(100, skillScore));
-
-        boolean expFulfilled = maxCandidateYears >= requiredExpYears;
-        int expScore;
-        if (expFulfilled) {
-            expScore = Math.min(100, 92 + Math.min(8, (maxCandidateYears - requiredExpYears) * 4));
-        } else if (requiredExpYears - maxCandidateYears == 1) {
-            expScore = 72;
-        } else {
-            expScore = 50;
+        // Check if Job Title demands a primary core specialization (e.g., Flutter, Mobile, Kotlin/Android, Golang) absent from CV
+        String missingTitleCoreSkill = detectMissingTitleCoreSkill(job.getTitle(), cvTextLower, allDetectedLower);
+        boolean hasCoreSpecMismatch = StringUtils.hasText(missingTitleCoreSkill);
+        if (hasCoreSpecMismatch && missingList.stream().noneMatch(m -> m.getName().equalsIgnoreCase(missingTitleCoreSkill))) {
+            missingList.add(0, AtsSkillBreakdownItem.builder()
+                    .name(missingTitleCoreSkill)
+                    .requiredYears(requiredExpYears)
+                    .candidateYears(0)
+                    .isMatched(false)
+                    .isRequired(true)
+                    .recommendation("Core specialization in Job Title (" + missingTitleCoreSkill + ") is not present in your CV.")
+                    .build());
         }
+
+        int totalSkillCount = jobSkills.size() + (hasCoreSpecMismatch ? 1 : 0);
+        double skillMatchRatio = totalSkillCount == 0 ? 0.70 : (double) matchedList.size() / totalSkillCount;
+        int bonusDepth = (senCal.levelMatched && !hasCoreSpecMismatch && !matchedList.isEmpty() && allDetectedCvSkills.size() >= 6) ? 5 : 0;
+        int skillScore = totalWeight > 0
+                ? (int) Math.round(100.0 * gainedWeight / (totalWeight + (hasCoreSpecMismatch ? 2.0 : 0.0))) + bonusDepth
+                : 45;
+        if (hasCoreSpecMismatch) {
+            skillScore = (int) Math.round(skillScore * 0.45);
+        }
+        skillScore = Math.max(10, Math.min(98, skillScore));
+
+        boolean expFulfilled = senCal.levelMatched;
+        int expScore = senCal.expScore;
 
         // 4. Keyword & JD Content Match Score
         String jdCombined = ((job.getTitle() != null ? job.getTitle() : "") + " "
@@ -402,26 +430,34 @@ public class AiService {
         int jdKeywordHits = 0;
         int jdKeywordTotal = 0;
         for (Map.Entry<String, List<String>> entry : SKILL_TAXONOMY.entrySet()) {
-            boolean inJd = entry.getValue().stream().anyMatch(jdCombined::contains);
+            boolean inJd = skillMatchesCvText(jdCombined, entry.getKey());
             if (inJd) {
                 jdKeywordTotal++;
-                boolean inCv = entry.getValue().stream().anyMatch(cvTextLower::contains)
+                boolean inCv = skillMatchesCvText(cvTextLower, entry.getKey())
                         || matchedList.stream().anyMatch(m -> m.getName().equalsIgnoreCase(entry.getKey()));
                 if (inCv) jdKeywordHits++;
             }
         }
-        int keywordScore = jdKeywordTotal > 0
+        int rawKwScore = jdKeywordTotal > 0
                 ? (int) Math.round(100.0 * jdKeywordHits / jdKeywordTotal)
                 : skillScore;
-        keywordScore = Math.max(25, Math.min(100, (keywordScore + skillScore) / 2));
+        int keywordScore = (int) Math.round(((rawKwScore + skillScore) / 2.0) * (0.45 + 0.55 * senCal.skillDepthFactor));
+        if (hasCoreSpecMismatch) {
+            keywordScore = Math.min(38, keywordScore);
+        }
+        keywordScore = Math.max(18, Math.min(98, keywordScore));
 
-        // Weighted Overall Score (60% Skills + 25% Experience + 15% JD Keywords) as baseline
-        int score = (int) Math.round(skillScore * 0.60 + expScore * 0.25 + keywordScore * 0.15);
-        score = Math.max(15, Math.min(100, score));
+        // Weighted Overall Score (50% Skills + 30% Experience/Seniority + 20% JD Keywords) capped by Seniority & Core Spec
+        int score = (int) Math.round(skillScore * 0.50 + expScore * 0.30 + keywordScore * 0.20);
+        score = Math.min(senCal.seniorityCap, score);
+        if (hasCoreSpecMismatch) {
+            score = Math.min(34, score);
+        }
+        score = Math.max(15, Math.min(98, score));
 
         String modelName = "TalentBridge-BiEncoder";
-        String modelVersion = "2.1.0-pytorch";
-        Double semanticSimilarity = Math.round(((score / 100.0) * 0.85 + 0.10) * 10000.0) / 10000.0;
+        String modelVersion = "3.0.0-e2e-transformer";
+        Double semanticSimilarity = Math.round(((score / 100.0) * 0.82 + 0.10) * 10000.0) / 10000.0;
         Double inferenceTimeMs = 1.45;
 
         // Invoke Real PyTorch Dual-Tower Bi-Encoder Microservice on port 8000 if available
@@ -441,10 +477,13 @@ public class AiService {
                     }
                 });
             }
-            List<String> jdReqSkills = jobSkills.stream()
+            List<String> jdReqSkills = new ArrayList<>(jobSkills.stream()
                     .filter(js -> Boolean.TRUE.equals(js.getIsRequired()))
                     .map(js -> js.getSkill().getName())
-                    .toList();
+                    .toList());
+            if (hasCoreSpecMismatch) {
+                jdReqSkills.add(missingTitleCoreSkill);
+            }
             List<String> jdOptSkills = jobSkills.stream()
                     .filter(js -> !Boolean.TRUE.equals(js.getIsRequired()))
                     .map(js -> js.getSkill().getName())
@@ -465,22 +504,20 @@ public class AiService {
                 int modelExp = aiPred.path("experience_score").asInt(expScore);
                 int modelKw = aiPred.path("keyword_score").asInt(keywordScore);
 
-                // Blend neural semantic prediction with exact JD skill/level alignment
-                int baseSkillFloor = skillMatchRatio >= 0.70
-                        ? Math.min(96, (int) Math.round(skillMatchRatio * 100) + bonusDepth)
-                        : 10;
-                skillScore = Math.max(baseSkillFloor, (int) Math.round(skillScore * 0.65 + modelSkill * 0.35));
+                skillScore = (int) Math.round(skillScore * 0.70 + (modelSkill * senCal.skillDepthFactor) * 0.30);
                 expScore = expFulfilled
-                        ? Math.max(88, (int) Math.round(expScore * 0.65 + modelExp * 0.35))
-                        : (int) Math.round(expScore * 0.55 + modelExp * 0.45);
-                keywordScore = (int) Math.round(keywordScore * 0.50 + modelKw * 0.50);
-                if (skillMatchRatio >= 0.70) {
-                    keywordScore = Math.max(75, keywordScore);
+                        ? Math.max(85, (int) Math.round(expScore * 0.70 + modelExp * 0.30))
+                        : Math.min(senCal.expScore + 4, (int) Math.round(expScore * 0.75 + modelExp * 0.25));
+                keywordScore = (int) Math.round(keywordScore * 0.65 + (modelKw * senCal.skillDepthFactor) * 0.35);
+
+                int weightedComposite = (int) Math.round(skillScore * 0.50 + expScore * 0.30 + keywordScore * 0.20);
+                score = (int) Math.round(weightedComposite * 0.75 + modelOverall * 0.25);
+                score = Math.min(senCal.seniorityCap, score);
+                if (hasCoreSpecMismatch) {
+                    skillScore = Math.min(38, skillScore);
+                    score = Math.min(34, score);
                 }
-                int weightedComposite = (int) Math.round(skillScore * 0.55 + expScore * 0.25 + keywordScore * 0.20);
-                score = skillMatchRatio >= 0.70 && expFulfilled
-                        ? Math.max(weightedComposite, (int) Math.round(modelOverall * 0.35 + weightedComposite * 0.65))
-                        : (int) Math.round(modelOverall * 0.45 + weightedComposite * 0.55);
+                score = Math.max(15, Math.min(98, score));
 
                 semanticSimilarity = aiPred.path("cosine_similarity").asDouble(semanticSimilarity);
                 inferenceTimeMs = aiPred.path("inference_time_ms").asDouble(inferenceTimeMs);
@@ -493,13 +530,13 @@ public class AiService {
 
         String rating;
         String color;
-        if (score >= 85) {
+        if (score >= 82) {
             rating = "STRONG MATCH";
             color = "emerald";
-        } else if (score >= 70) {
+        } else if (score >= 66) {
             rating = "GOOD MATCH";
             color = "teal";
-        } else if (score >= 50) {
+        } else if (score >= 48) {
             rating = "POTENTIAL FIT";
             color = "amber";
         } else {
@@ -514,7 +551,7 @@ public class AiService {
                 : allDetectedCvSkills.stream().limit(7).collect(Collectors.joining(", "));
         String cvSkillSummary;
         if (!matchedList.isEmpty()) {
-            cvSkillSummary = "Matched " + matchedList.size() + "/" + Math.max(1, jobSkills.size()) + " JD skills ("
+            cvSkillSummary = "Matched " + matchedList.size() + "/" + Math.max(1, totalSkillCount) + " JD skills ("
                     + matchedList.stream().limit(4).map(AtsSkillBreakdownItem::getName).collect(Collectors.joining(", ")) + ")"
                     + (StringUtils.hasText(detectedCvSkillsStr) ? " · CV Skills: " + detectedCvSkillsStr : "");
         } else if (StringUtils.hasText(detectedCvSkillsStr)) {
@@ -525,31 +562,30 @@ public class AiService {
 
         String jdSkillSummary = jobSkills.isEmpty()
                 ? "As specified in Job Description (JD)"
-                : "Requires " + jobSkills.size() + " skills ("
+                : "Requires " + totalSkillCount + " skills ("
+                + (hasCoreSpecMismatch ? missingTitleCoreSkill + ", " : "")
                 + jobSkills.stream().limit(5).map(js -> js.getSkill().getName()).collect(Collectors.joining(", ")) + ")";
         criteriaList.add(JdCriterionComparisonItem.builder()
                 .criterion("Technical Skills")
                 .cvValue(cvSkillSummary)
                 .jdValue(jdSkillSummary)
-                .status((skillMatchRatio >= 0.70 || skillScore >= 72) ? "MATCH" : (skillMatchRatio >= 0.40 || skillScore >= 48) ? "PARTIAL" : "GAP")
+                .status((!hasCoreSpecMismatch && (skillMatchRatio >= 0.70 || skillScore >= 72)) ? "MATCH" : (!hasCoreSpecMismatch && (skillMatchRatio >= 0.40 || skillScore >= 48)) ? "PARTIAL" : "GAP")
                 .build());
 
         String cvExpSummary;
         if (maxCandidateYears > 0) {
-            cvExpSummary = "~" + maxCandidateYears + " yrs experience · " + parsedCvHeadline;
+            cvExpSummary = "~" + maxCandidateYears + " yrs commercial experience · " + parsedCvHeadline;
         } else {
-            boolean isInternOrStudent = cvTextLower.contains("intern") || cvTextLower.contains("thực tập")
-                    || cvTextLower.contains("student") || cvTextLower.contains("sinh viên") || cvTextLower.contains("fresher");
-            String levelPrefix = isInternOrStudent ? "Intern / Fresher (Final-year Student)" : "Fresher / Entry-level (<1 yr)";
+            boolean isInternOrStudent = isInternOrFresherText(cvTextLower);
+            String levelPrefix = isInternOrStudent ? "Intern / Fresher (0 yrs commercial exp · Academic/Personal Projects)" : "Entry-level (<1 yr)";
             cvExpSummary = levelPrefix + (StringUtils.hasText(parsedCvHeadline) ? " · " + parsedCvHeadline : "");
         }
-        String jdExpSummary = (job.getExpLevel() != null ? job.getExpLevel() : "JUNIOR") + " Level"
-                + (requiredExpYears > 0 ? " (Min " + requiredExpYears + "+ yrs)" : " (No prior years required)");
+        String jdExpSummary = formatJdExpRequirementLabel(jdLevelUpper, requiredExpYears);
         criteriaList.add(JdCriterionComparisonItem.builder()
                 .criterion("Experience & Seniority")
                 .cvValue(cvExpSummary)
                 .jdValue(jdExpSummary)
-                .status((expFulfilled || expScore >= 78) ? "MATCH" : expScore >= 60 ? "PARTIAL" : "GAP")
+                .status(expFulfilled ? "MATCH" : expScore >= 58 ? "PARTIAL" : "GAP")
                 .build());
 
         String candCity = parsedCvCity;
@@ -566,24 +602,30 @@ public class AiService {
                 .build());
 
         List<String> strengths = new ArrayList<>();
-        if (!matchedList.isEmpty()) {
-            strengths.add("Your CV demonstrates strong alignment with core JD requirements: "
+        if (!matchedList.isEmpty() && !hasCoreSpecMismatch) {
+            strengths.add("Your CV demonstrates alignment with JD technologies: "
                     + matchedList.stream().limit(4).map(AtsSkillBreakdownItem::getName).collect(Collectors.joining(", ")) + ".");
-            if (expScore >= 80) {
-                strengths.add("Your experience level and technical focus align well with the " + job.getExpLevel() + " seniority required for " + job.getTitle() + ".");
+            if (expFulfilled) {
+                strengths.add("Your current seniority level aligns directly with the " + jdLevelUpper + " requirement for " + job.getTitle() + ".");
             }
         } else {
-            strengths.add("Your CV has a clear structure and can be tailored with domain-specific keywords from the JD.");
+            strengths.add("Your CV has a clear project structure, though this role targets a different specialization or seniority tier.");
         }
 
         List<String> tips = new ArrayList<>();
-        if (!missingList.isEmpty()) {
-            tips.add("Consider incorporating missing JD keywords into your CV: "
-                    + missingList.stream().limit(3).map(AtsSkillBreakdownItem::getName).collect(Collectors.joining(", "))
-                    + " (if you have relevant project or academic experience).");
+        if (!expFulfilled) {
+            tips.add(String.format("Seniority Gap Warning: Your CV is currently at %s (%d yrs commercial experience), whereas this JD requires %s. Prioritize INTERN / FRESHER openings for >85%% match.",
+                    maxCandidateYears == 0 ? "Intern/Fresher" : (maxCandidateYears + " yrs"),
+                    maxCandidateYears,
+                    jdExpSummary));
         }
-        tips.add("Highlight quantifiable project metrics and engineering outcomes in your CV and Cover Letter to stand out to "
-                + (job.getCompany() != null ? job.getCompany().getName() : "the hiring team") + ".");
+        if (!missingList.isEmpty()) {
+            tips.add("Missing JD keywords not detected in your CV: "
+                    + missingList.stream().limit(3).map(AtsSkillBreakdownItem::getName).collect(Collectors.joining(", ")) + ".");
+        } else {
+            tips.add("Highlight quantifiable project metrics and engineering outcomes in your CV and Cover Letter to stand out to "
+                    + (job.getCompany() != null ? job.getCompany().getName() : "the hiring team") + ".");
+        }
 
         String companyName = job.getCompany() != null ? job.getCompany().getName() : "Employer";
         String comment = String.format("AI CV vs JD Analysis [%s -> %s at %s]: %d%% Match (%s).",
@@ -715,55 +757,57 @@ public class AiService {
         else if (lower.contains("đà nẵng") || lower.contains("da nang") || lower.contains("danang")) city = "Da Nang";
         else if (lower.contains("cần thơ") || lower.contains("can tho")) city = "Can Tho";
 
-        // 3. Skills extraction
+        // 3. Skills extraction (using word-boundary matching and CV experience baseline)
+        int baseCvYears = extractExperienceYearsFromCvText(lower);
         List<ExtractedSkillItem> skills = new ArrayList<>();
         for (Map.Entry<String, List<String>> entry : SKILL_TAXONOMY.entrySet()) {
             String skillName = entry.getKey();
-            List<String> keywords = entry.getValue();
-
-            boolean found = keywords.stream().anyMatch(lower::contains);
+            boolean found = skillMatchesCvText(lower, skillName);
             if (found) {
-                int years = estimateSkillYears(lower, skillName);
+                int years = estimateSkillYears(lower, skillName, baseCvYears);
                 String prof = years >= 4 ? "EXPERT" : years >= 2 ? "ADVANCED" : "INTERMEDIATE";
                 skills.add(ExtractedSkillItem.builder()
                         .name(skillName)
                         .proficiency(prof)
                         .yearsExperience(years)
                         .confidenceScore(0.92)
-                        .isCore(years >= 2)
+                        .isCore(years >= 2 || baseCvYears == 0)
                         .build());
             }
         }
 
         // If no skills found, give fallback foundational set
         if (skills.isEmpty()) {
-            skills.add(ExtractedSkillItem.builder().name("Java").proficiency("INTERMEDIATE").yearsExperience(2).confidenceScore(0.85).isCore(true).build());
-            skills.add(ExtractedSkillItem.builder().name("Spring Boot").proficiency("INTERMEDIATE").yearsExperience(2).confidenceScore(0.85).isCore(true).build());
-            skills.add(ExtractedSkillItem.builder().name("SQL").proficiency("INTERMEDIATE").yearsExperience(2).confidenceScore(0.80).isCore(false).build());
+            skills.add(ExtractedSkillItem.builder().name("Java").proficiency("INTERMEDIATE").yearsExperience(baseCvYears).confidenceScore(0.85).isCore(true).build());
+            skills.add(ExtractedSkillItem.builder().name("Spring Boot").proficiency("INTERMEDIATE").yearsExperience(baseCvYears).confidenceScore(0.85).isCore(true).build());
+            skills.add(ExtractedSkillItem.builder().name("SQL").proficiency("INTERMEDIATE").yearsExperience(baseCvYears).confidenceScore(0.80).isCore(false).build());
         }
 
         // 4. Headline
-        String headline = "Software Engineer";
-        if (lower.contains("backend") || lower.contains("spring")) headline = "Backend Developer (Java / Spring Boot)";
-        else if (lower.contains("frontend") || lower.contains("react")) headline = "Frontend Developer (React / TypeScript)";
-        else if (lower.contains("fullstack")) headline = "Fullstack Software Engineer";
-        else if (lower.contains("ai") || lower.contains("data")) headline = "AI / Data Systems Engineer";
+        String headline = extractHeadlineFromCvText(content);
+        if (!StringUtils.hasText(headline) || "Software Engineer".equals(headline)) {
+            if (lower.contains("backend") || lower.contains("spring")) headline = "Backend Developer (Java / Spring Boot)";
+            else if (lower.contains("frontend") || lower.contains("react")) headline = "Frontend Developer (React / TypeScript)";
+            else if (lower.contains("fullstack") || lower.contains("full-stack")) headline = "Fullstack Software Engineer";
+            else if (lower.contains("ai") || lower.contains("data")) headline = "AI / Data Systems Engineer";
+        }
 
         // 5. Summary
-        String summary = String.format("Passionate Software Engineer with hands-on experience in %s. Proven track record in designing, building, and optimizing high-availability systems following clean architecture and security best practices.",
-                skills.stream().limit(3).map(ExtractedSkillItem::getName).collect(Collectors.joining(", ")));
+        String summary = String.format("Passionate %s with hands-on experience in %s. Proven track record in designing, building, and optimizing software systems following clean architecture and security best practices.",
+                headline,
+                skills.stream().limit(4).map(ExtractedSkillItem::getName).collect(Collectors.joining(", ")));
 
         // 6. Experiences
         List<ExtractedExperienceItem> experiences = new ArrayList<>();
         experiences.add(ExtractedExperienceItem.builder()
                 .role(headline)
-                .company("Technology Enterprise")
-                .period("2023 - Present")
+                .company(baseCvYears == 0 ? "Academic & Personal Engineering Projects" : "Technology Enterprise")
+                .period(baseCvYears == 0 ? "2025 - 2026" : "2023 - Present")
                 .location(city)
                 .highlights(List.of(
                         "Developed scalable RESTful backend services handling high daily API throughput.",
                         "Optimized database queries and transaction management for mission-critical reliability.",
-                        "Collaborated in Agile/Scrum teams to deliver containerized Docker & CI/CD deployments."
+                        "Collaborated in Agile/Scrum teams to deliver containerized Docker deployments."
                 ))
                 .build());
 
@@ -772,8 +816,8 @@ public class AiService {
         educations.add(ExtractedEducationItem.builder()
                 .school("University of Information Technology & Engineering")
                 .degree("B.S. in Software Engineering")
-                .year("2019 - 2023")
-                .details("GPA: 3.5/4.0 • Completed Capstone Project on modern distributed web architecture.")
+                .year(baseCvYears == 0 ? "2023 - 2027 (Expected)" : "2019 - 2023")
+                .details("Completed Capstone & Full-stack Web Engineering Projects.")
                 .build());
 
         // 8. Quality Score
@@ -815,11 +859,14 @@ public class AiService {
     }
 
     private int estimateSkillYears(String lowerText, String skill) {
-        return estimateSkillYears(lowerText, skill, 1);
+        return estimateSkillYears(lowerText, skill, extractExperienceYearsFromCvText(lowerText));
     }
 
     private int estimateSkillYears(String lowerText, String skill, int defaultYears) {
-        Pattern p = Pattern.compile("([1-9]|1[0-5])\\s*\\+?\\s*(năm|years?)\\s*(of\\s+)?(kinh nghiệm|experience)?.*" + Pattern.quote(skill.toLowerCase()));
+        if (defaultYears == 0 && isInternOrFresherText(lowerText)) {
+            return 0;
+        }
+        Pattern p = Pattern.compile("([1-9]|1[0-5])\\s*\\+?\\s*(năm|years?)\\s*(of\\s+)?(kinh nghiệm|experience)\\b[^.\\n]{0,60}" + Pattern.quote(skill.toLowerCase()));
         Matcher m = p.matcher(lowerText);
         if (m.find()) {
             try {
@@ -829,17 +876,60 @@ public class AiService {
         return defaultYears;
     }
 
+    /**
+     * Strict token/word-boundary skill matcher to prevent substring false positives
+     * (e.g., "ts" matching "projects", "java" matching "javascript", "go" matching "mongodb").
+     */
+    private boolean containsSkillKeyword(String textLower, String keywordLower) {
+        if (!StringUtils.hasText(textLower) || !StringUtils.hasText(keywordLower)) {
+            return false;
+        }
+        String kw = keywordLower.trim().toLowerCase();
+        if (kw.isEmpty()) return false;
+        String regex = "(?<![a-z0-9+#.])" + Pattern.quote(kw) + "(?![a-z0-9+#.])";
+        return Pattern.compile(regex).matcher(textLower).find();
+    }
+
+    private boolean skillMatchesCvText(String textLower, String skillName) {
+        if (!StringUtils.hasText(textLower) || !StringUtils.hasText(skillName)) {
+            return false;
+        }
+        if (containsSkillKeyword(textLower, skillName.toLowerCase())) {
+            return true;
+        }
+        List<String> aliases = SKILL_TAXONOMY.getOrDefault(skillName, List.of());
+        for (String alias : aliases) {
+            if (containsSkillKeyword(textLower, alias)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private List<String> extractAllSkillsFromCvText(String cvTextLower) {
         List<String> detected = new ArrayList<>();
         for (Map.Entry<String, List<String>> entry : SKILL_TAXONOMY.entrySet()) {
             String skillName = entry.getKey();
-            boolean found = cvTextLower.contains(skillName.toLowerCase())
-                    || entry.getValue().stream().anyMatch(cvTextLower::contains);
-            if (found) {
+            if (skillMatchesCvText(cvTextLower, skillName)) {
                 detected.add(skillName);
             }
         }
         return detected;
+    }
+
+    private boolean isInternOrFresherText(String cvTextLower) {
+        if (!StringUtils.hasText(cvTextLower)) return false;
+        boolean hasExplicitYears = Pattern.compile("\\b([1-9]|1[0-5])\\s*\\+?\\s*(?:years?|năm)\\s+(?:of\\s+)?(?:experience|kinh nghiệm|làm việc)")
+                .matcher(cvTextLower).find();
+        if (hasExplicitYears) return false;
+        return containsSkillKeyword(cvTextLower, "intern")
+                || containsSkillKeyword(cvTextLower, "internship")
+                || containsSkillKeyword(cvTextLower, "fresher")
+                || cvTextLower.contains("final-year")
+                || containsSkillKeyword(cvTextLower, "student")
+                || cvTextLower.contains("sinh viên")
+                || cvTextLower.contains("thực tập")
+                || cvTextLower.contains("mới tốt nghiệp");
     }
 
     private int extractExperienceYearsFromCvText(String cvTextLower) {
@@ -856,12 +946,166 @@ public class AiService {
             return maxFound;
         }
         // If CV mentions intern/fresher/final-year student without explicit years of experience -> 0 years
-        if (cvTextLower.contains("intern") || cvTextLower.contains("internship") || cvTextLower.contains("fresher")
-                || cvTextLower.contains("final-year") || cvTextLower.contains("student")
-                || cvTextLower.contains("sinh viên") || cvTextLower.contains("thực tập")) {
+        if (isInternOrFresherText(cvTextLower)) {
             return 0;
         }
         return 1;
+    }
+
+    private boolean isRealReadableCvText(String txt) {
+        if (!StringUtils.hasText(txt)) return false;
+        String trimmed = txt.trim();
+        if (trimmed.length() < 220) return false;
+        return !extractAllSkillsFromCvText(trimmed.toLowerCase()).isEmpty();
+    }
+
+    private Cv resolveBestCandidateCv(CandidateProfile profile, Long cvId) {
+        if (cvId != null) {
+            return cvRepository.findById(cvId).orElse(null);
+        }
+        if (profile == null) {
+            return null;
+        }
+        List<Cv> cvs = cvRepository.findByCandidateProfileIdAndDeletedAtIsNullOrderByIsDefaultDescCreatedAtDesc(profile.getId());
+        if (cvs.isEmpty()) {
+            return null;
+        }
+        // Prefer the first CV that actually has a readable resume document over a tiny seed placeholder
+        for (Cv c : cvs) {
+            String txt = readCvDocumentText(c);
+            if (isRealReadableCvText(txt)) {
+                return c;
+            }
+        }
+        return cvs.get(0);
+    }
+
+    private String readCvDocumentText(Cv targetCv) {
+        if (targetCv == null) return "";
+        Path localFile = candidateService.resolveLocalFile(targetCv);
+        if (localFile != null && Files.exists(localFile)) {
+            try {
+                return extractDocumentText(Files.readAllBytes(localFile), targetCv.getFileName());
+            } catch (IOException ignored) {}
+        }
+        return "";
+    }
+
+    private static class SeniorityCalibration {
+        final int expScore;
+        final double skillDepthFactor;
+        final int seniorityCap;
+        final boolean levelMatched;
+
+        SeniorityCalibration(int expScore, double skillDepthFactor, int seniorityCap, boolean levelMatched) {
+            this.expScore = expScore;
+            this.skillDepthFactor = skillDepthFactor;
+            this.seniorityCap = seniorityCap;
+            this.levelMatched = levelMatched;
+        }
+    }
+
+    /**
+     * Computes realistic seniority alignment, skill-depth attenuation, and maximum overall score cap.
+     * Prevents an Intern/Fresher (0 yrs) from scoring >90% on Junior (1-3 yrs), Middle (2-4 yrs), or Senior (4+ yrs) JDs.
+     */
+    private SeniorityCalibration computeSeniorityCalibration(int candidateYears, String jdLevelUpper, int requiredExpYears) {
+        String level = jdLevelUpper != null ? jdLevelUpper.toUpperCase() : "JUNIOR";
+        if (candidateYears == 0) {
+            return switch (level) {
+                case "INTERN" -> new SeniorityCalibration(96, 1.00, 97, true);
+                case "FRESHER" -> new SeniorityCalibration(88, 0.94, 90, true);
+                case "JUNIOR" -> new SeniorityCalibration(46, 0.70, 68, false);
+                case "MIDDLE" -> new SeniorityCalibration(30, 0.55, 54, false);
+                case "SENIOR", "LEAD", "MANAGER" -> new SeniorityCalibration(18, 0.40, 40, false);
+                default -> new SeniorityCalibration(46, 0.70, 68, false);
+            };
+        }
+        int deficit = requiredExpYears - candidateYears;
+        if (deficit <= 0) {
+            int over = candidateYears - requiredExpYears;
+            boolean sameTier = over <= 2;
+            int expScore = Math.min(98, 92 + Math.min(6, over * 2));
+            return new SeniorityCalibration(expScore, 1.00, 97, sameTier);
+        }
+        if (deficit == 1) {
+            return new SeniorityCalibration(62, 0.82, 74, false);
+        }
+        if (deficit == 2) {
+            return new SeniorityCalibration(44, 0.66, 60, false);
+        }
+        return new SeniorityCalibration(28, 0.50, 46, false);
+    }
+
+    private String formatJdExpRequirementLabel(String jdLevelUpper, int requiredExpYears) {
+        return switch (jdLevelUpper != null ? jdLevelUpper.toUpperCase() : "JUNIOR") {
+            case "INTERN" -> "INTERN Level (0 yrs required · Student / Internship)";
+            case "FRESHER" -> "FRESHER Level (0 - <1 yr · Entry-level / Fresh Graduate)";
+            case "JUNIOR" -> "JUNIOR Level (Requires 1 - 3 yrs commercial experience)";
+            case "MIDDLE" -> "MIDDLE Level (Requires 2 - 4 yrs commercial experience)";
+            case "SENIOR" -> "SENIOR Level (Requires 4+ yrs commercial experience)";
+            case "LEAD", "MANAGER" -> jdLevelUpper + " Level (Requires 5+ yrs commercial experience)";
+            default -> jdLevelUpper + " Level (Min " + requiredExpYears + "+ yrs)";
+        };
+    }
+
+    /**
+     * Detects if a Job Title explicitly demands a core specialization (e.g., Flutter, Mobile, Android/Kotlin, Golang,
+     * Next.js, DevOps, QA Automation, Data/Python) that is completely absent from the candidate's CV.
+     */
+    private String detectMissingTitleCoreSkill(String jobTitle, String cvTextLower, Set<String> candidateSkillsLower) {
+        if (!StringUtils.hasText(jobTitle)) return null;
+        String t = jobTitle.toLowerCase();
+
+        if (t.contains("flutter")) {
+            if (!hasAnySkill(cvTextLower, candidateSkillsLower, "flutter", "dart")) return "Flutter / Dart";
+        }
+        if (t.contains("android") || t.contains("kotlin")) {
+            if (!hasAnySkill(cvTextLower, candidateSkillsLower, "kotlin", "android")) return "Kotlin / Android";
+        }
+        if (t.contains("ios") || t.contains("swift")) {
+            if (!hasAnySkill(cvTextLower, candidateSkillsLower, "swift", "ios")) return "Swift / iOS";
+        }
+        if (t.contains("mobile")) {
+            if (!hasAnySkill(cvTextLower, candidateSkillsLower, "flutter", "dart", "kotlin", "android", "swift", "ios", "react native")) {
+                return "Mobile Development (Flutter / Android / iOS)";
+            }
+        }
+        if (t.contains("golang") || containsSkillKeyword(t, "go")) {
+            if (!t.contains("java") && !hasAnySkill(cvTextLower, candidateSkillsLower, "go", "golang")) {
+                return "Golang (Go)";
+            }
+        }
+        if (t.contains("next.js") || t.contains("nextjs")) {
+            if (!hasAnySkill(cvTextLower, candidateSkillsLower, "next.js", "nextjs")) {
+                return "Next.js";
+            }
+        }
+        if (t.contains("devops") || t.contains("cloud architect")) {
+            if (!hasAnySkill(cvTextLower, candidateSkillsLower, "kubernetes", "ci/cd", "aws", "terraform", "devops")) {
+                return "Cloud / DevOps (CI/CD, Kubernetes, AWS)";
+            }
+        }
+        if (t.contains("qa ") || t.startsWith("qa") || t.contains("automation") || t.contains("tester")) {
+            if (!hasAnySkill(cvTextLower, candidateSkillsLower, "selenium", "playwright", "cypress", "qa", "automation test")) {
+                return "QA / Test Automation";
+            }
+        }
+        if (t.contains("data engineer") || t.contains("computer vision") || t.contains("ai &")) {
+            if (!hasAnySkill(cvTextLower, candidateSkillsLower, "python", "pytorch", "machine learning")) {
+                return "Python / Data & AI";
+            }
+        }
+        return null;
+    }
+
+    private boolean hasAnySkill(String cvTextLower, Set<String> candidateSkillsLower, String... targets) {
+        for (String target : targets) {
+            String tl = target.toLowerCase();
+            if (candidateSkillsLower != null && candidateSkillsLower.contains(tl)) return true;
+            if (skillMatchesCvText(cvTextLower, target)) return true;
+        }
+        return false;
     }
 
     private String extractHeadlineFromCvText(String rawText) {
@@ -995,54 +1239,47 @@ public class AiService {
             }
         }
 
-        // 1. Resolve Selected CV (cvId) or Default CV and extract its real document text
+        // 1. Resolve Selected CV (cvId) or Best Real CV and extract its real document text
         Long resolvedCvId = cvId;
         String analyzedCvName = "Hồ sơ ứng viên TalentBridge";
         String extractedFileText = "";
 
-        Cv targetCv = null;
-        if (cvId != null) {
-            targetCv = cvRepository.findById(cvId).orElse(null);
-        } else if (profile != null) {
-            List<Cv> cvs = cvRepository.findByCandidateProfileIdAndDeletedAtIsNullOrderByIsDefaultDescCreatedAtDesc(profile.getId());
-            if (!cvs.isEmpty()) {
-                targetCv = cvs.get(0);
-            }
-        }
+        Cv targetCv = resolveBestCandidateCv(profile, cvId);
         if (targetCv != null) {
             resolvedCvId = targetCv.getId();
             analyzedCvName = StringUtils.hasText(targetCv.getTitle())
                     ? targetCv.getTitle() + " (" + targetCv.getFileName() + ")"
                     : targetCv.getFileName();
-            Path localFile = candidateService.resolveLocalFile(targetCv);
-            if (localFile != null && Files.exists(localFile)) {
-                try {
-                    extractedFileText = extractDocumentText(Files.readAllBytes(localFile), targetCv.getFileName());
-                } catch (IOException ignored) {}
-            }
+            extractedFileText = readCvDocumentText(targetCv);
         }
 
-        boolean hasRealCvFileText = StringUtils.hasText(extractedFileText) && extractedFileText.trim().length() > 40;
+        // Strict CV Isolation: if a real CV file (>= 220 chars with detected skills) is present, evaluate ONLY that CV file
+        // without polluting skills or experience with the demo database profile!
+        boolean hasRealCvFileText = isRealReadableCvText(extractedFileText);
         StringBuilder cvContentBuilder = new StringBuilder();
         if (hasRealCvFileText) {
-            cvContentBuilder.append(extractedFileText.trim()).append("\n");
-        }
-        if (profile != null) {
-            if (StringUtils.hasText(profile.getHeadline())) cvContentBuilder.append(profile.getHeadline()).append("\n");
-            if (StringUtils.hasText(profile.getBio())) cvContentBuilder.append(profile.getBio()).append("\n");
-        }
-        for (CandidateSkill cs : candidateSkills) {
-            if (cs.getSkill() != null && StringUtils.hasText(cs.getSkill().getName())) {
-                cvContentBuilder.append(cs.getSkill().getName()).append(" ");
+            cvContentBuilder.append(extractedFileText.trim());
+        } else {
+            if (profile != null) {
+                if (StringUtils.hasText(profile.getHeadline())) cvContentBuilder.append(profile.getHeadline()).append("\n");
+                if (StringUtils.hasText(profile.getBio())) cvContentBuilder.append(profile.getBio()).append("\n");
+            }
+            for (CandidateSkill cs : candidateSkills) {
+                if (cs.getSkill() != null && StringUtils.hasText(cs.getSkill().getName())) {
+                    cvContentBuilder.append(cs.getSkill().getName()).append(" ");
+                }
             }
         }
 
         String cvRawText = cvContentBuilder.toString();
         String cvTextLower = cvRawText.toLowerCase();
         List<String> allDetectedCvSkills = extractAllSkillsFromCvText(cvTextLower);
-        Set<String> allCandidateSkillNamesLower = new HashSet<>(candidateSkillMap.keySet());
+        Set<String> allCandidateSkillNamesLower = new HashSet<>();
         for (String s : allDetectedCvSkills) {
             allCandidateSkillNamesLower.add(s.toLowerCase());
+        }
+        if (!hasRealCvFileText) {
+            allCandidateSkillNamesLower.addAll(candidateSkillMap.keySet());
         }
 
         // 2. Behavioral signals from candidate's past applications
@@ -1067,11 +1304,11 @@ public class AiService {
         // 3. Candidate seniority, city, and primary career domain
         int candidateYears = hasRealCvFileText
                 ? extractExperienceYearsFromCvText(cvTextLower)
-                : candidateSkills.stream()
+                : (isInternOrFresherText(cvTextLower) ? 0 : candidateSkills.stream()
                         .map(CandidateSkill::getYearsExperience)
                         .filter(Objects::nonNull)
                         .max(Integer::compareTo)
-                        .orElse(0);
+                        .orElse(0));
         String candidateCity = hasRealCvFileText
                 ? extractCityFromCvText(cvTextLower)
                 : (profile != null && StringUtils.hasText(profile.getCity()) ? profile.getCity() : "Ho Chi Minh City");
@@ -1096,7 +1333,8 @@ public class AiService {
             double totalWeight = 0;
             double gainedWeight = 0;
 
-            int requiredExpYears = switch (job.getExpLevel() != null ? job.getExpLevel().toUpperCase() : "JUNIOR") {
+            String jdLevelUpper = job.getExpLevel() != null ? job.getExpLevel().toUpperCase() : "JUNIOR";
+            int requiredExpYears = switch (jdLevelUpper) {
                 case "INTERN", "FRESHER" -> 0;
                 case "JUNIOR" -> 1;
                 case "MIDDLE" -> 2;
@@ -1104,6 +1342,8 @@ public class AiService {
                 case "LEAD", "MANAGER" -> 5;
                 default -> 1;
             };
+
+            SeniorityCalibration senCal = computeSeniorityCalibration(candidateYears, jdLevelUpper, requiredExpYears);
 
             for (JobSkill js : jobSkills) {
                 if (js.getSkill() == null || !StringUtils.hasText(js.getSkill().getName())) continue;
@@ -1115,58 +1355,47 @@ public class AiService {
                 totalWeight += w;
 
                 boolean inCvOrProfile = allCandidateSkillNamesLower.contains(skLower)
-                        || cvTextLower.contains(skLower)
-                        || SKILL_TAXONOMY.getOrDefault(skName, List.of()).stream().anyMatch(cvTextLower::contains);
+                        || skillMatchesCvText(cvTextLower, skName);
                 boolean inBehavioral = !hasRealCvFileText && allCandidateSkillNamesLower.isEmpty() && behavioralSkillLower.contains(skLower);
 
                 if (inCvOrProfile || inBehavioral) {
                     matched.add(skName);
-                    gainedWeight += w;
+                    int needYears = requiredExpYears == 0 ? 0 : Math.max(requiredExpYears, js.getMinYearsExp() != null ? js.getMinYearsExp() : requiredExpYears);
+                    double earned = candidateYears >= needYears ? w : w * senCal.skillDepthFactor;
+                    gainedWeight += earned;
                 } else {
                     missing.add(skName);
                 }
             }
 
-            // Pillar 1: Technical Skills Score (55%)
-            int bonusDepth = (!matched.isEmpty() && allCandidateSkillNamesLower.size() >= 5) ? 6 : 0;
+            // Check if Job Title demands a primary core specialization (e.g., Flutter, Mobile, Kotlin/Android, Golang) absent from CV
+            String missingTitleCoreSkill = detectMissingTitleCoreSkill(job.getTitle(), cvTextLower, allCandidateSkillNamesLower);
+            boolean hasCoreSpecMismatch = StringUtils.hasText(missingTitleCoreSkill);
+            if (hasCoreSpecMismatch && missing.stream().noneMatch(m -> m.equalsIgnoreCase(missingTitleCoreSkill))) {
+                missing.add(0, missingTitleCoreSkill);
+            }
+
+            // Pillar 1: Technical Skills Score (50%)
+            int bonusDepth = (senCal.levelMatched && !hasCoreSpecMismatch && !matched.isEmpty() && allCandidateSkillNamesLower.size() >= 5) ? 5 : 0;
             int skillScore;
             if (totalWeight > 0) {
-                skillScore = (int) Math.round(100.0 * gainedWeight / totalWeight) + bonusDepth;
+                skillScore = (int) Math.round(100.0 * gainedWeight / (totalWeight + (hasCoreSpecMismatch ? 2.0 : 0.0))) + bonusDepth;
             } else {
                 String jdText = ((job.getTitle() != null ? job.getTitle() : "") + " "
                         + (job.getDescription() != null ? job.getDescription() : "")).toLowerCase();
-                long kwHits = allCandidateSkillNamesLower.stream().filter(jdText::contains).count();
-                skillScore = kwHits >= 2 ? 78 : kwHits == 1 ? 60 : 35;
+                long kwHits = allCandidateSkillNamesLower.stream().filter(s -> containsSkillKeyword(jdText, s)).count();
+                skillScore = (int) Math.round((kwHits >= 2 ? 78 : kwHits == 1 ? 60 : 30) * senCal.skillDepthFactor);
             }
-            skillScore = Math.max(10, Math.min(100, skillScore));
-
-            // Pillar 2: Experience & Seniority Alignment (20%)
-            boolean levelMatched = false;
-            int expScore;
-            if (candidateYears == 0) {
-                // Student / Intern / Fresher candidate
-                if (requiredExpYears == 0) {
-                    expScore = 98;
-                    levelMatched = true;
-                } else if (requiredExpYears == 1) {
-                    expScore = 86;
-                    levelMatched = true;
-                } else if (requiredExpYears == 2) {
-                    expScore = 66;
-                } else {
-                    expScore = 42;
-                }
-            } else if (candidateYears >= requiredExpYears) {
-                expScore = Math.min(100, 92 + Math.min(8, (candidateYears - requiredExpYears) * 3));
-                levelMatched = (candidateYears - requiredExpYears) <= 2;
-            } else if (requiredExpYears - candidateYears == 1) {
-                expScore = 76;
-                levelMatched = true;
-            } else {
-                expScore = 48;
+            if (hasCoreSpecMismatch) {
+                skillScore = (int) Math.round(skillScore * 0.42);
             }
+            skillScore = Math.max(10, Math.min(98, skillScore));
 
-            // Pillar 3: Domain & Role Semantic Alignment (15%)
+            // Pillar 2: Experience & Seniority Alignment (30%)
+            boolean levelMatched = senCal.levelMatched;
+            int expScore = senCal.expScore;
+
+            // Pillar 3: Domain & Role Semantic Alignment (12%)
             String jdCombinedLower = ((job.getTitle() != null ? job.getTitle() : "") + " "
                     + (job.getDescription() != null ? job.getDescription() : "") + " "
                     + (job.getRequirements() != null ? job.getRequirements() : "")).toLowerCase();
@@ -1178,19 +1407,23 @@ public class AiService {
             String jobSubTrack = inferTechSubTrack(jdCombinedLower, jobSkillNamesLower);
 
             int domainScore;
-            if (candidateDomain.equals(jobDomain)) {
+            if (hasCoreSpecMismatch) {
+                domainScore = 26;
+            } else if (candidateDomain.equals(jobDomain)) {
                 if (StringUtils.hasText(candidateSubTrack) && candidateSubTrack.equals(jobSubTrack)) {
                     domainScore = 96;
-                } else if ("FULLSTACK".equals(candidateSubTrack) || "FULLSTACK".equals(jobSubTrack)) {
+                } else if (("FULLSTACK".equals(candidateSubTrack) || "FULLSTACK".equals(jobSubTrack))
+                        && ("BACKEND".equals(candidateSubTrack) || "FRONTEND".equals(candidateSubTrack)
+                            || "BACKEND".equals(jobSubTrack) || "FRONTEND".equals(jobSubTrack))) {
                     domainScore = 90;
                 } else {
-                    domainScore = 82;
+                    domainScore = 65;
                 }
             } else {
-                domainScore = matched.isEmpty() ? 15 : 55;
+                domainScore = matched.isEmpty() ? 15 : 45;
             }
 
-            // Pillar 4: Location, Work Mode & Behavioral Affinity (10%)
+            // Pillar 4: Location, Work Mode & Behavioral Affinity (8%)
             String jobCity = StringUtils.hasText(job.getLocationCity()) ? job.getLocationCity() : "Vietnam";
             boolean isRemoteOrHybrid = "REMOTE".equalsIgnoreCase(job.getJobType()) || "HYBRID".equalsIgnoreCase(job.getJobType());
             boolean cityMatched = candidateCity.equalsIgnoreCase(jobCity)
@@ -1199,17 +1432,18 @@ public class AiService {
                     || (candidateCity.toLowerCase().contains("da nang") && jobCity.toLowerCase().contains("đà nẵng"))
                     || isRemoteOrHybrid;
             long behavioralOverlap = jobSkillNamesLower.stream().filter(behavioralSkillLower::contains).count();
-            int contextScore = (cityMatched ? 88 : 65) + (behavioralOverlap >= 2 ? 12 : behavioralOverlap == 1 ? 6 : 0);
+            int contextScore = (cityMatched ? 88 : 65) + (behavioralOverlap >= 2 ? 10 : behavioralOverlap == 1 ? 5 : 0);
             contextScore = Math.min(100, contextScore);
 
-            // Composite Weighted Score (55% Skills + 20% Level/Exp + 15% Domain + 10% Location/Behavior)
-            int score = (int) Math.round(skillScore * 0.55 + expScore * 0.20 + domainScore * 0.15 + contextScore * 0.10);
-            if (matched.isEmpty() && domainScore < 50) {
+            // Composite Weighted Score (50% Skills + 30% Level/Exp + 12% Domain + 8% Location/Behavior)
+            int score = (int) Math.round(skillScore * 0.50 + expScore * 0.30 + domainScore * 0.12 + contextScore * 0.08);
+            score = Math.min(senCal.seniorityCap, score);
+            if (hasCoreSpecMismatch) {
+                score = Math.min(34, score);
+            } else if (matched.isEmpty() && domainScore < 50) {
                 score = Math.min(score, 25);
-            } else if (!jobSkills.isEmpty() && matched.size() == jobSkills.size() && levelMatched) {
-                score = Math.max(score, 92);
             }
-            score = Math.max(15, Math.min(99, score));
+            score = Math.max(15, Math.min(97, score));
 
             String rating;
             String color;
@@ -1227,20 +1461,23 @@ public class AiService {
                 color = "rose";
             }
 
+            int totalDisplaySkills = Math.max(matched.size() + missing.size(), jobSkills.size());
             List<String> reasons = new ArrayList<>();
             if (!matched.isEmpty()) {
                 reasons.add(String.format("Khớp %d/%d kỹ năng (%s)",
-                        matched.size(), Math.max(matched.size(), jobSkills.size()),
+                        matched.size(), Math.max(1, totalDisplaySkills),
                         matched.stream().limit(3).collect(Collectors.joining(", "))));
             }
             if (levelMatched && StringUtils.hasText(job.getExpLevel())) {
                 reasons.add("Đúng cấp bậc " + job.getExpLevel());
+            } else if (!levelMatched && requiredExpYears > candidateYears) {
+                reasons.add(String.format("Chênh lệch KN (CV: %s vs JD: %s %d+ năm)",
+                        candidateYears == 0 ? "Intern/Fresher 0 năm" : (candidateYears + " năm"),
+                        jdLevelUpper,
+                        requiredExpYears));
             }
             if (cityMatched) {
                 reasons.add("REMOTE".equalsIgnoreCase(job.getJobType()) ? "Làm việc Remote linh hoạt" : "Khu vực " + jobCity);
-            }
-            if (behavioralOverlap >= 2) {
-                reasons.add("Cùng nhóm công nghệ bạn đã ứng tuyển");
             }
 
             String primaryReason = !reasons.isEmpty()
@@ -1248,12 +1485,17 @@ public class AiService {
                     : "Cơ hội phù hợp với định hướng chuyên môn của bạn";
 
             String tip;
-            if (!missing.isEmpty()) {
+            if (!levelMatched && requiredExpYears > candidateYears) {
+                tip = String.format("JD yêu cầu cấp bậc %s (%d+ năm KN), trong khi CV của bạn đang ở mức %s (%d năm KN thực tế).",
+                        jdLevelUpper, requiredExpYears,
+                        candidateYears == 0 ? "Intern / Fresher" : (candidateYears + " năm"),
+                        candidateYears);
+            } else if (!missing.isEmpty()) {
                 String topMissing = missing.stream().limit(2).collect(Collectors.joining(", "));
-                int boosted = Math.min(99, score + Math.min(18, missing.size() * 7));
-                tip = String.format("Bổ sung từ khóa %s vào CV để nâng độ khớp lên ~%d%%", topMissing, boosted);
+                int boosted = Math.min(senCal.seniorityCap, score + Math.min(15, missing.size() * 6));
+                tip = String.format("Bổ sung kỹ năng %s vào CV để nâng độ khớp lên ~%d%%", topMissing, boosted);
             } else {
-                tip = "CV của bạn đáp ứng đầy đủ kỹ năng cốt lõi của JD này!";
+                tip = "CV của bạn đáp ứng tốt cả kỹ năng cốt lõi lẫn cấp bậc của JD này!";
             }
 
             allScored.add(RecommendedJobDto.builder()
@@ -1302,10 +1544,10 @@ public class AiService {
         combined.addAll(behavioralLower);
 
         Set<String> itMarkers = Set.of(
-                "java", "spring boot", "c#", ".net core", "python", "typescript", "javascript", "react",
-                "node.js", "c++", "go", "sql", "mysql", "sql server", "postgresql", "mongodb", "redis",
-                "docker", "kubernetes", "git", "ci/cd", "restful api", "microservices", "aws", "tailwind css",
-                "unit testing", "pytorch", "machine learning"
+                "java", "spring boot", "c#", ".net core", "asp.net core", "python", "typescript", "javascript", "react",
+                "next.js", "node.js", "flutter", "dart", "kotlin", "android", "c++", "go", "sql", "mysql", "sql server",
+                "postgresql", "mongodb", "redis", "docker", "kubernetes", "git", "ci/cd", "restful api", "microservices",
+                "aws", "tailwind css", "unit testing", "pytorch", "machine learning"
         );
         for (String marker : itMarkers) {
             if (combined.contains(marker)) return "IT_SOFTWARE";
@@ -1319,7 +1561,7 @@ public class AiService {
                 || combined.contains("commercial negotiation") || lowerText.contains("kinh doanh") || lowerText.contains("sales")) {
             return "SALES_BUSINESS";
         }
-        if (combined.contains("digital marketing") || lowerText.contains("marketing")) {
+        if (combined.contains("digital marketing") || combined.contains("content marketing") || lowerText.contains("marketing")) {
             return "MARKETING";
         }
         if (combined.contains("financial accounting") || combined.contains("financial analysis")
@@ -1334,20 +1576,30 @@ public class AiService {
     }
 
     private String inferTechSubTrack(String lowerText, Set<String> skillsLower) {
-        boolean hasBackend = skillsLower.contains("java") || skillsLower.contains("spring boot")
-                || skillsLower.contains("c#") || skillsLower.contains(".net core") || skillsLower.contains("node.js")
-                || skillsLower.contains("go") || lowerText.contains("backend");
-        boolean hasFrontend = skillsLower.contains("react") || skillsLower.contains("tailwind css")
-                || lowerText.contains("frontend");
-        if (lowerText.contains("fullstack") || lowerText.contains("full-stack") || (hasBackend && hasFrontend)) {
-            return "FULLSTACK";
+        if (skillsLower.contains("flutter") || skillsLower.contains("dart")
+                || skillsLower.contains("kotlin") || skillsLower.contains("android")
+                || lowerText.contains("mobile developer") || lowerText.contains("android developer") || lowerText.contains("ios developer")) {
+            return "MOBILE";
         }
         if (skillsLower.contains("pytorch") || skillsLower.contains("machine learning")
-                || lowerText.contains("ai ") || lowerText.contains("data ")) {
+                || lowerText.contains("data engineer") || lowerText.contains("computer vision")) {
             return "DATA_AI";
         }
-        if (skillsLower.contains("docker") && skillsLower.contains("kubernetes") || lowerText.contains("devops")) {
+        if ((skillsLower.contains("docker") && skillsLower.contains("kubernetes"))
+                || skillsLower.contains("terraform")
+                || lowerText.contains("devops engineer") || lowerText.contains("devops specialist") || lowerText.contains("cloud architect")) {
             return "DEVOPS";
+        }
+        if (skillsLower.contains("selenium") || lowerText.contains("qa ") || lowerText.contains("automation engineer")) {
+            return "QA";
+        }
+        boolean hasBackend = skillsLower.contains("java") || skillsLower.contains("spring boot")
+                || skillsLower.contains("c#") || skillsLower.contains(".net core") || skillsLower.contains("asp.net core")
+                || skillsLower.contains("node.js") || skillsLower.contains("go") || lowerText.contains("backend");
+        boolean hasFrontend = skillsLower.contains("react") || skillsLower.contains("next.js")
+                || skillsLower.contains("tailwind css") || lowerText.contains("frontend");
+        if (lowerText.contains("fullstack") || lowerText.contains("full-stack") || (hasBackend && hasFrontend)) {
+            return "FULLSTACK";
         }
         if (hasBackend) return "BACKEND";
         if (hasFrontend) return "FRONTEND";

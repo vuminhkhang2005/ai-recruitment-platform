@@ -80,10 +80,6 @@ export const JobsPage: React.FC = () => {
         .listCvs()
         .then((cvs) => {
           setCandidateCvs(cvs);
-          const def = cvs.find((c) => c.isDefault) ?? cvs[0];
-          if (def && !selectedRecCvId) {
-            setSelectedRecCvId(def.id);
-          }
         })
         .catch(() => {});
     }
@@ -93,9 +89,12 @@ export const JobsPage: React.FC = () => {
     if (isAuthenticated && !isRecruiter) {
       setLoadingAiRecs(true);
       aiApi
-        .getRecommendedJobs(15, selectedRecCvId, 45)
+        .getRecommendedJobs(50, selectedRecCvId, 0)
         .then((recs) => {
           setRecommendedJobs(recs);
+          if (selectedRecCvId === null && recs.length > 0 && recs[0].analyzedCvId) {
+            setSelectedRecCvId(recs[0].analyzedCvId);
+          }
           if (showAiRecommendations && recs.length > 0 && !routeJobId) {
             setSelectedJobId(recs[0].job.id);
             setSelectedJob(recs[0].job);
@@ -137,14 +136,18 @@ export const JobsPage: React.FC = () => {
     return map;
   }, [recommendedJobs]);
 
+  const topRecommendedJobs = useMemo(() => {
+    return recommendedJobs.filter((r) => r.matchScore >= 52).slice(0, 12);
+  }, [recommendedJobs]);
+
   const filteredRecommendedJobs = useMemo(() => {
-    return recommendedJobs.filter((rec) => {
+    return topRecommendedJobs.filter((rec) => {
       if (recFilter === 'strong') return rec.matchScore >= 80;
       if (recFilter === 'level') return Boolean(rec.levelMatched);
       if (recFilter === 'unapplied') return !appliedJobIds.has(rec.job.id) && !rec.alreadyApplied;
       return true;
     });
-  }, [recommendedJobs, recFilter, appliedJobIds]);
+  }, [topRecommendedJobs, recFilter, appliedJobIds]);
 
   // 1. Fetch search list
   useEffect(() => {
@@ -440,8 +443,8 @@ export const JobsPage: React.FC = () => {
                                 ? 'Đang phân tích CV & hồ sơ của bạn...'
                                 : 'Analyzing your CV & profile...'
                               : isVi
-                                ? `${recommendedJobs.length} công việc khớp với CV & kỹ năng của bạn`
-                                : `${recommendedJobs.length} jobs matched with your CV & skills`}
+                                ? `${topRecommendedJobs.length} công việc khớp với CV & kỹ năng của bạn`
+                                : `${topRecommendedJobs.length} jobs matched with your CV & skills`}
                           </p>
                         </div>
                       </div>

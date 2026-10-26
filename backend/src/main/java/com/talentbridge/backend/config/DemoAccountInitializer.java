@@ -5,14 +5,18 @@ import com.talentbridge.backend.entity.CandidateProfile;
 import com.talentbridge.backend.entity.Company;
 import com.talentbridge.backend.entity.Job;
 import com.talentbridge.backend.entity.JobApplication;
+import com.talentbridge.backend.entity.JobSkill;
 import com.talentbridge.backend.entity.RecruiterProfile;
+import com.talentbridge.backend.entity.Skill;
 import com.talentbridge.backend.entity.User;
 import com.talentbridge.backend.repository.ApplicationMessageRepository;
 import com.talentbridge.backend.repository.CandidateProfileRepository;
 import com.talentbridge.backend.repository.CompanyRepository;
 import com.talentbridge.backend.repository.JobApplicationRepository;
 import com.talentbridge.backend.repository.JobRepository;
+import com.talentbridge.backend.repository.JobSkillRepository;
 import com.talentbridge.backend.repository.RecruiterProfileRepository;
+import com.talentbridge.backend.repository.SkillRepository;
 import com.talentbridge.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,6 +67,8 @@ public class DemoAccountInitializer implements ApplicationRunner {
     private final RecruiterProfileRepository recruiterProfileRepository;
     private final CompanyRepository companyRepository;
     private final JobRepository jobRepository;
+    private final JobSkillRepository jobSkillRepository;
+    private final SkillRepository skillRepository;
 
     @Value("${app.demo.default-password:Password@123}")
     private String defaultPassword;
@@ -100,7 +106,61 @@ public class DemoAccountInitializer implements ApplicationRunner {
 
         seedCompanyBannersIfNeeded();
         refreshSeedJobDeadlinesIfNeeded();
+        repairSeededJobSkillsIfNeeded();
         seedDemoConversationsIfNeeded();
+    }
+
+    private void repairSeededJobSkillsIfNeeded() {
+        try {
+            Skill flutter = ensureSkill("Flutter", "flutter", "OTHER");
+            Skill dart = ensureSkill("Dart", "dart", "OTHER");
+            Skill kotlin = ensureSkill("Kotlin", "kotlin", "OTHER");
+            Skill android = ensureSkill("Android", "android", "OTHER");
+
+            // Job #9: Mobile Developer (Flutter) -> replace wrong TypeScript tag with Flutter & Dart
+            jobRepository.findById(9L).ifPresent(job -> {
+                List<JobSkill> existing = jobSkillRepository.findByJobId(9L);
+                boolean hasFlutter = existing.stream().anyMatch(js -> js.getSkill() != null && "Flutter".equalsIgnoreCase(js.getSkill().getName()));
+                if (!hasFlutter) {
+                    existing.stream()
+                            .filter(js -> js.getSkill() != null && "TypeScript".equalsIgnoreCase(js.getSkill().getName()))
+                            .forEach(jobSkillRepository::delete);
+                    jobSkillRepository.save(JobSkill.builder()
+                            .job(job).skill(flutter).isRequired(true).minYearsExp(1).weight(new java.math.BigDecimal("2.00")).build());
+                    jobSkillRepository.save(JobSkill.builder()
+                            .job(job).skill(dart).isRequired(true).minYearsExp(1).weight(new java.math.BigDecimal("1.50")).build());
+                    log.info("Demo jobs: repaired job_skills for Job #9 Mobile Developer (Flutter)");
+                }
+            });
+
+            // Job #23: Fresher Android Developer (Kotlin) -> replace wrong TypeScript tag with Kotlin & Android
+            jobRepository.findById(23L).ifPresent(job -> {
+                List<JobSkill> existing = jobSkillRepository.findByJobId(23L);
+                boolean hasKotlin = existing.stream().anyMatch(js -> js.getSkill() != null && "Kotlin".equalsIgnoreCase(js.getSkill().getName()));
+                if (!hasKotlin) {
+                    existing.stream()
+                            .filter(js -> js.getSkill() != null && "TypeScript".equalsIgnoreCase(js.getSkill().getName()))
+                            .forEach(jobSkillRepository::delete);
+                    jobSkillRepository.save(JobSkill.builder()
+                            .job(job).skill(kotlin).isRequired(true).minYearsExp(0).weight(new java.math.BigDecimal("2.00")).build());
+                    jobSkillRepository.save(JobSkill.builder()
+                            .job(job).skill(android).isRequired(true).minYearsExp(0).weight(new java.math.BigDecimal("1.50")).build());
+                    log.info("Demo jobs: repaired job_skills for Job #23 Fresher Android Developer (Kotlin)");
+                }
+            });
+        } catch (Exception e) {
+            log.warn("Could not repair seeded job skills: {}", e.getMessage());
+        }
+    }
+
+    private Skill ensureSkill(String name, String slug, String category) {
+        return skillRepository.findByNameIgnoreCase(name)
+                .orElseGet(() -> skillRepository.save(Skill.builder()
+                        .name(name)
+                        .slug(slug)
+                        .category(category)
+                        .isActive(true)
+                        .build()));
     }
 
     private void refreshSeedJobDeadlinesIfNeeded() {
