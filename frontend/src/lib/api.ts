@@ -483,8 +483,10 @@ export const aiApi = {
       query: { jobId, ...(cvId ? { cvId } : {}) },
     });
   },
-  getRecommendedJobs: (limit = 6) =>
-    request<RecommendedJob[]>('/ai/recommended-jobs', { query: { limit } }),
+  getRecommendedJobs: (limit = 12, cvId?: number | null, minScore = 45) =>
+    request<RecommendedJob[]>('/ai/recommended-jobs', {
+      query: { limit, minScore, ...(cvId ? { cvId } : {}) },
+    }),
 };
 
 export const analyticsApi = {

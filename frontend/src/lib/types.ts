@@ -585,11 +585,21 @@ export interface InviteCandidateResponse {
 export interface RecommendedJob {
   job: Job;
   matchScore: number;
+  skillMatchScore?: number;
+  experienceMatchScore?: number;
+  domainMatchScore?: number;
   matchRating: string;
   ratingColor: string;
+  levelMatched?: boolean;
+  locationMatched?: boolean;
+  alreadyApplied?: boolean;
+  analyzedCvId?: number | null;
+  analyzedCvName?: string;
   matchedSkills: string[];
   missingSkills: string[];
+  matchReasons?: string[];
   recommendationReason: string;
+  improvementTip?: string;
 }
 
 export interface StageCountMetric {

@@ -46,6 +46,7 @@ public class AiService {
     private final CandidateSkillRepository candidateSkillRepository;
     private final JobRepository jobRepository;
     private final JobSkillRepository jobSkillRepository;
+    private final JobApplicationRepository jobApplicationRepository;
     private final UserRepository userRepository;
     private final CvRepository cvRepository;
     private final JobService jobService;
@@ -973,17 +974,19 @@ public class AiService {
     }
 
     /**
-     * Recommends personalized job openings for candidate based on ATS match with profile skills.
+     * Recommends personalized job openings for candidate based on CV content, profile skills, level, location, and behavior.
      */
     @Transactional(readOnly = true)
     public List<RecommendedJobDto> getRecommendedJobsForCandidate(Long userId, int limit) {
-        List<CandidateSkill> candidateSkills = Collections.emptyList();
-        if (userId != null) {
-            Optional<CandidateProfile> profileOpt = candidateProfileRepository.findByUserId(userId);
-            if (profileOpt.isPresent()) {
-                candidateSkills = candidateSkillRepository.findByCandidateProfileId(profileOpt.get().getId());
-            }
-        }
+        return getRecommendedJobsForCandidate(userId, null, limit, 45);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RecommendedJobDto> getRecommendedJobsForCandidate(Long userId, Long cvId, int limit, int minScore) {
+        CandidateProfile profile = userId != null ? candidateProfileRepository.findByUserId(userId).orElse(null) : null;
+        List<CandidateSkill> candidateSkills = profile != null
+                ? candidateSkillRepository.findByCandidateProfileId(profile.getId())
+                : Collections.emptyList();
 
         Map<String, CandidateSkill> candidateSkillMap = new HashMap<>();
         for (CandidateSkill cs : candidateSkills) {
@@ -992,53 +995,227 @@ public class AiService {
             }
         }
 
+        // 1. Resolve Selected CV (cvId) or Default CV and extract its real document text
+        Long resolvedCvId = cvId;
+        String analyzedCvName = "Hồ sơ ứng viên TalentBridge";
+        String extractedFileText = "";
+
+        Cv targetCv = null;
+        if (cvId != null) {
+            targetCv = cvRepository.findById(cvId).orElse(null);
+        } else if (profile != null) {
+            List<Cv> cvs = cvRepository.findByCandidateProfileIdAndDeletedAtIsNullOrderByIsDefaultDescCreatedAtDesc(profile.getId());
+            if (!cvs.isEmpty()) {
+                targetCv = cvs.get(0);
+            }
+        }
+        if (targetCv != null) {
+            resolvedCvId = targetCv.getId();
+            analyzedCvName = StringUtils.hasText(targetCv.getTitle())
+                    ? targetCv.getTitle() + " (" + targetCv.getFileName() + ")"
+                    : targetCv.getFileName();
+            Path localFile = candidateService.resolveLocalFile(targetCv);
+            if (localFile != null && Files.exists(localFile)) {
+                try {
+                    extractedFileText = extractDocumentText(Files.readAllBytes(localFile), targetCv.getFileName());
+                } catch (IOException ignored) {}
+            }
+        }
+
+        boolean hasRealCvFileText = StringUtils.hasText(extractedFileText) && extractedFileText.trim().length() > 40;
+        StringBuilder cvContentBuilder = new StringBuilder();
+        if (hasRealCvFileText) {
+            cvContentBuilder.append(extractedFileText.trim()).append("\n");
+        }
+        if (profile != null) {
+            if (StringUtils.hasText(profile.getHeadline())) cvContentBuilder.append(profile.getHeadline()).append("\n");
+            if (StringUtils.hasText(profile.getBio())) cvContentBuilder.append(profile.getBio()).append("\n");
+        }
+        for (CandidateSkill cs : candidateSkills) {
+            if (cs.getSkill() != null && StringUtils.hasText(cs.getSkill().getName())) {
+                cvContentBuilder.append(cs.getSkill().getName()).append(" ");
+            }
+        }
+
+        String cvRawText = cvContentBuilder.toString();
+        String cvTextLower = cvRawText.toLowerCase();
+        List<String> allDetectedCvSkills = extractAllSkillsFromCvText(cvTextLower);
+        Set<String> allCandidateSkillNamesLower = new HashSet<>(candidateSkillMap.keySet());
+        for (String s : allDetectedCvSkills) {
+            allCandidateSkillNamesLower.add(s.toLowerCase());
+        }
+
+        // 2. Behavioral signals from candidate's past applications
+        Set<Long> appliedJobIds = new HashSet<>();
+        Set<String> behavioralSkillLower = new HashSet<>();
+        if (profile != null) {
+            List<JobApplication> pastApps = jobApplicationRepository.findByCandidateProfileId(profile.getId());
+            for (JobApplication app : pastApps) {
+                if (app.getJob() != null && app.getJob().getId() != null) {
+                    Long appliedJId = app.getJob().getId();
+                    appliedJobIds.add(appliedJId);
+                    List<JobSkill> appJobSkills = jobSkillRepository.findByJobId(appliedJId);
+                    for (JobSkill ajs : appJobSkills) {
+                        if (ajs.getSkill() != null && ajs.getSkill().getName() != null) {
+                            behavioralSkillLower.add(ajs.getSkill().getName().trim().toLowerCase());
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Candidate seniority, city, and primary career domain
+        int candidateYears = hasRealCvFileText
+                ? extractExperienceYearsFromCvText(cvTextLower)
+                : candidateSkills.stream()
+                        .map(CandidateSkill::getYearsExperience)
+                        .filter(Objects::nonNull)
+                        .max(Integer::compareTo)
+                        .orElse(0);
+        String candidateCity = hasRealCvFileText
+                ? extractCityFromCvText(cvTextLower)
+                : (profile != null && StringUtils.hasText(profile.getCity()) ? profile.getCity() : "Ho Chi Minh City");
+        String candidateDomain = inferCareerDomain(cvTextLower, allCandidateSkillNamesLower, behavioralSkillLower);
+        String candidateSubTrack = inferTechSubTrack(cvTextLower, allCandidateSkillNamesLower);
+
         List<Job> publishedJobs = jobRepository.findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc("PUBLISHED");
         if (publishedJobs.isEmpty()) {
             publishedJobs = jobRepository.findAll();
         }
 
-        List<RecommendedJobDto> recommendations = new ArrayList<>();
+        List<RecommendedJobDto> allScored = new ArrayList<>();
 
         for (Job job : publishedJobs) {
             List<JobSkill> jobSkills = jobSkillRepository.findByJobId(job.getId());
-            if (jobSkills.isEmpty()) {
-                recommendations.add(RecommendedJobDto.builder()
-                        .job(jobService.toDto(job))
-                        .matchScore(50)
-                        .matchRating("POTENTIAL FIT")
-                        .ratingColor("amber")
-                        .matchedSkills(List.of())
-                        .missingSkills(List.of())
-                        .recommendationReason("Promising opportunity aligned with your engineering background.")
-                        .build());
-                continue;
-            }
-
             List<String> matched = new ArrayList<>();
             List<String> missing = new ArrayList<>();
+            double totalWeight = 0;
+            double gainedWeight = 0;
+
+            int requiredExpYears = switch (job.getExpLevel() != null ? job.getExpLevel().toUpperCase() : "JUNIOR") {
+                case "INTERN", "FRESHER" -> 0;
+                case "JUNIOR" -> 1;
+                case "MIDDLE" -> 2;
+                case "SENIOR" -> 4;
+                case "LEAD", "MANAGER" -> 5;
+                default -> 1;
+            };
 
             for (JobSkill js : jobSkills) {
-                if (js.getSkill() == null) continue;
-                String skName = js.getSkill().getName();
-                if (candidateSkillMap.containsKey(skName.trim().toLowerCase())) {
+                if (js.getSkill() == null || !StringUtils.hasText(js.getSkill().getName())) continue;
+                String skName = js.getSkill().getName().trim();
+                String skLower = skName.toLowerCase();
+                double w = js.getWeight() != null ? js.getWeight().doubleValue() : 1.0;
+                boolean isReq = Boolean.TRUE.equals(js.getIsRequired());
+                if (!isReq) w *= 0.5;
+                totalWeight += w;
+
+                boolean inCvOrProfile = allCandidateSkillNamesLower.contains(skLower)
+                        || cvTextLower.contains(skLower)
+                        || SKILL_TAXONOMY.getOrDefault(skName, List.of()).stream().anyMatch(cvTextLower::contains);
+                boolean inBehavioral = !hasRealCvFileText && allCandidateSkillNamesLower.isEmpty() && behavioralSkillLower.contains(skLower);
+
+                if (inCvOrProfile || inBehavioral) {
                     matched.add(skName);
+                    gainedWeight += w;
                 } else {
                     missing.add(skName);
                 }
             }
 
-            int score = (int) Math.round(((double) matched.size() / jobSkills.size()) * 100);
-            if (score > 100) score = 100;
+            // Pillar 1: Technical Skills Score (55%)
+            int bonusDepth = (!matched.isEmpty() && allCandidateSkillNamesLower.size() >= 5) ? 6 : 0;
+            int skillScore;
+            if (totalWeight > 0) {
+                skillScore = (int) Math.round(100.0 * gainedWeight / totalWeight) + bonusDepth;
+            } else {
+                String jdText = ((job.getTitle() != null ? job.getTitle() : "") + " "
+                        + (job.getDescription() != null ? job.getDescription() : "")).toLowerCase();
+                long kwHits = allCandidateSkillNamesLower.stream().filter(jdText::contains).count();
+                skillScore = kwHits >= 2 ? 78 : kwHits == 1 ? 60 : 35;
+            }
+            skillScore = Math.max(10, Math.min(100, skillScore));
+
+            // Pillar 2: Experience & Seniority Alignment (20%)
+            boolean levelMatched = false;
+            int expScore;
+            if (candidateYears == 0) {
+                // Student / Intern / Fresher candidate
+                if (requiredExpYears == 0) {
+                    expScore = 98;
+                    levelMatched = true;
+                } else if (requiredExpYears == 1) {
+                    expScore = 86;
+                    levelMatched = true;
+                } else if (requiredExpYears == 2) {
+                    expScore = 66;
+                } else {
+                    expScore = 42;
+                }
+            } else if (candidateYears >= requiredExpYears) {
+                expScore = Math.min(100, 92 + Math.min(8, (candidateYears - requiredExpYears) * 3));
+                levelMatched = (candidateYears - requiredExpYears) <= 2;
+            } else if (requiredExpYears - candidateYears == 1) {
+                expScore = 76;
+                levelMatched = true;
+            } else {
+                expScore = 48;
+            }
+
+            // Pillar 3: Domain & Role Semantic Alignment (15%)
+            String jdCombinedLower = ((job.getTitle() != null ? job.getTitle() : "") + " "
+                    + (job.getDescription() != null ? job.getDescription() : "") + " "
+                    + (job.getRequirements() != null ? job.getRequirements() : "")).toLowerCase();
+            Set<String> jobSkillNamesLower = jobSkills.stream()
+                    .filter(js -> js.getSkill() != null && js.getSkill().getName() != null)
+                    .map(js -> js.getSkill().getName().trim().toLowerCase())
+                    .collect(Collectors.toSet());
+            String jobDomain = inferCareerDomain(jdCombinedLower, jobSkillNamesLower, Set.of());
+            String jobSubTrack = inferTechSubTrack(jdCombinedLower, jobSkillNamesLower);
+
+            int domainScore;
+            if (candidateDomain.equals(jobDomain)) {
+                if (StringUtils.hasText(candidateSubTrack) && candidateSubTrack.equals(jobSubTrack)) {
+                    domainScore = 96;
+                } else if ("FULLSTACK".equals(candidateSubTrack) || "FULLSTACK".equals(jobSubTrack)) {
+                    domainScore = 90;
+                } else {
+                    domainScore = 82;
+                }
+            } else {
+                domainScore = matched.isEmpty() ? 15 : 55;
+            }
+
+            // Pillar 4: Location, Work Mode & Behavioral Affinity (10%)
+            String jobCity = StringUtils.hasText(job.getLocationCity()) ? job.getLocationCity() : "Vietnam";
+            boolean isRemoteOrHybrid = "REMOTE".equalsIgnoreCase(job.getJobType()) || "HYBRID".equalsIgnoreCase(job.getJobType());
+            boolean cityMatched = candidateCity.equalsIgnoreCase(jobCity)
+                    || (candidateCity.toLowerCase().contains("ho chi minh") && jobCity.toLowerCase().contains("hồ chí minh"))
+                    || (candidateCity.toLowerCase().contains("ha noi") && jobCity.toLowerCase().contains("hà nội"))
+                    || (candidateCity.toLowerCase().contains("da nang") && jobCity.toLowerCase().contains("đà nẵng"))
+                    || isRemoteOrHybrid;
+            long behavioralOverlap = jobSkillNamesLower.stream().filter(behavioralSkillLower::contains).count();
+            int contextScore = (cityMatched ? 88 : 65) + (behavioralOverlap >= 2 ? 12 : behavioralOverlap == 1 ? 6 : 0);
+            contextScore = Math.min(100, contextScore);
+
+            // Composite Weighted Score (55% Skills + 20% Level/Exp + 15% Domain + 10% Location/Behavior)
+            int score = (int) Math.round(skillScore * 0.55 + expScore * 0.20 + domainScore * 0.15 + contextScore * 0.10);
+            if (matched.isEmpty() && domainScore < 50) {
+                score = Math.min(score, 25);
+            } else if (!jobSkills.isEmpty() && matched.size() == jobSkills.size() && levelMatched) {
+                score = Math.max(score, 92);
+            }
+            score = Math.max(15, Math.min(99, score));
 
             String rating;
             String color;
-            if (score >= 75) {
+            if (score >= 82) {
                 rating = "STRONG MATCH";
                 color = "emerald";
-            } else if (score >= 50) {
+            } else if (score >= 65) {
                 rating = "GOOD MATCH";
                 color = "sky";
-            } else if (score >= 30) {
+            } else if (score >= 48) {
                 rating = "POTENTIAL FIT";
                 color = "amber";
             } else {
@@ -1046,30 +1223,130 @@ public class AiService {
                 color = "rose";
             }
 
-            String reason;
+            List<String> reasons = new ArrayList<>();
             if (!matched.isEmpty()) {
-                reason = String.format("Matched %d/%d required skills (%s)",
-                        matched.size(), jobSkills.size(),
-                        matched.stream().limit(4).collect(Collectors.joining(", ")));
-            } else {
-                reason = "Role within the same technology domain as your profile.";
+                reasons.add(String.format("Khớp %d/%d kỹ năng (%s)",
+                        matched.size(), Math.max(matched.size(), jobSkills.size()),
+                        matched.stream().limit(3).collect(Collectors.joining(", "))));
+            }
+            if (levelMatched && StringUtils.hasText(job.getExpLevel())) {
+                reasons.add("Đúng cấp bậc " + job.getExpLevel());
+            }
+            if (cityMatched) {
+                reasons.add("REMOTE".equalsIgnoreCase(job.getJobType()) ? "Làm việc Remote linh hoạt" : "Khu vực " + jobCity);
+            }
+            if (behavioralOverlap >= 2) {
+                reasons.add("Cùng nhóm công nghệ bạn đã ứng tuyển");
             }
 
-            recommendations.add(RecommendedJobDto.builder()
+            String primaryReason = !reasons.isEmpty()
+                    ? String.join(" • ", reasons.subList(0, Math.min(2, reasons.size())))
+                    : "Cơ hội phù hợp với định hướng chuyên môn của bạn";
+
+            String tip;
+            if (!missing.isEmpty()) {
+                String topMissing = missing.stream().limit(2).collect(Collectors.joining(", "));
+                int boosted = Math.min(99, score + Math.min(18, missing.size() * 7));
+                tip = String.format("Bổ sung từ khóa %s vào CV để nâng độ khớp lên ~%d%%", topMissing, boosted);
+            } else {
+                tip = "CV của bạn đáp ứng đầy đủ kỹ năng cốt lõi của JD này!";
+            }
+
+            allScored.add(RecommendedJobDto.builder()
                     .job(jobService.toDto(job))
                     .matchScore(score)
+                    .skillMatchScore(skillScore)
+                    .experienceMatchScore(expScore)
+                    .domainMatchScore(domainScore)
                     .matchRating(rating)
                     .ratingColor(color)
+                    .levelMatched(levelMatched)
+                    .locationMatched(cityMatched)
+                    .alreadyApplied(appliedJobIds.contains(job.getId()))
+                    .analyzedCvId(resolvedCvId)
+                    .analyzedCvName(analyzedCvName)
                     .matchedSkills(matched)
                     .missingSkills(missing)
-                    .recommendationReason(reason)
+                    .matchReasons(reasons)
+                    .recommendationReason(primaryReason)
+                    .improvementTip(tip)
                     .build());
         }
 
-        recommendations.sort((a, b) -> Integer.compare(b.getMatchScore(), a.getMatchScore()));
+        allScored.sort((a, b) -> {
+            int cmp = Integer.compare(b.getMatchScore(), a.getMatchScore());
+            if (cmp != 0) return cmp;
+            return Integer.compare(b.getMatchedSkills().size(), a.getMatchedSkills().size());
+        });
 
-        return recommendations.stream()
+        int effectiveMinScore = Math.max(0, minScore);
+        List<RecommendedJobDto> filtered = allScored.stream()
+                .filter(r -> r.getMatchScore() >= effectiveMinScore)
+                .collect(Collectors.toList());
+
+        if (filtered.size() < 3 && !allScored.isEmpty()) {
+            filtered = allScored.stream().limit(Math.min(6, allScored.size())).collect(Collectors.toList());
+        }
+
+        return filtered.stream()
                 .limit(Math.max(1, Math.min(limit, 50)))
                 .collect(Collectors.toList());
+    }
+
+    private String inferCareerDomain(String lowerText, Set<String> skillsLower, Set<String> behavioralLower) {
+        Set<String> combined = new HashSet<>(skillsLower);
+        combined.addAll(behavioralLower);
+
+        Set<String> itMarkers = Set.of(
+                "java", "spring boot", "c#", ".net core", "python", "typescript", "javascript", "react",
+                "node.js", "c++", "go", "sql", "mysql", "sql server", "postgresql", "mongodb", "redis",
+                "docker", "kubernetes", "git", "ci/cd", "restful api", "microservices", "aws", "tailwind css",
+                "unit testing", "pytorch", "machine learning"
+        );
+        for (String marker : itMarkers) {
+            if (combined.contains(marker)) return "IT_SOFTWARE";
+        }
+        if (lowerText.contains("software") || lowerText.contains("developer") || lowerText.contains("engineer")
+                || lowerText.contains("backend") || lowerText.contains("frontend") || lowerText.contains("fullstack")
+                || lowerText.contains("lập trình") || lowerText.contains("công nghệ thông tin") || lowerText.contains("cntt")) {
+            return "IT_SOFTWARE";
+        }
+        if (combined.contains("b2b sales") || combined.contains("customer success")
+                || combined.contains("commercial negotiation") || lowerText.contains("kinh doanh") || lowerText.contains("sales")) {
+            return "SALES_BUSINESS";
+        }
+        if (combined.contains("digital marketing") || lowerText.contains("marketing")) {
+            return "MARKETING";
+        }
+        if (combined.contains("financial accounting") || combined.contains("financial analysis")
+                || combined.contains("risk management") || lowerText.contains("tài chính") || lowerText.contains("kế toán")) {
+            return "FINANCE";
+        }
+        if (combined.contains("talent acquisition") || combined.contains("hr business partner")
+                || lowerText.contains("nhân sự") || lowerText.contains("tuyển dụng")) {
+            return "HR";
+        }
+        return "IT_SOFTWARE";
+    }
+
+    private String inferTechSubTrack(String lowerText, Set<String> skillsLower) {
+        boolean hasBackend = skillsLower.contains("java") || skillsLower.contains("spring boot")
+                || skillsLower.contains("c#") || skillsLower.contains(".net core") || skillsLower.contains("node.js")
+                || skillsLower.contains("go") || lowerText.contains("backend");
+        boolean hasFrontend = skillsLower.contains("react") || skillsLower.contains("tailwind css")
+                || lowerText.contains("frontend");
+        if (lowerText.contains("fullstack") || lowerText.contains("full-stack") || (hasBackend && hasFrontend)) {
+            return "FULLSTACK";
+        }
+        if (skillsLower.contains("pytorch") || skillsLower.contains("machine learning")
+                || lowerText.contains("ai ") || lowerText.contains("data ")) {
+            return "DATA_AI";
+        }
+        if (skillsLower.contains("docker") && skillsLower.contains("kubernetes") || lowerText.contains("devops")) {
+            return "DEVOPS";
+        }
+        if (hasBackend) return "BACKEND";
+        if (hasFrontend) return "FRONTEND";
+        return "";
     }
 }

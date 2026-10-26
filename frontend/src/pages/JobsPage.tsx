@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Flame, Sparkles } from 'lucide-react';
-import { ApiError, companyApi, jobApi, aiApi } from '../lib/api';
-import type { Company, Job, Page, RecommendedJob } from '../lib/types';
+import { ArrowLeft, CheckCircle2, FileText, Flame, Lightbulb, Sparkles, Target } from 'lucide-react';
+import { ApiError, candidateApi, companyApi, jobApi, aiApi } from '../lib/api';
+import type { Company, CvItem, Job, Page, RecommendedJob } from '../lib/types';
 import { EXP_LEVELS, JOB_TYPES, getExpLevels, getJobTypes } from '../lib/format';
 import { SearchBar } from '../components/jobs/SearchBar';
 import { JobCard } from '../components/jobs/JobCard';
@@ -61,20 +61,50 @@ export const JobsPage: React.FC = () => {
   const [reload, setReload] = useState(0);
 
   const { isAuthenticated, isRecruiter } = useAuth();
-  const [showAiRecommendations, setShowAiRecommendations] = useState(false);
+  const [showAiRecommendations, setShowAiRecommendations] = useState(() => params.get('recommended') === '1');
   const [recommendedJobs, setRecommendedJobs] = useState<RecommendedJob[]>([]);
   const [loadingAiRecs, setLoadingAiRecs] = useState(false);
+  const [candidateCvs, setCandidateCvs] = useState<CvItem[]>([]);
+  const [selectedRecCvId, setSelectedRecCvId] = useState<number | null>(null);
+  const [recFilter, setRecFilter] = useState<'all' | 'strong' | 'level' | 'unapplied'>('all');
+
+  useEffect(() => {
+    if (params.get('recommended') === '1') {
+      setShowAiRecommendations(true);
+    }
+  }, [params]);
+
+  useEffect(() => {
+    if (isAuthenticated && !isRecruiter) {
+      candidateApi
+        .listCvs()
+        .then((cvs) => {
+          setCandidateCvs(cvs);
+          const def = cvs.find((c) => c.isDefault) ?? cvs[0];
+          if (def && !selectedRecCvId) {
+            setSelectedRecCvId(def.id);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isAuthenticated, isRecruiter]);
 
   useEffect(() => {
     if (isAuthenticated && !isRecruiter) {
       setLoadingAiRecs(true);
       aiApi
-        .getRecommendedJobs(10)
-        .then((recs) => setRecommendedJobs(recs))
+        .getRecommendedJobs(15, selectedRecCvId, 45)
+        .then((recs) => {
+          setRecommendedJobs(recs);
+          if (showAiRecommendations && recs.length > 0 && !routeJobId) {
+            setSelectedJobId(recs[0].job.id);
+            setSelectedJob(recs[0].job);
+          }
+        })
         .catch(() => {})
         .finally(() => setLoadingAiRecs(false));
     }
-  }, [isAuthenticated, isRecruiter]);
+  }, [isAuthenticated, isRecruiter, selectedRecCvId]);
 
   const activeJobId = routeJobId ? Number(routeJobId) : selectedJobId;
 
@@ -93,6 +123,28 @@ export const JobsPage: React.FC = () => {
   );
   const scores = useMatchScores(allJobIds);
   const { appliedJobIds } = useMyApplications();
+
+  const recMatchMap = useMemo(() => {
+    const map: Record<number, { jobId: number; score: number; matchedSkills: string[]; missingSkills: string[] }> = {};
+    for (const r of recommendedJobs) {
+      map[r.job.id] = {
+        jobId: r.job.id,
+        score: r.matchScore,
+        matchedSkills: r.matchedSkills,
+        missingSkills: r.missingSkills,
+      };
+    }
+    return map;
+  }, [recommendedJobs]);
+
+  const filteredRecommendedJobs = useMemo(() => {
+    return recommendedJobs.filter((rec) => {
+      if (recFilter === 'strong') return rec.matchScore >= 80;
+      if (recFilter === 'level') return Boolean(rec.levelMatched);
+      if (recFilter === 'unapplied') return !appliedJobIds.has(rec.job.id) && !rec.alreadyApplied;
+      return true;
+    });
+  }, [recommendedJobs, recFilter, appliedJobIds]);
 
   // 1. Fetch search list
   useEffect(() => {
@@ -365,59 +417,169 @@ export const JobsPage: React.FC = () => {
                   </span>
                 </div>
 
-                {/* AI Recommendation Banner for Candidate */}
+                {/* AI Recommendation Console for Candidate */}
                 {isAuthenticated && !isRecruiter && (
-                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/40 dark:to-purple-950/30 border border-indigo-200 dark:border-indigo-800/60 rounded-2xl p-3 flex items-center justify-between gap-3 shadow-soft-xs">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                        <Sparkles className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                            {isVi ? 'Gợi ý việc làm theo hồ sơ' : 'AI Job Recommendations'}
-                          </h4>
-                          <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
-                            AI
-                          </span>
+                  <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/60 to-sky-50/60 dark:from-emerald-950/40 dark:via-slate-900 dark:to-sky-950/30 border border-emerald-200/90 dark:border-emerald-800/60 rounded-2xl p-3.5 space-y-2.5 shadow-soft-xs">
+                    <div className="flex items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                          <Sparkles className="w-4 h-4" />
                         </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                          {isVi
-                            ? `${recommendedJobs.length} việc làm phù hợp với kỹ năng của bạn`
-                            : `${recommendedJobs.length} jobs matched with your profile`}
-                        </p>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
+                              {isVi ? 'Gợi ý công việc phù hợp (AI)' : 'AI Job Recommendations'}
+                            </h4>
+                            <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/80 text-emerald-700 dark:text-emerald-300">
+                              Hybrid AI
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate">
+                            {loadingAiRecs
+                              ? isVi
+                                ? 'Đang phân tích CV & hồ sơ của bạn...'
+                                : 'Analyzing your CV & profile...'
+                              : isVi
+                                ? `${recommendedJobs.length} công việc khớp với CV & kỹ năng của bạn`
+                                : `${recommendedJobs.length} jobs matched with your CV & skills`}
+                          </p>
+                        </div>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextVal = !showAiRecommendations;
+                          setShowAiRecommendations(nextVal);
+                          if (nextVal && recommendedJobs.length > 0 && !routeJobId) {
+                            setSelectedJobId(recommendedJobs[0].job.id);
+                            setSelectedJob(recommendedJobs[0].job);
+                          }
+                        }}
+                        className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 shadow-sm shrink-0 cursor-pointer ${
+                          showAiRecommendations
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-50'
+                        }`}
+                        data-testid="toggle-ai-recommendations"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        {showAiRecommendations
+                          ? isVi
+                            ? 'Xem tất cả việc'
+                            : 'Show All Jobs'
+                          : isVi
+                            ? `Xem gợi ý (${recommendedJobs.length})`
+                            : `AI Matches (${recommendedJobs.length})`}
+                      </button>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setShowAiRecommendations(!showAiRecommendations)}
-                      className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 shadow-sm shrink-0 cursor-pointer ${
-                        showAiRecommendations
-                          ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                          : 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-50'
-                      }`}
-                      data-testid="toggle-ai-recommendations"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      {showAiRecommendations
-                        ? (isVi ? 'Tất cả việc làm' : 'Show All')
-                        : (isVi ? `Xem gợi ý (${recommendedJobs.length})` : `AI Matches (${recommendedJobs.length})`)}
-                    </button>
+                    {/* CV Selector & Sub-filter Pills when AI Recommendations are active */}
+                    {showAiRecommendations && (
+                      <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/50 space-y-2">
+                        {candidateCvs.length > 0 && (
+                          <div className="flex items-center justify-between gap-2 text-[11px]">
+                            <span className="inline-flex items-center gap-1 font-bold text-slate-600 dark:text-slate-300 shrink-0">
+                              <FileText className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                              {isVi ? 'Đối chiếu theo CV:' : 'Match by CV:'}
+                            </span>
+                            <select
+                              aria-label={isVi ? 'Chọn CV gợi ý' : 'Select CV for recommendations'}
+                              value={selectedRecCvId ?? ''}
+                              onChange={(e) => setSelectedRecCvId(e.target.value ? Number(e.target.value) : null)}
+                              className="flex-1 min-w-0 h-7 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-slate-900 px-2 text-[11px] font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                            >
+                              {candidateCvs.map((cv) => (
+                                <option key={cv.id} value={cv.id}>
+                                  {cv.title || cv.fileName} {cv.isDefault ? (isVi ? '(Mặc định)' : '(Default)') : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {[
+                            {
+                              key: 'all' as const,
+                              label: isVi ? `Tất cả (${recommendedJobs.length})` : `All (${recommendedJobs.length})`,
+                            },
+                            {
+                              key: 'strong' as const,
+                              label: isVi
+                                ? `🔥 Rất hợp ≥80% (${recommendedJobs.filter((r) => r.matchScore >= 80).length})`
+                                : `🔥 Strong ≥80% (${recommendedJobs.filter((r) => r.matchScore >= 80).length})`,
+                            },
+                            {
+                              key: 'level' as const,
+                              label: isVi
+                                ? `🎯 Đúng cấp bậc (${recommendedJobs.filter((r) => r.levelMatched).length})`
+                                : `🎯 Right Level (${recommendedJobs.filter((r) => r.levelMatched).length})`,
+                            },
+                            {
+                              key: 'unapplied' as const,
+                              label: isVi ? '✨ Chưa ứng tuyển' : '✨ Not Applied',
+                            },
+                          ].map((pill) => (
+                            <button
+                              key={pill.key}
+                              type="button"
+                              onClick={() => setRecFilter(pill.key)}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                recFilter === pill.key
+                                  ? 'bg-emerald-600 text-white shadow-soft-xs'
+                                  : 'bg-white/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 hover:border-emerald-400'
+                              }`}
+                            >
+                              {pill.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Scrollable Master Job List */}
                 <div className="lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto pr-1.5 space-y-3 custom-scrollbar">
                   {showAiRecommendations ? (
-                    recommendedJobs.length === 0 ? (
-                      <div className="p-6 text-center text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl">
-                        {isVi ? 'Chưa có gợi ý việc làm. Hãy cập nhật kỹ năng trong hồ sơ để AI gợi ý chính xác hơn!' : 'No AI recommendations yet. Update your skills in your profile to get matched!'}
+                    loadingAiRecs ? (
+                      <div className="p-10 flex justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl">
+                        <Spinner />
+                      </div>
+                    ) : filteredRecommendedJobs.length === 0 ? (
+                      <div className="p-6 text-center text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
+                        <p>
+                          {isVi
+                            ? 'Không có việc làm nào khớp với bộ lọc gợi ý này.'
+                            : 'No recommended jobs match this sub-filter.'}
+                        </p>
+                        {recFilter !== 'all' && (
+                          <button
+                            type="button"
+                            onClick={() => setRecFilter('all')}
+                            className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                          >
+                            {isVi ? 'Xem tất cả gợi ý phù hợp' : 'Show all recommended jobs'}
+                          </button>
+                        )}
                       </div>
                     ) : (
-                      recommendedJobs.map((rec) => {
+                      filteredRecommendedJobs.map((rec) => {
                         const j = rec.job;
                         const isSelected = activeJobId === j.id;
+                        const ratingVi =
+                          rec.matchScore >= 82
+                            ? isVi
+                              ? 'RẤT PHÙ HỢP'
+                              : 'STRONG MATCH'
+                            : rec.matchScore >= 65
+                              ? isVi
+                                ? 'PHÙ HỢP TỐT'
+                                : 'GOOD MATCH'
+                              : isVi
+                                ? 'TIỀM NĂNG'
+                                : 'POTENTIAL FIT';
                         return (
                           <div key={j.id} className="space-y-1.5">
                             <JobCard
@@ -428,7 +590,7 @@ export const JobsPage: React.FC = () => {
                                 matchedSkills: rec.matchedSkills,
                                 missingSkills: rec.missingSkills,
                               }}
-                              applied={appliedJobIds.has(j.id)}
+                              applied={appliedJobIds.has(j.id) || Boolean(rec.alreadyApplied)}
                               selected={isSelected}
                               compact
                               preserveSearch
@@ -437,12 +599,50 @@ export const JobsPage: React.FC = () => {
                                 setSelectedJob(j);
                               }}
                             />
-                            {/* AI Match Callout */}
-                            <div className="mx-1 px-3 py-1.5 bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded-xl text-[11px] flex items-center justify-between text-indigo-700 dark:text-indigo-300">
-                              <span className="truncate mr-2 font-medium">💡 {rec.recommendationReason}</span>
-                              <span className="shrink-0 font-bold px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/80 text-[10px]">
-                                {rec.matchRating}
-                              </span>
+                            {/* Explainable AI Breakdown Card Footer */}
+                            <div className="mx-1 px-3 py-2 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-900/50 rounded-xl text-[11px] space-y-1.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1 truncate">
+                                  <Target className="w-3.5 h-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                  <span className="truncate">{rec.recommendationReason}</span>
+                                </span>
+                                <span
+                                  className={`shrink-0 font-black px-2 py-0.5 rounded-full text-[10px] ${
+                                    rec.matchScore >= 82
+                                      ? 'bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-200'
+                                      : rec.matchScore >= 65
+                                        ? 'bg-sky-100 dark:bg-sky-900/80 text-sky-800 dark:text-sky-200'
+                                        : 'bg-amber-100 dark:bg-amber-900/80 text-amber-800 dark:text-amber-200'
+                                  }`}
+                                >
+                                  {rec.matchScore}% • {ratingVi}
+                                </span>
+                              </div>
+
+                              {/* Matched Skills & Pill Tags */}
+                              <div className="flex flex-wrap items-center gap-1">
+                                {rec.matchedSkills.slice(0, 4).map((sk) => (
+                                  <span
+                                    key={sk}
+                                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800/70 text-[10px] font-bold text-emerald-700 dark:text-emerald-300"
+                                  >
+                                    <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
+                                    {sk}
+                                  </span>
+                                ))}
+                                {rec.levelMatched && (
+                                  <span className="px-1.5 py-0.5 rounded-md bg-teal-100/80 dark:bg-teal-900/50 text-[10px] font-semibold text-teal-800 dark:text-teal-300">
+                                    🎯 {isVi ? `Đúng cấp bậc ${j.expLevel}` : `Fits ${j.expLevel}`}
+                                  </span>
+                                )}
+                              </div>
+
+                              {rec.improvementTip && rec.missingSkills.length > 0 && (
+                                <p className="text-[10px] text-slate-600 dark:text-slate-400 flex items-center gap-1 truncate">
+                                  <Lightbulb className="w-3 h-3 text-amber-500 shrink-0" />
+                                  <span className="truncate">{rec.improvementTip}</span>
+                                </p>
+                              )}
                             </div>
                           </div>
                         );
@@ -455,7 +655,7 @@ export const JobsPage: React.FC = () => {
                         <JobCard
                           key={j.id}
                           job={j}
-                          match={scores[j.id]}
+                          match={recMatchMap[j.id] ?? scores[j.id]}
                           applied={appliedJobIds.has(j.id)}
                           selected={isSelected}
                           compact
@@ -471,7 +671,7 @@ export const JobsPage: React.FC = () => {
                 </div>
 
                 {/* Pagination Controls */}
-                {result && result.totalPages > 1 && (
+                {!showAiRecommendations && result && result.totalPages > 1 && (
                   <div className="pt-2">
                     <Pagination
                       page={result.page}
@@ -506,7 +706,12 @@ export const JobsPage: React.FC = () => {
                   <JobDetailPanel
                     job={selectedJob}
                     company={selectedCompany}
-                    match={scores[selectedJob.id]}
+                    match={recMatchMap[selectedJob.id] ?? scores[selectedJob.id]}
+                    recommendedJobs={recommendedJobs}
+                    onSelectJob={(nextJob) => {
+                      setSelectedJobId(nextJob.id);
+                      setSelectedJob(nextJob);
+                    }}
                     onApplied={() => setReload((r) => r + 1)}
                   />
                 ) : loadingDetail ? (

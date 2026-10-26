@@ -18,7 +18,7 @@ import {
   Users,
 } from 'lucide-react';
 import { aiApi } from '../../lib/api';
-import type { AtsMatchAnalysis, Company, Job, MatchScore } from '../../lib/types';
+import type { AtsMatchAnalysis, Company, Job, MatchScore, RecommendedJob } from '../../lib/types';
 import { EXP_LEVELS, JOB_TYPES, daysLeft, formatDate, formatSalary, getExpLevels, getJobTypes, label, timeAgo, toLines } from '../../lib/format';
 import { useAuth } from '../../context/AuthContext';
 import { useMyApplications } from '../../context/MyApplicationsContext';
@@ -58,6 +58,8 @@ export interface JobDetailPanelProps {
   job: Job;
   company: Company | null;
   match?: MatchScore;
+  recommendedJobs?: RecommendedJob[];
+  onSelectJob?: (job: Job) => void;
   onApplied?: () => void;
   standalone?: boolean;
 }
@@ -66,6 +68,8 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
   job,
   company,
   match,
+  recommendedJobs = [],
+  onSelectJob,
   onApplied,
   standalone = false,
 }) => {
@@ -587,6 +591,66 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
             </Link>
           </div>
         </div>
+
+        {/* Similar Jobs Matched for You */}
+        {isAuthenticated && !isRecruiter && recommendedJobs.filter((r) => r.job.id !== job.id).length > 0 && (
+          <div className={`${cardCls} p-4 space-y-3`} data-testid="similar-recommended-jobs">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 text-sm font-black text-slate-900 dark:text-white">
+                <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                {language === 'vi' ? 'Việc làm tương tự phù hợp với bạn' : 'Similar Jobs Matched for You'}
+              </h2>
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60">
+                AI Match
+              </span>
+            </div>
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {recommendedJobs
+                .filter((r) => r.job.id !== job.id)
+                .slice(0, 4)
+                .map((rec) => {
+                  const sj = rec.job;
+                  return (
+                    <div
+                      key={sj.id}
+                      onClick={() => {
+                        if (onSelectJob) {
+                          onSelectJob(sj);
+                        } else {
+                          navigate(`/jobs/${sj.id}`);
+                        }
+                      }}
+                      className="group p-3 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 hover:border-emerald-400 dark:hover:border-emerald-700 hover:bg-white dark:hover:bg-slate-900 transition-all cursor-pointer flex flex-col justify-between gap-2"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <CompanyAvatar name={sj.companyName} logoUrl={sj.companyLogo} size="sm" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-extrabold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 truncate">
+                              {sj.title}
+                            </p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{sj.companyName}</p>
+                          </div>
+                        </div>
+                        <span className="shrink-0 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/70 text-emerald-800 dark:text-emerald-200 text-[10px] font-black">
+                          {rec.matchScore}%
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 text-[11px] pt-1 border-t border-slate-200/60 dark:border-slate-800/70">
+                        <span className="font-bold text-emerald-700 dark:text-emerald-400 truncate">
+                          {formatSalary(sj.salaryFormatted, language)}
+                        </span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                          {rec.matchedSkills.slice(0, 2).join(', ') || sj.locationCity}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
 
         {/* Bottom Apply Banner */}
         {!applied && isOpen && !isRecruiter && (

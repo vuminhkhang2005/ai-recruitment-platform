@@ -109,13 +109,15 @@ public class AiController {
 
     @GetMapping("/recommended-jobs")
     @PreAuthorize("hasRole('CANDIDATE')")
-    @Operation(summary = "Get personalized recommended jobs based on ATS skill matching")
+    @Operation(summary = "Get personalized recommended jobs based on CV content, profile skills, level, location, and behavior")
     public ResponseEntity<ApiResponse<List<RecommendedJobDto>>> getRecommendedJobs(
-            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(defaultValue = "12") int limit,
+            @RequestParam(required = false) Long cvId,
+            @RequestParam(defaultValue = "45") int minScore,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
         Long userId = userPrincipal != null ? userPrincipal.getId() : 1L;
-        List<RecommendedJobDto> recommended = aiService.getRecommendedJobsForCandidate(userId, limit);
+        List<RecommendedJobDto> recommended = aiService.getRecommendedJobsForCandidate(userId, cvId, limit, minScore);
         return ResponseEntity.ok(ApiResponse.ok(recommended));
     }
 }

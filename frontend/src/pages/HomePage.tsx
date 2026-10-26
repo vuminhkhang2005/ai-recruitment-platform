@@ -31,8 +31,8 @@ import {
   Users,
   Workflow,
 } from 'lucide-react';
-import { companyApi, jobApi } from '../lib/api';
-import type { Company, Job } from '../lib/types';
+import { aiApi, candidateApi, companyApi, jobApi } from '../lib/api';
+import type { Company, CvItem, Job, RecommendedJob } from '../lib/types';
 import { SearchBar } from '../components/jobs/SearchBar';
 import { JobCard } from '../components/jobs/JobCard';
 import { CompanyAvatar, EmptyState, ErrorBox, Spinner, resolveCompanyBanner } from '../components/ui/primitives';
@@ -376,7 +376,7 @@ export const HomePage: React.FC = () => {
   const isVi = language === 'vi';
   const specialties = useMemo(() => getSpecialties(language), [language]);
   const tabs = useMemo(() => getTabs(language), [language]);
-  const { user, isRecruiter } = useAuth();
+  const { user, isAuthenticated, isRecruiter } = useAuth();
   const [allJobs, setAllJobs] = useState<Job[] | null>(null);
   const [total, setTotal] = useState<number | null>(null);
   const [allCompanies, setAllCompanies] = useState<Company[] | null>(null);
@@ -384,6 +384,38 @@ export const HomePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>('all');
   const { appliedJobIds } = useMyApplications();
+  const [homeRecs, setHomeRecs] = useState<RecommendedJob[]>([]);
+  const [loadingHomeRecs, setLoadingHomeRecs] = useState(false);
+  const [candidateCvs, setCandidateCvs] = useState<CvItem[]>([]);
+  const [selectedHomeCvId, setSelectedHomeCvId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (isAuthenticated && !isRecruiter) {
+      candidateApi
+        .listCvs()
+        .then((cvs) => {
+          setCandidateCvs(cvs);
+          const def = cvs.find((c) => c.isDefault) ?? cvs[0];
+          if (def && !selectedHomeCvId) {
+            setSelectedHomeCvId(def.id);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isAuthenticated, isRecruiter]);
+
+  useEffect(() => {
+    if (isAuthenticated && !isRecruiter) {
+      setLoadingHomeRecs(true);
+      aiApi
+        .getRecommendedJobs(6, selectedHomeCvId, 50)
+        .then((recs) => setHomeRecs(recs))
+        .catch(() => {})
+        .finally(() => setLoadingHomeRecs(false));
+    } else {
+      setHomeRecs([]);
+    }
+  }, [isAuthenticated, isRecruiter, selectedHomeCvId]);
 
   const load = () => {
     setError(null);
@@ -602,6 +634,91 @@ export const HomePage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* ============ AI PERSONALIZED RECOMMENDED JOBS (CANDIDATE) ============ */}
+      {isAuthenticated && !isRecruiter && (loadingHomeRecs || homeRecs.length > 0) && (
+        <section
+          className="bg-gradient-to-b from-emerald-50/50 via-white to-white dark:from-emerald-950/20 dark:via-slate-950 dark:to-slate-950 border-t border-emerald-200/60 dark:border-emerald-900/40 py-14 transition-colors duration-300"
+          data-testid="home-recommended-jobs"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <SectionHeading
+              eyebrow={
+                <Eyebrow icon={Sparkles}>
+                  {isVi ? 'Gợi ý thông minh theo CV & kỹ năng' : 'AI-Matched For Your Profile & CV'}
+                </Eyebrow>
+              }
+              title={isVi ? 'Việc làm gợi ý riêng cho bạn' : 'Recommended Jobs For You'}
+              subtitle={
+                isVi
+                  ? 'Hệ thống AI tự động phân tích nội dung CV, kỹ năng chuyên môn, cấp bậc và khu vực của bạn để đề xuất những vị trí có độ tương thích cao nhất.'
+                  : 'Our Hybrid AI analyzes your uploaded CV, technical skills, seniority level, and location to surface your best-fit roles.'
+              }
+              action={
+                <div className="flex flex-wrap items-center gap-3">
+                  {candidateCvs.length > 0 && (
+                    <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800/70 rounded-xl px-3 py-1.5 shadow-soft-xs">
+                      <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                        {isVi ? 'CV đối chiếu:' : 'Active CV:'}
+                      </span>
+                      <select
+                        aria-label={isVi ? 'Chọn CV gợi ý trang chủ' : 'Select CV for home recommendations'}
+                        value={selectedHomeCvId ?? ''}
+                        onChange={(e) => setSelectedHomeCvId(e.target.value ? Number(e.target.value) : null)}
+                        className="text-xs font-extrabold text-emerald-700 dark:text-emerald-300 bg-transparent focus:outline-none cursor-pointer"
+                      >
+                        {candidateCvs.map((cv) => (
+                          <option key={cv.id} value={cv.id} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+                            {cv.title || cv.fileName} {cv.isDefault ? (isVi ? '(Mặc định)' : '(Default)') : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <SeeAll to="/jobs?recommended=1">
+                    {isVi ? 'Xem tất cả gợi ý AI' : 'View all AI matches'}
+                  </SeeAll>
+                </div>
+              }
+            />
+
+            {loadingHomeRecs ? (
+              <div className="py-12 flex justify-center">
+                <Spinner />
+              </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {homeRecs.map((rec) => {
+                  const j = rec.job;
+                  return (
+                    <div key={j.id} className="flex flex-col space-y-2">
+                      <JobCard
+                        job={j}
+                        match={{
+                          jobId: j.id,
+                          score: rec.matchScore,
+                          matchedSkills: rec.matchedSkills,
+                          missingSkills: rec.missingSkills,
+                        }}
+                        applied={appliedJobIds.has(j.id) || Boolean(rec.alreadyApplied)}
+                      />
+                      <div className="px-3.5 py-2 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/35 border border-emerald-200/70 dark:border-emerald-900/50 flex items-center justify-between gap-2 text-xs">
+                        <span className="font-semibold text-emerald-800 dark:text-emerald-300 truncate">
+                          ✨ {rec.recommendationReason}
+                        </span>
+                        <span className="shrink-0 font-black px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-200 text-[10px]">
+                          {rec.matchScore}% Match
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ============ FEATURED JOBS ============ */}
       <section className="bg-slate-50 dark:bg-slate-900/40 border-y border-slate-200/70 dark:border-slate-800/70 py-16 transition-colors duration-300">

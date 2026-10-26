@@ -188,12 +188,23 @@ public class AiDtos {
     public static class RecommendedJobDto {
         private JobResponseDto job;
         private Integer matchScore;
+        private Integer skillMatchScore;
+        private Integer experienceMatchScore;
+        private Integer domainMatchScore;
         private String matchRating;
         private String ratingColor;
+        private Boolean levelMatched;
+        private Boolean locationMatched;
+        private Boolean alreadyApplied;
+        private Long analyzedCvId;
+        private String analyzedCvName;
         @Builder.Default
         private List<String> matchedSkills = new ArrayList<>();
         @Builder.Default
         private List<String> missingSkills = new ArrayList<>();
+        @Builder.Default
+        private List<String> matchReasons = new ArrayList<>();
         private String recommendationReason;
+        private String improvementTip;
     }
 }
