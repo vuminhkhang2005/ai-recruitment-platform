@@ -57,7 +57,7 @@ public class EmailService {
     @Value("${app.mail.google-script-url:}")
     private String googleScriptUrl;
 
-    @Value("${app.mail.google-script-fallback-url:https://script.google.com/macros/s/AKfycbx7LgR2YaragbesI-BTZ8RMCqTdvN1Xah0aii1C6gMN5qKEuP2eTGIKzOPSvPiwy4Bm/exec}")
+    @Value("${app.mail.google-script-fallback-url:}")
     private String googleScriptFallbackUrl;
 
     @Value("${app.mail.google-script-secret:}")
