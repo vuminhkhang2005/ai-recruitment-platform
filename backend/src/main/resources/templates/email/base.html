@@ -9,43 +9,66 @@
             margin: 0;
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f8fafc;
+            background-color: #f1f5f9;
             color: #1e293b;
             line-height: 1.6;
         }
         .container {
-            max-width: 600px;
-            margin: 20px auto;
+            max-width: 620px;
+            margin: 24px auto;
             background: #ffffff;
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
             border: 1px solid #e2e8f0;
         }
         .header {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-            padding: 30px;
+            background: linear-gradient(135deg, #2d7a5f 0%, #1f5c4d 100%);
+            padding: 28px 32px;
             text-align: center;
             color: #ffffff;
         }
-        .brand {
-            font-size: 24px;
-            font-weight: 800;
+        .logo-badge {
+            display: inline-block;
+            width: 52px;
+            height: 52px;
+            line-height: 52px;
+            border-radius: 14px;
+            background-color: #ffffff;
+            color: #1f5c4d;
+            font-size: 20px;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
             letter-spacing: -0.5px;
+        }
+        .brand {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
             margin: 0;
+            color: #ffffff;
         }
         .brand span {
             color: #a7f3d0;
         }
+        .sender-bar {
+            background-color: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 12px 32px;
+            font-size: 13px;
+            color: #475569;
+        }
         .content {
-            padding: 36px 32px;
+            padding: 32px;
         }
         .heading {
             font-size: 20px;
             font-weight: 700;
             color: #0f172a;
             margin-top: 0;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
         .greeting {
             font-size: 16px;
@@ -56,13 +79,13 @@
         p {
             margin-top: 0;
             margin-bottom: 16px;
-            color: #475569;
+            color: #334155;
             font-size: 15px;
         }
         .card {
-            background-color: #f1f5f9;
-            border-left: 4px solid #059669;
-            border-radius: 6px;
+            background-color: #f8fafc;
+            border-left: 4px solid #2d7a5f;
+            border-radius: 8px;
             padding: 16px 20px;
             margin: 24px 0;
         }
@@ -75,51 +98,63 @@
         }
         .detail-label {
             font-weight: 600;
-            color: #334155;
+            color: #475569;
             display: inline-block;
-            min-width: 120px;
+            min-width: 130px;
         }
         .detail-value {
             color: #0f172a;
+            font-weight: 500;
         }
         .btn-wrapper {
             text-align: center;
-            margin: 32px 0 24px;
+            margin: 30px 0 22px;
         }
         .btn {
             display: inline-block;
-            background-color: #059669;
+            background-color: #2d7a5f;
             color: #ffffff !important;
             text-decoration: none;
             font-weight: 600;
             font-size: 15px;
             padding: 12px 28px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
+            border-radius: 10px;
         }
         .footer {
             background-color: #f8fafc;
             border-top: 1px solid #e2e8f0;
-            padding: 24px 32px;
+            padding: 22px 32px;
             text-align: center;
-            font-size: 13px;
-            color: #94a3b8;
+            font-size: 12.5px;
+            color: #64748b;
         }
         .footer a {
-            color: #059669;
+            color: #2d7a5f;
             text-decoration: none;
+            font-weight: 600;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1 class="brand" th:if="${senderDisplayName != null and !senderDisplayName.isEmpty()}" th:text="${senderDisplayName}">FPT Software - Phòng Tuyển dụng</h1>
-            <h1 class="brand" th:if="${senderDisplayName == null or senderDisplayName.isEmpty()}">Talent<span>Bridge</span></h1>
-            <div th:if="${senderDisplayName != null and !senderDisplayName.isEmpty()}" style="font-size: 12px; color: #d1fae5; margin-top: 6px; font-weight: 500;">
-                Gửi từ Hệ thống Tuyển dụng chính thức qua nền tảng TalentBridge ATS
+            <div class="logo-badge">TB</div>
+            <h1 class="brand" th:if="${senderDisplayName != null and !senderDisplayName.isEmpty()}" th:text="${senderDisplayName}">Lê Thu Hà — FPT Software</h1>
+            <h1 class="brand" th:if="${senderDisplayName == null or senderDisplayName.isEmpty()}">Talent<span>Bridge</span> Recruitment</h1>
+            <div style="font-size: 12px; color: #d1fae5; margin-top: 6px; font-weight: 500;">
+                TalentBridge ATS · Cổng Tuyển dụng &amp; Kết nối Nhân tài Công nghệ
             </div>
         </div>
+
+        <div class="sender-bar" th:if="${senderDisplayName != null or replyToEmail != null}">
+            <span th:if="${senderDisplayName != null}">
+                <strong>Người gửi / Đại diện HR:</strong> <span th:text="${senderDisplayName}">Lê Thu Hà — FPT Software</span>
+            </span>
+            <span th:if="${replyToEmail != null and !replyToEmail.isEmpty()}" style="margin-left: 12px;">
+                · <strong>Email liên hệ:</strong> <a th:href="'mailto:' + ${replyToEmail}" style="color: #2d7a5f; text-decoration: none;" th:text="${replyToEmail}">recruiter@company.com</a>
+            </span>
+        </div>
+
         <div class="content">
             <h2 class="heading" th:if="${heading}" th:text="${heading}">Thông báo</h2>
             <div class="greeting" th:if="${recipientName}">Xin chào <span th:text="${recipientName}">Ứng viên</span>,</div>
@@ -136,19 +171,19 @@
             </div>
 
             <div class="btn-wrapper" th:if="${ctaUrl != null and ctaText != null}">
-                <a th:href="${ctaUrl}" class="btn" th:text="${ctaText}">Xem chi tiết</a>
+                <a th:href="${ctaUrl}" class="btn" th:text="${ctaText}">Xem chi tiết trên TalentBridge</a>
             </div>
 
-            <p style="margin-top: 24px; font-size: 14px; color: #64748b;" th:if="${signOff}" th:text="${signOff}">
-                Trân trọng,<br>Đội ngũ TalentBridge
+            <p style="margin-top: 24px; font-size: 14px; color: #475569; white-space: pre-line;" th:if="${signOff}" th:text="${signOff}">
+                Trân trọng,
+                Đội ngũ Tuyển dụng
             </p>
         </div>
         <div class="footer">
             <p style="margin-bottom: 4px;" th:if="${replyToEmail != null and !replyToEmail.isEmpty()}">
-                Email liên hệ trực tiếp bộ phận HR: <a th:href="'mailto:' + ${replyToEmail}" th:text="${replyToEmail}">hr@company.com</a>
+                Phản hồi trực tiếp cho Nhà tuyển dụng qua email: <a th:href="'mailto:' + ${replyToEmail}" th:text="${replyToEmail}">hr@company.com</a>
             </p>
-            <p style="margin-bottom: 4px;">TalentBridge – Nền tảng kết nối ứng viên và nhà tuyển dụng công nghệ</p>
-            <p style="margin-bottom: 0;">Email được ủy quyền gửi từ hệ thống TalentBridge thay mặt Nhà tuyển dụng.</p>
+            <p style="margin-bottom: 0;">Được gửi tự động qua hệ thống quản trị tuyển dụng <strong>TalentBridge ATS</strong>.</p>
         </div>
     </div>
 </body>
