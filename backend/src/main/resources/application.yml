@@ -42,20 +42,19 @@ spring:
     baseline-description: "Initial schema from 02_DATABASE_SCHEMA_DDL.sql"
     locations: classpath:db/migration
 
-  # SMTP. Local default = MailDev (npx maildev -> SMTP :1025, inbox UI :1080).
-  # Production: MAIL_HOST=smtp.gmail.com MAIL_PORT=587 MAIL_USERNAME=... MAIL_PASSWORD=<app password> MAIL_STARTTLS=true
+  # SMTP configured with Gmail App Password (same as MinLish project)
   mail:
-    host: ${MAIL_HOST:localhost}
-    port: ${MAIL_PORT:1025}
-    username: ${MAIL_USERNAME:}
-    password: ${MAIL_PASSWORD:}
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:kimnguyenthihoang68@gmail.com}
+    password: ${MAIL_PASSWORD:yjak xguk sdko gfkr}
     default-encoding: UTF-8
     properties:
-      mail.smtp.auth: ${MAIL_SMTP_AUTH:false}
-      mail.smtp.starttls.enable: ${MAIL_STARTTLS:false}
-      mail.smtp.connectiontimeout: 5000
-      mail.smtp.timeout: 5000
-      mail.smtp.writetimeout: 5000
+      mail.smtp.auth: ${MAIL_SMTP_AUTH:true}
+      mail.smtp.starttls.enable: ${MAIL_STARTTLS:true}
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
 
   thymeleaf:
     check-template-location: false
