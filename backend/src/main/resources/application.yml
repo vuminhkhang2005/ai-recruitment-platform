@@ -42,16 +42,16 @@ spring:
     baseline-description: "Initial schema from 02_DATABASE_SCHEMA_DDL.sql"
     locations: classpath:db/migration
 
-  # SMTP configured with Gmail App Password (same as MinLish project)
+  # Local SMTP fallback (only used when MAIL_PROVIDER=smtp)
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:kimnguyenthihoang68@gmail.com}
-    password: ${MAIL_PASSWORD:yjak xguk sdko gfkr}
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     default-encoding: UTF-8
     properties:
-      mail.smtp.auth: ${MAIL_SMTP_AUTH:true}
-      mail.smtp.starttls.enable: ${MAIL_STARTTLS:true}
+      mail.smtp.auth: ${MAIL_SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${MAIL_STARTTLS:false}
       mail.smtp.connectiontimeout: 10000
       mail.smtp.timeout: 10000
       mail.smtp.writetimeout: 10000
@@ -104,12 +104,13 @@ app:
   mail:
     enabled: ${APP_MAIL_ENABLED:true}
     from: ${APP_MAIL_FROM:TalentBridge <no-reply@talentbridge.vn>}
-    # Free Production HTTP Email APIs (recommended for cloud hosts like Render/Railway that block SMTP port 587):
-    # Option 1: Brevo (300 free emails/day to ANY recipient, no custom domain needed): set BREVO_API_KEY & BREVO_SENDER_EMAIL
+    # Default Free Production Email Relay: Google Apps Script (works on Render/Railway where SMTP is blocked, 0 third-party registration)
+    google-script-url: ${GOOGLE_SCRIPT_MAIL_URL:https://script.google.com/macros/s/AKfycbx7LgR2YaragbesI-BTZ8RMCqTdvN1Xah0aii1C6gMN5qKEuP2eTGIKzOPSvPiwy4Bm/exec}
+    google-script-secret: ${GOOGLE_SCRIPT_MAIL_SECRET:minlish_mail_secret_2026}
+    # Optional alternative providers:
     brevo-api-key: ${BREVO_API_KEY:}
     brevo-sender-email: ${BREVO_SENDER_EMAIL:}
     brevo-sender-name: ${BREVO_SENDER_NAME:TalentBridge Recruitment}
-    # Option 2: Resend (100 free emails/day): set RESEND_API_KEY
     resend-api-key: ${RESEND_API_KEY:}
   invitations:
     ttl-days: 7

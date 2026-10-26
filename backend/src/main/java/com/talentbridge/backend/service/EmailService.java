@@ -38,7 +38,8 @@ public class EmailService {
     private final ObjectMapper objectMapper;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
+            .connectTimeout(Duration.ofSeconds(15))
+            .followRedirects(HttpClient.Redirect.NEVER)
             .build();
 
     @Value("${app.mail.enabled:true}")
@@ -52,6 +53,12 @@ public class EmailService {
 
     @Value("${spring.mail.username:}")
     private String smtpUsername;
+
+    @Value("${app.mail.google-script-url:}")
+    private String googleScriptUrl;
+
+    @Value("${app.mail.google-script-secret:}")
+    private String googleScriptSecret;
 
     @Value("${app.mail.brevo-api-key:}")
     private String brevoApiKey;
@@ -98,9 +105,8 @@ public class EmailService {
     }
 
     /**
-     * Sends an email using 1 single verified technical sender address while dynamically
-     * customizing the Sender Display Name (e.g. "FPT Software - Phòng Tuyển dụng") and
-     * Reply-To header (e.g. "recruiter.fpt@fpt.com") for each company/HR.
+     * Sends an email using 1 single verified technical sender (Google Apps Script Relay, Brevo, Resend, or SMTP)
+     * while dynamically customizing the Sender Display Name (e.g. "Lê Thu Hà — FPT Software") and Reply-To header.
      */
     public void sendEmail(
             String toEmail,
@@ -143,8 +149,20 @@ public class EmailService {
             context.setVariable("replyToEmail", StringUtils.hasText(replyToEmail) ? replyToEmail.trim() : null);
 
             String htmlBody = templateEngine.process("email/base.html", context);
+            String plainTextBody = paragraphs != null && !paragraphs.isEmpty()
+                    ? String.join("\n\n", paragraphs)
+                    : subject;
 
-            // 1. Free HTTP API Provider #1: Brevo (Sendinblue) — 300 free emails/day to any recipient
+            // 1. Primary Free Production Relay: Google Apps Script Mail Relay (same as MinLish deploy branch)
+            if (StringUtils.hasText(googleScriptUrl) && StringUtils.hasText(googleScriptSecret)) {
+                sendViaGoogleAppsScript(toEmail, subject, plainTextBody, htmlBody, effectiveDisplayName, replyToEmail);
+                log.info("[Google Apps Script Relay] Email sent from '{}' (Reply-To: {}) to {} | Subject: '{}'",
+                        effectiveDisplayName, replyToEmail, toEmail, subject);
+                saveLog(toEmail, subject, "base.html", "SENT", null, referenceType, referenceId);
+                return;
+            }
+
+            // 2. Optional Free HTTP API Provider: Brevo
             if (StringUtils.hasText(brevoApiKey)) {
                 sendViaBrevoApi(toEmail, recipientName, subject, htmlBody, icsContent, effectiveDisplayName, replyToEmail);
                 log.info("[Brevo API] Email sent from '{}' <{}> (Reply-To: {}) to {} | Subject: '{}'",
@@ -153,7 +171,7 @@ public class EmailService {
                 return;
             }
 
-            // 2. Free HTTP API Provider #2: Resend — 100 free emails/day over HTTPS
+            // 3. Optional Free HTTP API Provider: Resend
             if (StringUtils.hasText(resendApiKey)) {
                 sendViaResendApi(toEmail, subject, htmlBody, icsContent, effectiveDisplayName, replyToEmail);
                 log.info("[Resend API] Email sent from '{}' to {} | Subject: '{}'", effectiveDisplayName, toEmail, subject);
@@ -161,7 +179,7 @@ public class EmailService {
                 return;
             }
 
-            // 3. Standard SMTP (Gmail Free App Password 500 emails/day or Local MailDev)
+            // 4. Standard SMTP (Gmail SMTP or Local MailDev)
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, icsContent != null, "UTF-8");
             helper.setFrom(new InternetAddress(actualFromEmail, effectiveDisplayName, StandardCharsets.UTF_8.name()));
@@ -198,6 +216,74 @@ public class EmailService {
                 err = err.substring(0, 490);
             }
             saveLog(toEmail, subject, "base.html", "FAILED", err, referenceType, referenceId);
+        }
+    }
+
+    private void sendViaGoogleAppsScript(
+            String toEmail,
+            String subject,
+            String plainText,
+            String htmlBody,
+            String senderDisplayName,
+            String replyToEmail
+    ) throws Exception {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("secret", googleScriptSecret.trim());
+        payload.put("to", toEmail);
+        payload.put("subject", subject);
+        payload.put("text", plainText != null ? plainText : "");
+        payload.put("html", htmlBody != null ? htmlBody : "");
+        if (StringUtils.hasText(senderDisplayName)) {
+            payload.put("name", senderDisplayName);
+            payload.put("senderName", senderDisplayName);
+            payload.put("fromName", senderDisplayName);
+        }
+        if (StringUtils.hasText(replyToEmail)) {
+            payload.put("replyTo", replyToEmail.trim());
+        }
+
+        String json = objectMapper.writeValueAsString(payload);
+        HttpRequest postReq = HttpRequest.newBuilder()
+                .uri(URI.create(googleScriptUrl.trim()))
+                .timeout(Duration.ofSeconds(25))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(postReq, HttpResponse.BodyHandlers.ofString());
+        int status = response.statusCode();
+
+        // Google Apps Script Web App (/exec) executes doPost(e) and returns HTTP 302 Redirect to script.googleusercontent.com
+        if (status == 301 || status == 302 || status == 303 || status == 307 || status == 308) {
+            String location = response.headers().firstValue("location").orElse(null);
+            if (StringUtils.hasText(location)) {
+                HttpRequest getRedirect = HttpRequest.newBuilder()
+                        .uri(URI.create(location))
+                        .timeout(Duration.ofSeconds(20))
+                        .GET()
+                        .build();
+                response = httpClient.send(getRedirect, HttpResponse.BodyHandlers.ofString());
+                status = response.statusCode();
+            } else {
+                // If 302 returned without location, doPost already executed
+                return;
+            }
+        }
+
+        String bodyText = response.body();
+        if (status < 200 || status >= 300) {
+            throw new IllegalStateException("Google Apps Script mail failed (" + status + "): " + bodyText);
+        }
+        if (StringUtils.hasText(bodyText) && bodyText.trim().startsWith("{")) {
+            try {
+                Map<?, ?> bodyMap = objectMapper.readValue(bodyText, Map.class);
+                if (Boolean.FALSE.equals(bodyMap.get("ok"))) {
+                    throw new IllegalStateException("Google Apps Script error: " + bodyMap.get("message"));
+                }
+            } catch (IllegalStateException ise) {
+                throw ise;
+            } catch (Exception ignored) {
+            }
         }
     }
 
