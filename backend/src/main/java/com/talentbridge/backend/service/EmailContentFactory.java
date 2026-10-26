@@ -77,7 +77,7 @@ public class EmailContentFactory {
         return compName + " - Phòng Tuyển dụng";
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public void handleApplicationSubmitted(DomainEvents.ApplicationSubmitted event) {
         JobApplication app = applicationRepository.findById(event.applicationId()).orElse(null);
         if (app == null) return;
@@ -163,7 +163,7 @@ public class EmailContentFactory {
                 .replace("{{rejection_reason}}", rejectionReason != null ? rejectionReason : "");
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public void handleApplicationStageChanged(DomainEvents.ApplicationStageChanged event) {
         if (!event.sendEmail()) return;
         JobApplication app = applicationRepository.findById(event.applicationId()).orElse(null);
@@ -312,7 +312,7 @@ public class EmailContentFactory {
         );
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public void handleInterviewChanged(DomainEvents.InterviewChanged event) {
         Interview interview = interviewRepository.findById(event.interviewId()).orElse(null);
         if (interview == null) return;
@@ -451,7 +451,7 @@ public class EmailContentFactory {
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public void handleTeamInvitationCreated(DomainEvents.TeamInvitationCreated event) {
         CompanyInvitation invitation = invitationRepository.findById(event.invitationId()).orElse(null);
         if (invitation == null) return;
