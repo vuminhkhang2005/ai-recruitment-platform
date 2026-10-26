@@ -661,7 +661,7 @@ export const LoginPage: React.FC = () => {
           `&client_id=${encodeURIComponent(cfg.googleClientId)}` +
           `&redirect_uri=${encodeURIComponent(redirectUri)}` +
           `&scope=${encodeURIComponent('openid email profile')}` +
-          `&access_type=offline&prompt=consent&state=google_oauth2`;
+          `&prompt=select_account&state=google_oauth2`;
         return;
       }
       if (provider === 'linkedin' && cfg.linkedinConfigured && cfg.linkedinClientId) {
@@ -867,7 +867,7 @@ export const RegisterPage: React.FC = () => {
           `&client_id=${encodeURIComponent(cfg.googleClientId)}` +
           `&redirect_uri=${encodeURIComponent(redirectUri)}` +
           `&scope=${encodeURIComponent('openid email profile')}` +
-          `&access_type=offline&prompt=consent&state=google_oauth2`;
+          `&prompt=select_account&state=google_oauth2`;
         return;
       }
       if (provider === 'linkedin' && cfg.linkedinConfigured && cfg.linkedinClientId) {
