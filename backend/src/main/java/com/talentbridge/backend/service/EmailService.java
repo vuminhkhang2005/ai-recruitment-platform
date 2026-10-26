@@ -3,6 +3,7 @@ package com.talentbridge.backend.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.talentbridge.backend.entity.EmailLog;
 import com.talentbridge.backend.repository.EmailLogRepository;
+import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -78,11 +79,55 @@ public class EmailService {
             String referenceType,
             Long referenceId
     ) {
+        sendEmail(
+                toEmail,
+                subject,
+                heading,
+                recipientName,
+                paragraphs,
+                details,
+                ctaText,
+                ctaUrl,
+                signOff,
+                icsContent,
+                referenceType,
+                referenceId,
+                null,
+                null
+        );
+    }
+
+    /**
+     * Sends an email using 1 single verified technical sender address while dynamically
+     * customizing the Sender Display Name (e.g. "FPT Software - Phòng Tuyển dụng") and
+     * Reply-To header (e.g. "recruiter.fpt@fpt.com") for each company/HR.
+     */
+    public void sendEmail(
+            String toEmail,
+            String subject,
+            String heading,
+            String recipientName,
+            List<String> paragraphs,
+            Map<String, String> details,
+            String ctaText,
+            String ctaUrl,
+            String signOff,
+            String icsContent,
+            String referenceType,
+            Long referenceId,
+            String senderDisplayName,
+            String replyToEmail
+    ) {
         if (!mailEnabled) {
             log.info("Email disabled. Skipping email to {} with subject '{}'", toEmail, subject);
             saveLog(toEmail, subject, "base.html", "DISABLED", null, referenceType, referenceId);
             return;
         }
+
+        String effectiveDisplayName = StringUtils.hasText(senderDisplayName)
+                ? senderDisplayName.trim()
+                : extractDisplayName(mailFrom);
+        String actualFromEmail = resolveActualSenderEmail();
 
         try {
             Context context = new Context();
@@ -94,30 +139,35 @@ public class EmailService {
             context.setVariable("ctaText", ctaText);
             context.setVariable("ctaUrl", ctaUrl);
             context.setVariable("signOff", signOff);
+            context.setVariable("senderDisplayName", StringUtils.hasText(senderDisplayName) ? senderDisplayName.trim() : null);
+            context.setVariable("replyToEmail", StringUtils.hasText(replyToEmail) ? replyToEmail.trim() : null);
 
             String htmlBody = templateEngine.process("email/base.html", context);
 
-            // 1. Free HTTP API Provider #1: Brevo (Sendinblue) — 300 free emails/day to any recipient, works on Render/Railway
+            // 1. Free HTTP API Provider #1: Brevo (Sendinblue) — 300 free emails/day to any recipient
             if (StringUtils.hasText(brevoApiKey)) {
-                sendViaBrevoApi(toEmail, recipientName, subject, htmlBody, icsContent);
-                log.info("[Brevo API] Email successfully sent to {} with subject '{}'", toEmail, subject);
+                sendViaBrevoApi(toEmail, recipientName, subject, htmlBody, icsContent, effectiveDisplayName, replyToEmail);
+                log.info("[Brevo API] Email sent from '{}' <{}> (Reply-To: {}) to {} | Subject: '{}'",
+                        effectiveDisplayName, actualFromEmail, replyToEmail, toEmail, subject);
                 saveLog(toEmail, subject, "base.html", "SENT", null, referenceType, referenceId);
                 return;
             }
 
             // 2. Free HTTP API Provider #2: Resend — 100 free emails/day over HTTPS
             if (StringUtils.hasText(resendApiKey)) {
-                sendViaResendApi(toEmail, subject, htmlBody, icsContent);
-                log.info("[Resend API] Email successfully sent to {} with subject '{}'", toEmail, subject);
+                sendViaResendApi(toEmail, subject, htmlBody, icsContent, effectiveDisplayName, replyToEmail);
+                log.info("[Resend API] Email sent from '{}' to {} | Subject: '{}'", effectiveDisplayName, toEmail, subject);
                 saveLog(toEmail, subject, "base.html", "SENT", null, referenceType, referenceId);
                 return;
             }
 
             // 3. Standard SMTP (Gmail Free App Password 500 emails/day or Local MailDev)
-            String effectiveFrom = resolveEffectiveFrom();
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, icsContent != null, "UTF-8");
-            helper.setFrom(effectiveFrom);
+            helper.setFrom(new InternetAddress(actualFromEmail, effectiveDisplayName, StandardCharsets.UTF_8.name()));
+            if (StringUtils.hasText(replyToEmail)) {
+                helper.setReplyTo(new InternetAddress(replyToEmail.trim(), effectiveDisplayName, StandardCharsets.UTF_8.name()));
+            }
             helper.setTo(toEmail);
             helper.setSubject(subject);
             helper.setText(htmlBody, true);
@@ -129,11 +179,13 @@ public class EmailService {
 
             try {
                 mailSender.send(message);
-                log.info("[SMTP] Email successfully sent to {} with subject '{}'", toEmail, subject);
+                log.info("[SMTP] Email sent from '{}' <{}> (Reply-To: {}) to {} | Subject: '{}'",
+                        effectiveDisplayName, actualFromEmail, replyToEmail, toEmail, subject);
                 saveLog(toEmail, subject, "base.html", "SENT", null, referenceType, referenceId);
             } catch (Exception smtpEx) {
                 if (isLocalDevWithoutSmtpDaemon()) {
-                    log.info("[LOCAL DEV OUTBOX] Simulated email delivery to {} | Subject: '{}' (Configure BREVO_API_KEY or Gmail MAIL_USERNAME/MAIL_PASSWORD for real inbox delivery)", toEmail, subject);
+                    log.info("[LOCAL DEV OUTBOX] Simulated email from '{}' <{}> (Reply-To: {}) -> to {} | Subject: '{}'",
+                            effectiveDisplayName, actualFromEmail, replyToEmail, toEmail, subject);
                     saveLog(toEmail, subject, "base.html", "SENT", null, referenceType, referenceId);
                 } else {
                     throw smtpEx;
@@ -154,24 +206,38 @@ public class EmailService {
         return isLocalHost && !StringUtils.hasText(smtpUsername);
     }
 
-    private String resolveEffectiveFrom() {
-        if (StringUtils.hasText(smtpUsername) && smtpUsername.contains("@")
-                && (mailFrom == null || mailFrom.contains("no-reply@talentbridge.vn"))) {
-            return "TalentBridge Recruitment <" + smtpUsername.trim() + ">";
+    private String resolveActualSenderEmail() {
+        if (StringUtils.hasText(brevoSenderEmail) && brevoSenderEmail.contains("@")) {
+            return brevoSenderEmail.trim();
         }
-        return mailFrom;
+        if (StringUtils.hasText(smtpUsername) && smtpUsername.contains("@")) {
+            return smtpUsername.trim();
+        }
+        return extractEmailAddress(mailFrom);
     }
 
-    private void sendViaBrevoApi(String toEmail, String recipientName, String subject, String htmlBody, String icsContent) throws Exception {
-        String senderEmail = StringUtils.hasText(brevoSenderEmail)
-                ? brevoSenderEmail.trim()
-                : (StringUtils.hasText(smtpUsername) && smtpUsername.contains("@") ? smtpUsername.trim() : extractEmailAddress(mailFrom));
+    private void sendViaBrevoApi(
+            String toEmail,
+            String recipientName,
+            String subject,
+            String htmlBody,
+            String icsContent,
+            String senderDisplayName,
+            String replyToEmail
+    ) throws Exception {
+        String senderEmail = resolveActualSenderEmail();
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("sender", Map.of(
-                "name", StringUtils.hasText(brevoSenderName) ? brevoSenderName : "TalentBridge Recruitment",
+                "name", StringUtils.hasText(senderDisplayName) ? senderDisplayName : brevoSenderName,
                 "email", senderEmail
         ));
+        if (StringUtils.hasText(replyToEmail)) {
+            payload.put("replyTo", Map.of(
+                    "name", StringUtils.hasText(senderDisplayName) ? senderDisplayName : brevoSenderName,
+                    "email", replyToEmail.trim()
+            ));
+        }
         payload.put("to", List.of(Map.of(
                 "email", toEmail,
                 "name", StringUtils.hasText(recipientName) ? recipientName : toEmail
@@ -202,13 +268,25 @@ public class EmailService {
         }
     }
 
-    private void sendViaResendApi(String toEmail, String subject, String htmlBody, String icsContent) throws Exception {
-        String fromHeader = (mailFrom == null || mailFrom.contains("no-reply@talentbridge.vn"))
-                ? "TalentBridge Recruitment <onboarding@resend.dev>"
-                : mailFrom;
+    private void sendViaResendApi(
+            String toEmail,
+            String subject,
+            String htmlBody,
+            String icsContent,
+            String senderDisplayName,
+            String replyToEmail
+    ) throws Exception {
+        String senderEmail = (mailFrom == null || mailFrom.contains("no-reply@talentbridge.vn"))
+                ? "onboarding@resend.dev"
+                : extractEmailAddress(mailFrom);
+        String fromHeader = (StringUtils.hasText(senderDisplayName) ? senderDisplayName : "TalentBridge Recruitment")
+                + " <" + senderEmail + ">";
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("from", fromHeader);
+        if (StringUtils.hasText(replyToEmail)) {
+            payload.put("reply_to", replyToEmail.trim());
+        }
         payload.put("to", List.of(toEmail));
         payload.put("subject", subject);
         payload.put("html", htmlBody);
@@ -233,6 +311,15 @@ public class EmailService {
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IllegalStateException("Resend API returned HTTP " + response.statusCode() + ": " + response.body());
         }
+    }
+
+    private String extractDisplayName(String rawFrom) {
+        if (!StringUtils.hasText(rawFrom)) return "TalentBridge Recruitment";
+        int start = rawFrom.indexOf('<');
+        if (start > 0) {
+            return rawFrom.substring(0, start).trim();
+        }
+        return "TalentBridge Recruitment";
     }
 
     private String extractEmailAddress(String rawFrom) {

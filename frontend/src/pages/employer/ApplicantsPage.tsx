@@ -347,6 +347,7 @@ const StageEmailComposerModal: React.FC<StageEmailComposerModalProps> = ({
 }) => {
   const isVi = lang === 'vi';
   const toast = useToast();
+  const { user } = useAuth();
   const stageLabels = getStageLabels(lang);
 
   const defaultAdvanceStage = useMemo<Stage>(() => {
@@ -881,6 +882,21 @@ const StageEmailComposerModal: React.FC<StageEmailComposerModalProps> = ({
                   <div className="p-4 space-y-3 flex-1 overflow-y-auto text-xs" data-testid="email-live-preview">
                     <div className="space-y-1 pb-2.5 border-b border-slate-200/80 dark:border-slate-700/70">
                       <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                        <span className="font-semibold w-16 shrink-0">{isVi ? 'Người gửi:' : 'From:'}</span>
+                        <span className="font-bold text-emerald-700 dark:text-emerald-300 truncate">
+                          {user?.fullName ? `${user.fullName} — ` : ''}
+                          {previewTarget?.companyName || (isVi ? 'Phòng Tuyển dụng' : 'Recruitment Team')}
+                        </span>
+                      </div>
+                      {user?.email && (
+                        <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                          <span className="font-semibold w-16 shrink-0">{isVi ? 'Reply-To:' : 'Reply-To:'}</span>
+                          <span className="font-mono text-[11px] text-slate-600 dark:text-slate-300 truncate">
+                            {user.email}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
                         <span className="font-semibold w-16 shrink-0">{isVi ? 'Người nhận:' : 'To:'}</span>
                         <span className="font-medium text-slate-800 dark:text-slate-200 truncate">
                           {previewTarget?.candidateName} &lt;{previewTarget?.candidateEmail}&gt;
@@ -893,7 +909,7 @@ const StageEmailComposerModal: React.FC<StageEmailComposerModalProps> = ({
                     </div>
                     <div className="bg-white dark:bg-slate-900 rounded-xl p-3.5 border border-slate-200/80 dark:border-slate-800 space-y-2.5 shadow-2xs">
                       <div className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                        TalentBridge Notification
+                        {previewTarget?.companyName || 'TalentBridge'} · {isVi ? 'Bộ phận Tuyển dụng' : 'Recruitment'}
                       </div>
                       <div className="whitespace-pre-wrap text-slate-700 dark:text-slate-200 leading-relaxed">
                         {previewBody}

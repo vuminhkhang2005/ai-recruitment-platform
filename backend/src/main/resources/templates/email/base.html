@@ -114,7 +114,11 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1 class="brand">Talent<span>Bridge</span></h1>
+            <h1 class="brand" th:if="${senderDisplayName != null and !senderDisplayName.isEmpty()}" th:text="${senderDisplayName}">FPT Software - Phòng Tuyển dụng</h1>
+            <h1 class="brand" th:if="${senderDisplayName == null or senderDisplayName.isEmpty()}">Talent<span>Bridge</span></h1>
+            <div th:if="${senderDisplayName != null and !senderDisplayName.isEmpty()}" style="font-size: 12px; color: #d1fae5; margin-top: 6px; font-weight: 500;">
+                Gửi từ Hệ thống Tuyển dụng chính thức qua nền tảng TalentBridge ATS
+            </div>
         </div>
         <div class="content">
             <h2 class="heading" th:if="${heading}" th:text="${heading}">Thông báo</h2>
@@ -140,8 +144,11 @@
             </p>
         </div>
         <div class="footer">
+            <p style="margin-bottom: 4px;" th:if="${replyToEmail != null and !replyToEmail.isEmpty()}">
+                Email liên hệ trực tiếp bộ phận HR: <a th:href="'mailto:' + ${replyToEmail}" th:text="${replyToEmail}">hr@company.com</a>
+            </p>
             <p style="margin-bottom: 4px;">TalentBridge – Nền tảng kết nối ứng viên và nhà tuyển dụng công nghệ</p>
-            <p style="margin-bottom: 0;">Email này được gửi tự động. Vui lòng không trả lời trực tiếp email này.</p>
+            <p style="margin-bottom: 0;">Email được ủy quyền gửi từ hệ thống TalentBridge thay mặt Nhà tuyển dụng.</p>
         </div>
     </div>
 </body>

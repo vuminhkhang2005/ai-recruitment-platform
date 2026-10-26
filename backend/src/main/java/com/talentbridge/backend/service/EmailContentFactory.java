@@ -24,6 +24,7 @@ public class EmailContentFactory {
     private final EmailService emailService;
     private final JobApplicationRepository applicationRepository;
     private final CandidateProfileRepository candidateProfileRepository;
+    private final RecruiterProfileRepository recruiterProfileRepository;
     private final UserRepository userRepository;
     private final InterviewRepository interviewRepository;
     private final CompanyInvitationRepository invitationRepository;
@@ -41,6 +42,39 @@ public class EmailContentFactory {
         return candidateProfileRepository.findById(app.getCandidateProfileId())
                 .flatMap(cp -> userRepository.findById(cp.getUserId()))
                 .orElse(null);
+    }
+
+    private String resolveCompanyReplyToEmail(Job job, Company company) {
+        if (job != null && job.getRecruiterId() != null) {
+            String recEmail = recruiterProfileRepository.findById(job.getRecruiterId())
+                    .flatMap(rp -> userRepository.findById(rp.getUserId()))
+                    .map(User::getEmail)
+                    .orElse(null);
+            if (recEmail != null && !recEmail.isBlank()) {
+                return recEmail;
+            }
+        }
+        if (company != null && company.getId() != null) {
+            List<Long> managerIds = hiringTeamService.managerUserIds(company.getId());
+            if (!managerIds.isEmpty()) {
+                return userRepository.findById(managerIds.get(0)).map(User::getEmail).orElse(null);
+            }
+        }
+        return null;
+    }
+
+    private String resolveCompanySenderName(Job job, Company company) {
+        String compName = company != null && company.getName() != null ? company.getName() : "Nhà tuyển dụng";
+        if (job != null && job.getRecruiterId() != null) {
+            String hrName = recruiterProfileRepository.findById(job.getRecruiterId())
+                    .flatMap(rp -> userRepository.findById(rp.getUserId()))
+                    .map(User::getFullName)
+                    .orElse(null);
+            if (hrName != null && !hrName.isBlank()) {
+                return hrName + " — " + compName;
+            }
+        }
+        return compName + " - Phòng Tuyển dụng";
     }
 
     @Transactional(readOnly = true)
@@ -77,7 +111,9 @@ public class EmailContentFactory {
                 "Trân trọng,\nĐội ngũ Tuyển dụng " + company.getName(),
                 null,
                 "APPLICATION",
-                app.getId()
+                app.getId(),
+                resolveCompanySenderName(job, company),
+                resolveCompanyReplyToEmail(job, company)
         );
 
         // 2. Email to company hiring managers
@@ -270,7 +306,9 @@ public class EmailContentFactory {
                 signOff,
                 null,
                 "APPLICATION",
-                app.getId()
+                app.getId(),
+                resolveCompanySenderName(job, company),
+                resolveCompanyReplyToEmail(job, company)
         );
     }
 
@@ -372,7 +410,9 @@ public class EmailContentFactory {
                 "Trân trọng,\nĐội ngũ Tuyển dụng " + company.getName(),
                 icsContent,
                 "INTERVIEW",
-                interview.getId()
+                interview.getId(),
+                resolveCompanySenderName(job, company),
+                resolveCompanyReplyToEmail(job, company)
         );
 
         // 2. Send to panelists
