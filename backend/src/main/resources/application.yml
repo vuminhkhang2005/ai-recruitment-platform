@@ -105,6 +105,13 @@ app:
   mail:
     enabled: ${APP_MAIL_ENABLED:true}
     from: ${APP_MAIL_FROM:TalentBridge <no-reply@talentbridge.vn>}
+    # Free Production HTTP Email APIs (recommended for cloud hosts like Render/Railway that block SMTP port 587):
+    # Option 1: Brevo (300 free emails/day to ANY recipient, no custom domain needed): set BREVO_API_KEY & BREVO_SENDER_EMAIL
+    brevo-api-key: ${BREVO_API_KEY:}
+    brevo-sender-email: ${BREVO_SENDER_EMAIL:}
+    brevo-sender-name: ${BREVO_SENDER_NAME:TalentBridge Recruitment}
+    # Option 2: Resend (100 free emails/day): set RESEND_API_KEY
+    resend-api-key: ${RESEND_API_KEY:}
   invitations:
     ttl-days: 7
   demo:

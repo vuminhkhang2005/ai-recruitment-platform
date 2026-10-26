@@ -108,6 +108,25 @@ public class EmailContentFactory {
         }
     }
 
+    public static String interpolateTemplate(
+            String rawText,
+            String candidateName,
+            String candidateEmail,
+            String jobTitle,
+            String companyName,
+            String stageName,
+            String rejectionReason
+    ) {
+        if (rawText == null) return "";
+        return rawText
+                .replace("{{candidate_name}}", candidateName != null ? candidateName : "Ứng viên")
+                .replace("{{candidate_email}}", candidateEmail != null ? candidateEmail : "")
+                .replace("{{job_title}}", jobTitle != null ? jobTitle : "")
+                .replace("{{company_name}}", companyName != null ? companyName : "Nhà tuyển dụng")
+                .replace("{{stage_name}}", stageName != null ? stageName : "")
+                .replace("{{rejection_reason}}", rejectionReason != null ? rejectionReason : "");
+    }
+
     @Transactional(readOnly = true)
     public void handleApplicationStageChanged(DomainEvents.ApplicationStageChanged event) {
         if (!event.sendEmail()) return;
@@ -119,28 +138,38 @@ public class EmailContentFactory {
         if (candidate == null) return;
 
         String toStage = event.toStage();
+        String stageLabel = switch (toStage) {
+            case "SCREENING" -> "Sàng lọc hồ sơ";
+            case "INTERVIEW" -> "Phỏng vấn";
+            case "OFFERED" -> "Đề nghị nhận việc (Offer)";
+            case "HIRED" -> "Trúng tuyển";
+            case "REJECTED" -> "Từ chối / Chưa phù hợp";
+            default -> toStage;
+        };
+
         String subject;
         String heading;
         List<String> paragraphs;
         Map<String, String> details = new LinkedHashMap<>();
         details.put("Vị trí", job.getTitle());
         details.put("Công ty", company.getName());
+        details.put("Trạng thái", stageLabel);
 
         switch (toStage) {
             case "SCREENING" -> {
-                subject = "Cập nhật hồ sơ: Đang xem xét hồ sơ vị trí " + job.getTitle();
-                heading = "Hồ sơ của bạn đang được xem xét";
+                subject = "Cập nhật hồ sơ: Vượt qua vòng CV vị trí " + job.getTitle() + " - " + company.getName();
+                heading = "Hồ sơ của bạn đã được chọn vào vòng Sàng lọc";
                 paragraphs = List.of(
-                        "Hồ sơ ứng tuyển của bạn cho vị trí " + job.getTitle() + " tại " + company.getName() + " đã vượt qua vòng lọc ban đầu và đang được bộ phận chuyên môn xem xét chi tiết.",
+                        "Hồ sơ ứng tuyển của bạn cho vị trí " + job.getTitle() + " tại " + company.getName() + " đã vượt qua vòng đánh giá ban đầu và đang được bộ phận chuyên môn xem xét chi tiết.",
                         "Chúng tôi sẽ cập nhật kết quả các bước tiếp theo sớm nhất có thể."
                 );
             }
             case "INTERVIEW" -> {
                 subject = "Lời mời phỏng vấn: " + job.getTitle() + " tại " + company.getName();
-                heading = "Lời mời tham gia phỏng vấn";
+                heading = "Lời mời tham gia vòng tiếp theo (Phỏng vấn)";
                 paragraphs = List.of(
                         "Chúc mừng bạn! " + company.getName() + " đánh giá cao hồ sơ của bạn và trân trọng mời bạn tham gia vòng phỏng vấn cho vị trí " + job.getTitle() + ".",
-                        "Lịch phỏng vấn cụ thể sẽ được gửi kèm trong email tiếp theo hoặc bạn có thể theo dõi trên hệ thống."
+                        "Lịch phỏng vấn cụ thể sẽ được gửi kèm hoặc bạn có thể theo dõi trực tiếp trên hệ thống TalentBridge."
                 );
             }
             case "OFFERED" -> {
@@ -176,16 +205,69 @@ public class EmailContentFactory {
             }
         }
 
+        String recipientGreetingName = candidate.getFullName();
+        String signOff = "Trân trọng,\nĐội ngũ Tuyển dụng " + company.getName();
+
+        if (event.customEmailSubject() != null && !event.customEmailSubject().isBlank()) {
+            subject = interpolateTemplate(
+                    event.customEmailSubject().trim(),
+                    candidate.getFullName(),
+                    candidate.getEmail(),
+                    job.getTitle(),
+                    company.getName(),
+                    stageLabel,
+                    app.getRejectionReason()
+            );
+        }
+
+        if (event.customEmailBody() != null && !event.customEmailBody().isBlank()) {
+            String renderedBody = interpolateTemplate(
+                    event.customEmailBody().trim(),
+                    candidate.getFullName(),
+                    candidate.getEmail(),
+                    job.getTitle(),
+                    company.getName(),
+                    stageLabel,
+                    app.getRejectionReason()
+            );
+            List<String> customParagraphs = Arrays.stream(renderedBody.split("\\r?\\n\\s*\\r?\\n|\\r?\\n"))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+            if (!customParagraphs.isEmpty()) {
+                paragraphs = customParagraphs;
+                String firstLineLower = customParagraphs.get(0).toLowerCase(Locale.ROOT);
+                if (firstLineLower.startsWith("chào ")
+                        || firstLineLower.startsWith("xin chào ")
+                        || firstLineLower.startsWith("kính gửi ")
+                        || firstLineLower.startsWith("thân gửi ")
+                        || firstLineLower.startsWith("dear ")
+                        || firstLineLower.startsWith("hi ")
+                        || firstLineLower.startsWith("hello ")) {
+                    recipientGreetingName = null;
+                }
+                String lastLineLower = customParagraphs.get(customParagraphs.size() - 1).toLowerCase(Locale.ROOT);
+                if (lastLineLower.startsWith("trân trọng")
+                        || lastLineLower.startsWith("thân ái")
+                        || lastLineLower.startsWith("best regards")
+                        || lastLineLower.startsWith("sincerely")
+                        || lastLineLower.startsWith("warm regards")
+                        || (customParagraphs.size() >= 2 && customParagraphs.get(customParagraphs.size() - 2).toLowerCase(Locale.ROOT).startsWith("trân trọng"))) {
+                    signOff = null;
+                }
+            }
+        }
+
         emailService.sendEmail(
                 candidate.getEmail(),
                 subject,
                 heading,
-                candidate.getFullName(),
+                recipientGreetingName,
                 paragraphs,
                 details,
                 "Xem chi tiết hồ sơ",
                 frontendUrl + "/my-applications",
-                "Trân trọng,\nĐội ngũ Tuyển dụng " + company.getName(),
+                signOff,
                 null,
                 "APPLICATION",
                 app.getId()

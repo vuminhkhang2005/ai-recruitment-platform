@@ -5,6 +5,8 @@ import com.talentbridge.backend.config.OpenApiConfig;
 import com.talentbridge.backend.dto.ApplicationCreateRequestDto;
 import com.talentbridge.backend.dto.ApplicationResponseDto;
 import com.talentbridge.backend.dto.ApplicationStatusUpdateRequestDto;
+import com.talentbridge.backend.dto.BulkApplicationStageUpdateRequestDto;
+import com.talentbridge.backend.dto.BulkApplicationStageUpdateResponseDto;
 import com.talentbridge.backend.security.UserPrincipal;
 import com.talentbridge.backend.service.ApplicationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -97,6 +99,21 @@ public class ApplicationController {
         ApplicationResponseDto updated = applicationService.updateApplicationStatus(
                 id, request, userPrincipal.getId(), hasRole(userPrincipal, "ROLE_ADMIN"));
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái ứng viên thành công", updated));
+    }
+
+    @PostMapping("/bulk-status")
+    @PreAuthorize("hasAnyRole('RECRUITER', 'ADMIN')")
+    @Operation(summary = "Bulk Update Application Stage & Send Personalized Emails (Recruiter / Admin)")
+    public ResponseEntity<ApiResponse<BulkApplicationStageUpdateResponseDto>> bulkUpdateApplicationStatus(
+            @Valid @RequestBody BulkApplicationStageUpdateRequestDto request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        BulkApplicationStageUpdateResponseDto result = applicationService.bulkUpdateApplicationStatus(
+                request, userPrincipal.getId(), hasRole(userPrincipal, "ROLE_ADMIN"));
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Đã cập nhật thành công " + result.getUpdatedCount() + "/" + result.getTotalRequested() + " hồ sơ ứng viên",
+                result
+        ));
     }
 
     @DeleteMapping("/{id}")

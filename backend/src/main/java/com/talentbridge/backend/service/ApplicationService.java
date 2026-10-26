@@ -3,6 +3,8 @@ package com.talentbridge.backend.service;
 import com.talentbridge.backend.dto.ApplicationCreateRequestDto;
 import com.talentbridge.backend.dto.ApplicationResponseDto;
 import com.talentbridge.backend.dto.ApplicationStatusUpdateRequestDto;
+import com.talentbridge.backend.dto.BulkApplicationStageUpdateRequestDto;
+import com.talentbridge.backend.dto.BulkApplicationStageUpdateResponseDto;
 
 import java.util.List;
 
@@ -23,6 +25,8 @@ public interface ApplicationService {
     List<ApplicationResponseDto> getApplicationsForRecruiter(Long recruiterUserId);
 
     ApplicationResponseDto updateApplicationStatus(Long applicationId, ApplicationStatusUpdateRequestDto request, Long recruiterUserId, boolean isAdmin);
+
+    BulkApplicationStageUpdateResponseDto bulkUpdateApplicationStatus(BulkApplicationStageUpdateRequestDto request, Long recruiterUserId, boolean isAdmin);
 
     void withdrawApplication(Long applicationId, Long candidateUserId, boolean isAdmin);
 

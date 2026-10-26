@@ -4,6 +4,8 @@ import com.talentbridge.backend.common.SalaryFormatter;
 import com.talentbridge.backend.dto.ApplicationCreateRequestDto;
 import com.talentbridge.backend.dto.ApplicationResponseDto;
 import com.talentbridge.backend.dto.ApplicationStatusUpdateRequestDto;
+import com.talentbridge.backend.dto.BulkApplicationStageUpdateRequestDto;
+import com.talentbridge.backend.dto.BulkApplicationStageUpdateResponseDto;
 import com.talentbridge.backend.dto.InterviewDtos;
 import com.talentbridge.backend.dto.MatchScoreDto;
 import com.talentbridge.backend.entity.*;
@@ -13,6 +15,7 @@ import com.talentbridge.backend.exception.ResourceNotFoundException;
 import com.talentbridge.backend.repository.*;
 import com.talentbridge.backend.service.ApplicationService;
 import com.talentbridge.backend.service.CandidateService;
+import com.talentbridge.backend.service.EmailContentFactory;
 import com.talentbridge.backend.service.HiringTeamService;
 import com.talentbridge.backend.service.MatchingService;
 import com.talentbridge.backend.service.MessageService;
@@ -26,7 +29,9 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -203,26 +208,141 @@ public class ApplicationServiceImpl implements ApplicationService {
             hiringTeamService.assertCanManageApplication(recruiterUserId, application, "Bạn không có quyền cập nhật đơn ứng tuyển này");
         }
 
-        String stage = request.getCurrentStage() == null ? "" : request.getCurrentStage().trim().toUpperCase();
-        if ("REVIEWING".equals(stage)) {
-            stage = "SCREENING";
-        }
+        String stage = normalizeStage(request.getCurrentStage());
         if (!STAGES.contains(stage)) {
             throw new BadRequestException("Trạng thái không hợp lệ: " + request.getCurrentStage());
         }
-        if (stage.equals(application.getCurrentStage())) {
+        boolean hasCustomEmail = StringUtils.hasText(request.getCustomEmailBody()) || StringUtils.hasText(request.getCustomEmailSubject());
+        if (stage.equals(application.getCurrentStage()) && !hasCustomEmail) {
             return mapToDto(application, MessageService.COMPANY);
         }
         if (FINAL_STAGES.contains(application.getCurrentStage())) {
             throw new BadRequestException("Hồ sơ đã kết thúc ở trạng thái \"" + STAGE_LABELS.get(application.getCurrentStage()) + "\", không thể chuyển tiếp.");
         }
-        if ("REJECTED".equals(stage) && !StringUtils.hasText(request.getRejectionReason())) {
-            throw new BadRequestException("Vui lòng nhập lý do từ chối để phản hồi cho ứng viên.");
+
+        String noteOrReason = resolveNoteOrReason(stage, request.getRejectionReason(), request.getNote(), request.getCustomEmailBody());
+        boolean sendEmail = request.getSendEmail() == null || request.getSendEmail();
+        boolean sendChat = Boolean.TRUE.equals(request.getSendChatMessage());
+
+        JobApplication updated = transitionWithEmail(
+                application,
+                stage,
+                recruiterUserId,
+                noteOrReason,
+                sendEmail,
+                request.getCustomEmailSubject(),
+                request.getCustomEmailBody(),
+                sendChat
+        );
+        return mapToDto(updated, MessageService.COMPANY);
+    }
+
+    @Override
+    @Transactional
+    public BulkApplicationStageUpdateResponseDto bulkUpdateApplicationStatus(BulkApplicationStageUpdateRequestDto request, Long recruiterUserId, boolean isAdmin) {
+        String stage = normalizeStage(request.getCurrentStage());
+        if (!STAGES.contains(stage)) {
+            throw new BadRequestException("Trạng thái không hợp lệ: " + request.getCurrentStage());
         }
 
-        JobApplication updated = transition(application, stage, recruiterUserId,
-                "REJECTED".equals(stage) ? request.getRejectionReason().trim() : null, true);
-        return mapToDto(updated, MessageService.COMPANY);
+        String noteOrReason = resolveNoteOrReason(stage, request.getRejectionReason(), request.getNote(), request.getCustomEmailBody());
+        boolean sendEmail = request.getSendEmail() == null || request.getSendEmail();
+        boolean sendChat = Boolean.TRUE.equals(request.getSendChatMessage());
+        boolean hasCustomEmail = StringUtils.hasText(request.getCustomEmailBody()) || StringUtils.hasText(request.getCustomEmailSubject());
+
+        Set<Long> uniqueIds = new LinkedHashSet<>(request.getApplicationIds());
+        List<ApplicationResponseDto> updatedDtos = new ArrayList<>();
+        List<String> skippedReasons = new ArrayList<>();
+        int emailSentCount = 0;
+
+        for (Long appId : uniqueIds) {
+            if (appId == null) continue;
+            JobApplication app = jobApplicationRepository.findById(appId).orElse(null);
+            if (app == null) {
+                skippedReasons.add("Hồ sơ #" + appId + " không tồn tại");
+                continue;
+            }
+            if (!isAdmin) {
+                try {
+                    hiringTeamService.assertCanManageApplication(recruiterUserId, app, "Không có quyền");
+                } catch (Exception ex) {
+                    skippedReasons.add("Hồ sơ #" + appId + ": Không có quyền cập nhật");
+                    continue;
+                }
+            }
+            String candidateName = resolveCandidateName(app);
+            if (FINAL_STAGES.contains(app.getCurrentStage())) {
+                skippedReasons.add(candidateName + ": Hồ sơ đã kết thúc ở trạng thái " + STAGE_LABELS.getOrDefault(app.getCurrentStage(), app.getCurrentStage()));
+                continue;
+            }
+            if (stage.equals(app.getCurrentStage()) && !hasCustomEmail) {
+                skippedReasons.add(candidateName + ": Đang ở sẵn trạng thái " + STAGE_LABELS.getOrDefault(stage, stage));
+                continue;
+            }
+
+            JobApplication updated = transitionWithEmail(
+                    app,
+                    stage,
+                    recruiterUserId,
+                    noteOrReason,
+                    sendEmail,
+                    request.getCustomEmailSubject(),
+                    request.getCustomEmailBody(),
+                    sendChat
+            );
+            updatedDtos.add(mapToDto(updated, MessageService.COMPANY));
+            if (sendEmail) {
+                emailSentCount++;
+            }
+        }
+
+        if (updatedDtos.isEmpty() && !skippedReasons.isEmpty()) {
+            throw new BadRequestException("Không có hồ sơ nào đủ điều kiện cập nhật: " + String.join("; ", skippedReasons));
+        }
+
+        return BulkApplicationStageUpdateResponseDto.builder()
+                .totalRequested(uniqueIds.size())
+                .updatedCount(updatedDtos.size())
+                .skippedCount(skippedReasons.size())
+                .emailSentCount(emailSentCount)
+                .updatedApplications(updatedDtos)
+                .skippedReasons(skippedReasons)
+                .build();
+    }
+
+    private String normalizeStage(String rawStage) {
+        String stage = rawStage == null ? "" : rawStage.trim().toUpperCase();
+        return "REVIEWING".equals(stage) ? "SCREENING" : stage;
+    }
+
+    private String resolveNoteOrReason(String stage, String rejectionReason, String note, String customEmailBody) {
+        if ("REJECTED".equals(stage)) {
+            if (StringUtils.hasText(rejectionReason)) {
+                return rejectionReason.trim();
+            }
+            if (StringUtils.hasText(note)) {
+                return note.trim();
+            }
+            if (StringUtils.hasText(customEmailBody)) {
+                return "Chưa phù hợp với yêu cầu vị trí tại thời điểm hiện tại";
+            }
+            throw new BadRequestException("Vui lòng nhập lý do từ chối để phản hồi cho ứng viên.");
+        }
+        if (StringUtils.hasText(note)) {
+            return note.trim();
+        }
+        if (StringUtils.hasText(rejectionReason)) {
+            return rejectionReason.trim();
+        }
+        return null;
+    }
+
+    private String resolveCandidateName(JobApplication app) {
+        if (app == null || app.getCandidateProfileId() == null) return "Ứng viên #" + (app != null ? app.getId() : "");
+        return candidateProfileRepository.findById(app.getCandidateProfileId())
+                .flatMap(cp -> userRepository.findById(cp.getUserId()))
+                .map(User::getFullName)
+                .orElse("Ứng viên #" + app.getId());
     }
 
     @Override
@@ -236,30 +356,98 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
 
     private JobApplication transition(JobApplication application, String stage, Long actorUserId, String note, boolean sendEmail) {
+        return transitionWithEmail(application, stage, actorUserId, note, sendEmail, null, null, false);
+    }
+
+    private JobApplication transitionWithEmail(
+            JobApplication application,
+            String stage,
+            Long actorUserId,
+            String note,
+            boolean sendEmail,
+            String customEmailSubject,
+            String customEmailBody,
+            boolean sendChatMessage
+    ) {
         String from = application.getCurrentStage();
+        boolean stageChanged = !stage.equals(from);
         application.setCurrentStage(stage);
-        application.setRejectionReason("REJECTED".equals(stage) ? note : null);
+        if ("REJECTED".equals(stage)) {
+            application.setRejectionReason(note);
+        } else if (stageChanged) {
+            application.setRejectionReason(null);
+        }
         application.setUpdatedAt(LocalDateTime.now());
         JobApplication updated = jobApplicationRepository.save(application);
 
+        String historyNote = note;
+        if (!StringUtils.hasText(historyNote) && StringUtils.hasText(customEmailSubject)) {
+            historyNote = "Đã gửi email: " + customEmailSubject.trim();
+        }
         stageHistoryRepository.save(ApplicationStageHistory.builder()
                 .applicationId(updated.getId())
                 .fromStage(from)
                 .toStage(stage)
                 .changedByUserId(actorUserId)
-                .note(note)
+                .note(historyNote)
                 .build());
 
         candidateProfileRepository.findById(updated.getCandidateProfileId()).ifPresent(cp -> {
             Job job = updated.getJob();
             String company = job.getCompany() != null ? job.getCompany().getName() : "Nhà tuyển dụng";
+            String stageLabel = STAGE_LABELS.getOrDefault(stage, stage);
             notificationService.notify(cp.getUserId(), "APPLICATION_STATUS",
-                    job.getTitle() + ": " + STAGE_LABELS.get(stage),
-                    company + " đã cập nhật trạng thái hồ sơ của bạn thành \"" + STAGE_LABELS.get(stage) + "\".",
+                    job.getTitle() + ": " + stageLabel,
+                    company + " đã cập nhật trạng thái hồ sơ của bạn thành \"" + stageLabel + "\".",
                     "APPLICATION", updated.getId());
+
+            if (sendChatMessage && StringUtils.hasText(customEmailBody)) {
+                User candUser = userRepository.findById(cp.getUserId()).orElse(null);
+                String candName = candUser != null ? candUser.getFullName() : "Ứng viên";
+                String candEmail = candUser != null ? candUser.getEmail() : "";
+                String renderedBody = EmailContentFactory.interpolateTemplate(
+                        customEmailBody.trim(),
+                        candName,
+                        candEmail,
+                        job.getTitle(),
+                        company,
+                        stageLabel,
+                        updated.getRejectionReason()
+                );
+                String renderedSubject = StringUtils.hasText(customEmailSubject)
+                        ? EmailContentFactory.interpolateTemplate(
+                                customEmailSubject.trim(),
+                                candName,
+                                candEmail,
+                                job.getTitle(),
+                                company,
+                                stageLabel,
+                                updated.getRejectionReason()
+                        )
+                        : null;
+                String chatContent = (StringUtils.hasText(renderedSubject) ? "📧 [" + renderedSubject + "]\n\n" : "") + renderedBody;
+                if (chatContent.length() > 1950) {
+                    chatContent = chatContent.substring(0, 1950) + "...";
+                }
+                ApplicationMessage savedMsg = messageRepository.save(ApplicationMessage.builder()
+                        .applicationId(updated.getId())
+                        .senderUserId(actorUserId)
+                        .senderSide(MessageService.COMPANY)
+                        .content(chatContent)
+                        .createdAt(LocalDateTime.now())
+                        .build());
+                eventPublisher.publishEvent(new DomainEvents.MessageCreated(savedMsg.getId(), List.of(cp.getUserId())));
+            }
         });
 
-        eventPublisher.publishEvent(new DomainEvents.ApplicationStageChanged(updated.getId(), from, stage, sendEmail));
+        eventPublisher.publishEvent(new DomainEvents.ApplicationStageChanged(
+                updated.getId(),
+                from,
+                stage,
+                sendEmail,
+                customEmailSubject,
+                customEmailBody
+        ));
         return updated;
     }
 

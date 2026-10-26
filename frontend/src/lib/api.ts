@@ -289,10 +289,50 @@ export const applicationApi = {
   get: (id: number) => request<Application>(`/applications/${id}`),
   forRecruiter: () => request<Application[]>('/applications/recruiter'),
   forJob: (jobId: number) => request<Application[]>(`/applications/job/${jobId}`),
-  updateStage: (id: number, currentStage: Stage, rejectionReason?: string) =>
+  updateStage: (
+    id: number,
+    currentStage: Stage,
+    rejectionReason?: string,
+    options?: {
+      note?: string;
+      sendEmail?: boolean;
+      customEmailSubject?: string;
+      customEmailBody?: string;
+      sendChatMessage?: boolean;
+    },
+  ) =>
     request<Application>(`/applications/${id}/status`, {
       method: 'PATCH',
-      body: { currentStage, rejectionReason },
+      body: {
+        currentStage,
+        rejectionReason,
+        note: options?.note,
+        sendEmail: options?.sendEmail ?? true,
+        customEmailSubject: options?.customEmailSubject,
+        customEmailBody: options?.customEmailBody,
+        sendChatMessage: options?.sendChatMessage ?? false,
+      },
+    }),
+  bulkUpdateStage: (payload: {
+    applicationIds: number[];
+    currentStage: Stage;
+    rejectionReason?: string;
+    note?: string;
+    sendEmail?: boolean;
+    customEmailSubject?: string;
+    customEmailBody?: string;
+    sendChatMessage?: boolean;
+  }) =>
+    request<{
+      totalRequested: number;
+      updatedCount: number;
+      skippedCount: number;
+      emailSentCount: number;
+      updatedApplications: Application[];
+      skippedReasons: string[];
+    }>('/applications/bulk-status', {
+      method: 'POST',
+      body: payload,
     }),
   withdraw: (id: number) => request<void>(`/applications/${id}`, { method: 'DELETE' }),
 };

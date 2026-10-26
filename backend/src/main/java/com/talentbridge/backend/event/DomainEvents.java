@@ -13,7 +13,17 @@ public final class DomainEvents {
     }
 
     /** @param sendEmail false when another e-mail (e.g. interview invitation) already covers this change */
-    public record ApplicationStageChanged(Long applicationId, String fromStage, String toStage, boolean sendEmail) {
+    public record ApplicationStageChanged(
+            Long applicationId,
+            String fromStage,
+            String toStage,
+            boolean sendEmail,
+            String customEmailSubject,
+            String customEmailBody
+    ) {
+        public ApplicationStageChanged(Long applicationId, String fromStage, String toStage, boolean sendEmail) {
+            this(applicationId, fromStage, toStage, sendEmail, null, null);
+        }
     }
 
     /** @param change SCHEDULED, RESCHEDULED or CANCELLED */
