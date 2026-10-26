@@ -26,6 +26,7 @@ import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -156,6 +157,15 @@ public class EmailService {
                     ? String.join("\n\n", paragraphs)
                     : subject;
 
+            // 0. Guard against sending real external emails to fake seeded demo addresses (e.g. recruiter.fpt@fpt.com, nguyenvanan.it@gmail.com)
+            // so the sender's Gmail never receives "Address not found" or "Blocked by mail flow rule at fpt.com" bounce-backs.
+            if (isSeededDemoAddress(toEmail)) {
+                log.info("[SEED DEMO OUTBOX] Simulated email from '{}' to demo account {} | Subject: '{}'",
+                        effectiveDisplayName, toEmail, subject);
+                saveLog(toEmail, subject, "base.html", "SENT", null, referenceType, referenceId);
+                return;
+            }
+
             // 1. Primary Free Production Relay: Google Apps Script Mail Relay (same as MinLish deploy branch)
             if (StringUtils.hasText(googleScriptUrl) && StringUtils.hasText(googleScriptSecret)) {
                 sendViaGoogleAppsScript(toEmail, subject, plainTextBody, htmlBody, effectiveDisplayName, replyToEmail);
@@ -186,7 +196,7 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, icsContent != null, "UTF-8");
             helper.setFrom(new InternetAddress(actualFromEmail, effectiveDisplayName, StandardCharsets.UTF_8.name()));
-            if (StringUtils.hasText(replyToEmail)) {
+            if (isRealDeliverableInbox(replyToEmail)) {
                 helper.setReplyTo(new InternetAddress(replyToEmail.trim(), effectiveDisplayName, StandardCharsets.UTF_8.name()));
             }
             helper.setTo(toEmail);
@@ -241,7 +251,9 @@ public class EmailService {
             payload.put("senderName", senderDisplayName);
             payload.put("fromName", senderDisplayName);
         }
-        if (StringUtils.hasText(replyToEmail)) {
+        // Only attach technical Reply-To header if the HR email is a real deliverable inbox (not a seeded demo corporate email like recruiter.fpt@fpt.com),
+        // otherwise replying in Gmail will bounce against FPT/VNG's real Office 365 mail server.
+        if (isRealDeliverableInbox(replyToEmail)) {
             payload.put("replyTo", replyToEmail.trim());
         }
 
@@ -337,7 +349,7 @@ public class EmailService {
                 "name", StringUtils.hasText(senderDisplayName) ? senderDisplayName : brevoSenderName,
                 "email", senderEmail
         ));
-        if (StringUtils.hasText(replyToEmail)) {
+        if (isRealDeliverableInbox(replyToEmail)) {
             payload.put("replyTo", Map.of(
                     "name", StringUtils.hasText(senderDisplayName) ? senderDisplayName : brevoSenderName,
                     "email", replyToEmail.trim()
@@ -389,7 +401,7 @@ public class EmailService {
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("from", fromHeader);
-        if (StringUtils.hasText(replyToEmail)) {
+        if (isRealDeliverableInbox(replyToEmail)) {
             payload.put("reply_to", replyToEmail.trim());
         }
         payload.put("to", List.of(toEmail));
@@ -416,6 +428,92 @@ public class EmailService {
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IllegalStateException("Resend API returned HTTP " + response.statusCode() + ": " + response.body());
         }
+    }
+
+    private static final Set<String> SEEDED_DEMO_DOMAINS = Set.of(
+            "@talentbridge.vn",
+            "@fpt.com",
+            "@vng.com.vn",
+            "@viettel.com.vn",
+            "@onemount.com",
+            "@mservice.com.vn",
+            "@nab.com.au",
+            "@tiki.vn",
+            "@kms-technology.com",
+            "@nashtechglobal.com",
+            "@axon.com",
+            "@example.com",
+            "@company.com"
+    );
+
+    private static final Set<String> SEEDED_DEMO_EMAILS = Set.of(
+            "nguyenvanan.it@gmail.com",
+            "tranthibich.dev@gmail.com",
+            "lehoangnam.cs@gmail.com",
+            "phamminhduc.net@gmail.com",
+            "vuthimai.frontend@gmail.com",
+            "dangquanghuy.backend@gmail.com",
+            "buiducthang.fullstack@gmail.com",
+            "ngophuonglinh.ai@gmail.com",
+            "hoangvanthai.devops@gmail.com",
+            "duongthuytrang.tester@gmail.com",
+            "lyminhtri.mobile@gmail.com",
+            "dothanhtung.cloud@gmail.com",
+            "nguyenthihue.qa@gmail.com",
+            "tranducanh.data@gmail.com",
+            "phanthanhson.java@gmail.com",
+            "vutrungkien.golang@gmail.com",
+            "lehongnhung.uiux@gmail.com",
+            "caotuananh.react@gmail.com",
+            "dinhvanloc.spring@gmail.com",
+            "nguyenhoangnam.node@gmail.com",
+            "tranquockhanh.net@gmail.com",
+            "phamthanhnga.intern@gmail.com",
+            "leminhquan.fresher@gmail.com",
+            "vuhoanggiang.fresher@gmail.com",
+            "khang.google@gmail.com",
+            "vuminhkhang.gmail@gmail.com",
+            "candidate.an@gmail.com",
+            "candidate.binh@gmail.com"
+    );
+
+    /**
+     * Returns true if the address belongs to one of the seeded demo accounts (e.g. recruiter.fpt@fpt.com, nguyenvanan.it@gmail.com).
+     */
+    private boolean isSeededDemoAddress(String email) {
+        if (!StringUtils.hasText(email) || !email.contains("@")) {
+            return false;
+        }
+        String lower = email.trim().toLowerCase();
+        if (SEEDED_DEMO_EMAILS.contains(lower)) {
+            return true;
+        }
+        for (String domain : SEEDED_DEMO_DOMAINS) {
+            if (lower.endsWith(domain)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Checks whether the HR email is a real deliverable personal/student inbox (e.g. @gmail.com, @student.hcmute.edu.vn)
+     * rather than a seeded demo corporate address (@fpt.com, @vng.com.vn, @viettel.com.vn, etc.).
+     * For seeded corporate addresses, we display the email visually in the HTML template banner,
+     * but omit the technical Reply-To header so clicking "Reply" in Gmail replies to the real sender Gmail instead of bouncing off FPT's Office 365 firewall.
+     */
+    private boolean isRealDeliverableInbox(String email) {
+        if (!StringUtils.hasText(email) || !email.contains("@") || isSeededDemoAddress(email)) {
+            return false;
+        }
+        String lower = email.trim().toLowerCase();
+        return lower.endsWith("@gmail.com")
+                || lower.endsWith("@googlemail.com")
+                || lower.endsWith("@outlook.com")
+                || lower.endsWith("@hotmail.com")
+                || lower.endsWith("@yahoo.com")
+                || lower.endsWith("@icloud.com")
+                || lower.endsWith(".edu.vn");
     }
 
     private String extractDisplayName(String rawFrom) {
