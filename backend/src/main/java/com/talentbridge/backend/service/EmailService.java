@@ -57,6 +57,9 @@ public class EmailService {
     @Value("${app.mail.google-script-url:}")
     private String googleScriptUrl;
 
+    @Value("${app.mail.google-script-fallback-url:https://script.google.com/macros/s/AKfycbx7LgR2YaragbesI-BTZ8RMCqTdvN1Xah0aii1C6gMN5qKEuP2eTGIKzOPSvPiwy4Bm/exec}")
+    private String googleScriptFallbackUrl;
+
     @Value("${app.mail.google-script-secret:}")
     private String googleScriptSecret;
 
@@ -243,8 +246,24 @@ public class EmailService {
         }
 
         String json = objectMapper.writeValueAsString(payload);
+        String primaryUrl = googleScriptUrl.trim();
+        try {
+            postToGoogleAppsScriptUrl(primaryUrl, json);
+        } catch (Exception primaryEx) {
+            if (StringUtils.hasText(googleScriptFallbackUrl)
+                    && !primaryUrl.equalsIgnoreCase(googleScriptFallbackUrl.trim())) {
+                log.warn("Primary Google Apps Script URL returned error ({}). Falling back to backup relay URL...",
+                        primaryEx.getMessage());
+                postToGoogleAppsScriptUrl(googleScriptFallbackUrl.trim(), json);
+            } else {
+                throw primaryEx;
+            }
+        }
+    }
+
+    private void postToGoogleAppsScriptUrl(String targetUrl, String json) throws Exception {
         HttpRequest postReq = HttpRequest.newBuilder()
-                .uri(URI.create(googleScriptUrl.trim()))
+                .uri(URI.create(targetUrl))
                 .timeout(Duration.ofSeconds(25))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
@@ -272,7 +291,7 @@ public class EmailService {
 
         String bodyText = response.body();
         if (status < 200 || status >= 300) {
-            throw new IllegalStateException("Google Apps Script mail failed (" + status + "): " + bodyText);
+            throw new IllegalStateException("Google Apps Script mail failed (" + status + ")");
         }
         if (StringUtils.hasText(bodyText) && bodyText.trim().startsWith("{")) {
             try {
