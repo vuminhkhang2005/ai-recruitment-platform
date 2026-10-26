@@ -1084,8 +1084,12 @@ public class AiService {
         }
 
         List<RecommendedJobDto> allScored = new ArrayList<>();
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
 
         for (Job job : publishedJobs) {
+            if (job.getDeadline() != null && job.getDeadline().isBefore(now)) {
+                continue;
+            }
             List<JobSkill> jobSkills = jobSkillRepository.findByJobId(job.getId());
             List<String> matched = new ArrayList<>();
             List<String> missing = new ArrayList<>();

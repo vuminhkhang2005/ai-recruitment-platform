@@ -3,6 +3,7 @@ package com.talentbridge.backend.config;
 import com.talentbridge.backend.entity.ApplicationMessage;
 import com.talentbridge.backend.entity.CandidateProfile;
 import com.talentbridge.backend.entity.Company;
+import com.talentbridge.backend.entity.Job;
 import com.talentbridge.backend.entity.JobApplication;
 import com.talentbridge.backend.entity.RecruiterProfile;
 import com.talentbridge.backend.entity.User;
@@ -10,6 +11,7 @@ import com.talentbridge.backend.repository.ApplicationMessageRepository;
 import com.talentbridge.backend.repository.CandidateProfileRepository;
 import com.talentbridge.backend.repository.CompanyRepository;
 import com.talentbridge.backend.repository.JobApplicationRepository;
+import com.talentbridge.backend.repository.JobRepository;
 import com.talentbridge.backend.repository.RecruiterProfileRepository;
 import com.talentbridge.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +62,7 @@ public class DemoAccountInitializer implements ApplicationRunner {
     private final CandidateProfileRepository candidateProfileRepository;
     private final RecruiterProfileRepository recruiterProfileRepository;
     private final CompanyRepository companyRepository;
+    private final JobRepository jobRepository;
 
     @Value("${app.demo.default-password:Password@123}")
     private String defaultPassword;
@@ -96,7 +99,28 @@ public class DemoAccountInitializer implements ApplicationRunner {
         }
 
         seedCompanyBannersIfNeeded();
+        refreshSeedJobDeadlinesIfNeeded();
         seedDemoConversationsIfNeeded();
+    }
+
+    private void refreshSeedJobDeadlinesIfNeeded() {
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            List<Job> publishedJobs = jobRepository.findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc("PUBLISHED");
+            int updated = 0;
+            for (Job j : publishedJobs) {
+                if (j.getDeadline() != null && j.getDeadline().isBefore(now)) {
+                    j.setDeadline(now.plusDays(25));
+                    updated++;
+                }
+            }
+            if (updated > 0) {
+                jobRepository.saveAll(publishedJobs);
+                log.info("Demo jobs: extended expired deadlines by 25 days for {} PUBLISHED jobs", updated);
+            }
+        } catch (Exception e) {
+            log.warn("Could not refresh seed job deadlines: {}", e.getMessage());
+        }
     }
 
     private void seedCompanyBannersIfNeeded() {
