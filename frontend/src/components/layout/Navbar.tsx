@@ -214,6 +214,8 @@ export const Navbar: React.FC = () => {
         { to: '/admin', label: language === 'vi' ? 'Tổng quan & AI' : 'Overview & AI', icon: BarChart3, end: true },
         { to: '/admin/users', label: language === 'vi' ? 'Người dùng & RBAC' : 'Users & RBAC', icon: Users },
         { to: '/admin/moderation', label: language === 'vi' ? 'Kiểm duyệt' : 'Moderation', icon: ShieldCheck },
+        { to: '/admin/skills', label: language === 'vi' ? 'Từ điển Kỹ năng' : 'AI Skills', icon: Sparkles },
+        { to: '/admin/audit-logs', label: language === 'vi' ? 'Nhật ký Audit' : 'Audit Logs', icon: FileCheck2 },
       ]
     : isRecruiter
     ? [
@@ -228,20 +230,7 @@ export const Navbar: React.FC = () => {
       ];
 
   const dropdownLinks: NavItem[] = isAdmin
-    ? [
-        {
-          to: '/admin/skills',
-          label: language === 'vi' ? 'Từ điển Kỹ năng AI' : 'AI Skill Taxonomy',
-          desc: language === 'vi' ? 'Chuẩn hóa kỹ năng & từ đồng nghĩa' : 'Manage skill taxonomy & synonyms',
-          icon: Sparkles,
-        },
-        {
-          to: '/admin/audit-logs',
-          label: language === 'vi' ? 'Nhật ký Audit & Email' : 'Audit & Email Logs',
-          desc: language === 'vi' ? 'Truy vết thao tác & lịch sử gửi thư' : 'System audit trail & email logs',
-          icon: FileCheck2,
-        },
-      ]
+    ? []
     : isRecruiter
     ? [
         {
@@ -621,28 +610,36 @@ export const Navbar: React.FC = () => {
 
 export const Avatar: React.FC<{ name: string; url?: string | null; size?: string }> = ({ name, url, size = 'w-8 h-8' }) => {
   const [broken, setBroken] = useState(false);
-  if (url && !broken) {
-    return (
-      <img
-        src={url}
-        alt=""
-        className={`${size} rounded-lg object-cover bg-slate-200 dark:bg-slate-700 ring-1 ring-emerald-500/60`}
-        onError={() => setBroken(true)}
-      />
-    );
-  }
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(-2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase();
+  const [loaded, setLoaded] = useState(false);
+  const initials =
+    (name || 'U')
+      .replace(/\([^)]*\)/g, '')
+      .split(/\s+/)
+      .map((w) => w.replace(/^[^a-zA-ZÀ-ỹ0-9]+/, ''))
+      .filter(Boolean)
+      .slice(-2)
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase() || 'U';
+
+  const showRemoteImg = Boolean(url && !url.includes('ui-avatars.com') && !broken);
+
   return (
     <span
-      className={`${size} ${size.includes('text-') ? '' : 'text-xs'} rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-black flex items-center justify-center ring-1 ring-emerald-500/60 shrink-0`}
+      className={`relative ${size} ${size.includes('text-') ? '' : 'text-xs'} rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-black inline-flex items-center justify-center ring-1 ring-emerald-500/60 shrink-0 overflow-hidden select-none`}
     >
-      {initials}
+      <span>{initials}</span>
+      {showRemoteImg && (
+        <img
+          src={url!}
+          alt=""
+          onLoad={() => setLoaded(true)}
+          onError={() => setBroken(true)}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${
+            loaded ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      )}
     </span>
   );
 };

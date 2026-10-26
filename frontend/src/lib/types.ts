@@ -676,6 +676,8 @@ export interface AdminCompany {
   companySize?: string;
   taxCode?: string;
   city?: string;
+  address?: string;
+  description?: string;
   verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED' | string;
   jobCount: number;
   recruiterCount: number;
@@ -696,6 +698,9 @@ export interface AdminJob {
   minSalary?: number;
   maxSalary?: number;
   currency: string;
+  description?: string;
+  requirements?: string;
+  benefits?: string;
   status: 'DRAFT' | 'PENDING_APPROVAL' | 'PUBLISHED' | 'PAUSED' | 'CLOSED' | 'EXPIRED' | string;
   viewsCount: number;
   applicationsCount: number;

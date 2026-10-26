@@ -66,36 +66,41 @@ export const AdminHeader: React.FC<{
 }> = ({ title, subtitle, rightSlot }) => {
   const { language } = useLanguage();
   const isVi = language === 'vi';
-  return (
-    <div className="mb-6 space-y-4">
-      {/* Executive Command Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-emerald-950 text-white p-5 sm:p-6 shadow-xl border border-indigo-500/20">
-        <div className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full bg-emerald-500/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-indigo-500/15 blur-3xl" />
 
-        <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-[11px] font-bold uppercase tracking-wider mb-2">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>TalentBridge Governance & AI Control Center</span>
-              <span className="inline-flex items-center gap-1 text-emerald-300 ml-1">
-                <Activity className="w-3 h-3 animate-pulse" />
-                LIVE
-              </span>
+  return (
+    <div className="mb-8">
+      <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 p-5 sm:p-6 shadow-soft-xs">
+        {/* Subtle ambient accent */}
+        <div className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full bg-emerald-500/8 dark:bg-emerald-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-teal-500/8 dark:bg-teal-500/10 blur-3xl" />
+
+        <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-5 border-b border-slate-200/80 dark:border-slate-800">
+          <div className="flex items-start gap-3.5 min-w-0">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-600 text-white flex items-center justify-center shadow-soft shrink-0 mt-0.5">
+              <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-              {title}
-            </h1>
-            <p className="mt-1 text-xs sm:text-sm text-slate-300 max-w-3xl">
-              {subtitle}
-            </p>
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200/80 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold uppercase tracking-wider mb-1.5">
+                <span>{isVi ? 'Trung tâm Quản trị & Điều hành AI' : 'Governance & AI Control Center'}</span>
+                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                  <Activity className="w-3 h-3 animate-pulse" />
+                  LIVE
+                </span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                {title}
+              </h1>
+              <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-3xl leading-relaxed">
+                {subtitle}
+              </p>
+            </div>
           </div>
 
-          {rightSlot && <div className="shrink-0">{rightSlot}</div>}
+          {rightSlot && <div className="shrink-0 flex items-center gap-2">{rightSlot}</div>}
         </div>
 
-        {/* Navigation Sub-bar (Single Symmetrical 5-Column Row on Desktop) */}
-        <div className="relative mt-4 pt-4 border-t border-white/10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+        {/* Harmonious Segmented Sub-navigation */}
+        <div className="relative mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 bg-slate-100/80 dark:bg-slate-800/60 p-1.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
           {ADMIN_TABS.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -105,10 +110,10 @@ export const AdminHeader: React.FC<{
                 end={tab.end}
                 data-testid={tab.testId}
                 className={({ isActive }) =>
-                  `inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all truncate ${
+                  `inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold transition-all truncate ${
                     isActive
-                      ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 ring-2 ring-emerald-300/60'
-                      : 'bg-white/10 text-slate-200 hover:bg-white/20 hover:text-white'
+                      ? 'bg-emerald-600 text-white shadow-soft-xs ring-1 ring-emerald-500/40'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800 hover:text-emerald-600 dark:hover:text-emerald-400'
                   }`
                 }
               >

@@ -150,6 +150,8 @@ public class AdminDtos {
         private String companySize;
         private String taxCode;
         private String city;
+        private String address;
+        private String description;
         private String verificationStatus;
         private long jobCount;
         private long recruiterCount;
@@ -162,7 +164,7 @@ public class AdminDtos {
     @AllArgsConstructor
     @Builder
     public static class VerifyCompanyRequestDto {
-        @NotBlank(message = "Trạng thái xác minh không được để trống")
+        @NotBlank(message = "Verification status is required")
         private String verificationStatus;
         private String note;
     }
@@ -186,6 +188,9 @@ public class AdminDtos {
         private BigDecimal minSalary;
         private BigDecimal maxSalary;
         private String currency;
+        private String description;
+        private String requirements;
+        private String benefits;
         private String status;
         private Integer viewsCount;
         private Integer applicationsCount;

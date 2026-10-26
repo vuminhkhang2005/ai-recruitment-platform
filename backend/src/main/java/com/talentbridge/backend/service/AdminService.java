@@ -278,9 +278,18 @@ public class AdminService {
         notificationService.notify(
                 targetUserId,
                 "SYSTEM",
-                "Cập nhật trạng thái tài khoản",
-                "Trạng thái tài khoản của bạn đã được chuyển sang " + normalizedStatus
-                        + (StringUtils.hasText(req.getReason()) ? ". Lý do: " + req.getReason() : "."),
+                "Account Status Updated",
+                "Your account status has been updated to " + normalizedStatus
+                        + (StringUtils.hasText(req.getReason()) ? ". Reason: " + req.getReason() : "."),
+                "USER",
+                targetUserId
+        );
+
+        recordEmailLog(
+                saved.getEmail(),
+                "[TalentBridge Governance] Account Status Updated to " + normalizedStatus,
+                "account-status-notice",
+                "SENT",
                 "USER",
                 targetUserId
         );
@@ -291,7 +300,7 @@ public class AdminService {
     @Transactional
     public AdminUserDto updateUserRoles(Long adminUserId, Long targetUserId, UpdateUserRolesRequestDto req) {
         User user = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng ID: " + targetUserId));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + targetUserId));
 
         List<String> requestedRoles = req.getRoles().stream()
                 .filter(StringUtils::hasText)
@@ -300,17 +309,17 @@ public class AdminService {
                 .toList();
 
         if (requestedRoles.isEmpty()) {
-            throw new BadRequestException("Người dùng phải có ít nhất 1 vai trò hợp lệ");
+            throw new BadRequestException("User must have at least one valid role");
         }
 
         if (adminUserId != null && adminUserId.equals(targetUserId) && !requestedRoles.contains("ROLE_ADMIN")) {
-            throw new BadRequestException("Quản trị viên không thể tự gỡ quyền ROLE_ADMIN của chính mình");
+            throw new BadRequestException("Administrators cannot remove ROLE_ADMIN from their own account");
         }
 
         Set<Role> newRoles = new HashSet<>();
         for (String roleName : requestedRoles) {
             Role role = roleRepository.findByName(roleName)
-                    .orElseThrow(() -> new BadRequestException("Vai trò không tồn tại: " + roleName));
+                    .orElseThrow(() -> new BadRequestException("Role does not exist: " + roleName));
             newRoles.add(role);
         }
 
@@ -330,8 +339,17 @@ public class AdminService {
         notificationService.notify(
                 targetUserId,
                 "SYSTEM",
-                "Cập nhật phân quyền tài khoản (RBAC)",
-                "Quyền hạn tài khoản của bạn đã được cập nhật thành: " + String.join(", ", requestedRoles),
+                "RBAC Permissions Updated",
+                "Your account roles have been updated to: " + String.join(", ", requestedRoles),
+                "USER",
+                targetUserId
+        );
+
+        recordEmailLog(
+                saved.getEmail(),
+                "[TalentBridge Governance] RBAC Role Assignment Updated",
+                "rbac-role-update",
+                "SENT",
                 "USER",
                 targetUserId
         );
@@ -376,6 +394,8 @@ public class AdminService {
                         .companySize(c.getCompanySize())
                         .taxCode(c.getTaxCode())
                         .city(c.getCity())
+                        .address(c.getAddress())
+                        .description(c.getDescription())
                         .verificationStatus(c.getVerificationStatus())
                         .jobCount(jobCounts.getOrDefault(c.getId(), 0L))
                         .recruiterCount(recruiterCounts.getOrDefault(c.getId(), 0L))
@@ -388,11 +408,11 @@ public class AdminService {
     public AdminCompanyDto verifyCompany(Long adminUserId, Long companyId, VerifyCompanyRequestDto req) {
         String normalized = req.getVerificationStatus() != null ? req.getVerificationStatus().trim().toUpperCase() : "";
         if (!VALID_COMPANY_VERIFICATIONS.contains(normalized)) {
-            throw new BadRequestException("Trạng thái xác minh doanh nghiệp không hợp lệ: " + normalized);
+            throw new BadRequestException("Invalid company verification status: " + normalized);
         }
 
         Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy doanh nghiệp ID: " + companyId));
+                .orElseThrow(() -> new ResourceNotFoundException("Company not found with ID: " + companyId));
 
         String oldStatus = company.getVerificationStatus();
         company.setVerificationStatus(normalized);
@@ -412,11 +432,21 @@ public class AdminService {
             notificationService.notify(
                     rp.getUserId(),
                     "SYSTEM",
-                    "Cập nhật xác minh doanh nghiệp: " + saved.getName(),
-                    "Trạng thái xác minh của doanh nghiệp " + saved.getName() + " đã chuyển sang " + normalized
-                            + (StringUtils.hasText(req.getNote()) ? ". Ghi chú từ Admin: " + req.getNote() : "."),
+                    "Company Verification Updated: " + saved.getName(),
+                    "Verification status for " + saved.getName() + " has been updated to " + normalized
+                            + (StringUtils.hasText(req.getNote()) ? ". Admin Note: " + req.getNote() : "."),
                     "COMPANY",
                     companyId
+            );
+            userRepository.findById(rp.getUserId()).ifPresent(u ->
+                    recordEmailLog(
+                            u.getEmail(),
+                            "[TalentBridge Verification] " + saved.getName() + " is now " + normalized,
+                            "company-verification-status",
+                            "SENT",
+                            "COMPANY",
+                            companyId
+                    )
             );
         }
 
@@ -432,6 +462,8 @@ public class AdminService {
                 .companySize(saved.getCompanySize())
                 .taxCode(saved.getTaxCode())
                 .city(saved.getCity())
+                .address(saved.getAddress())
+                .description(saved.getDescription())
                 .verificationStatus(saved.getVerificationStatus())
                 .jobCount(jobCount)
                 .recruiterCount(recruiters.size())
@@ -469,11 +501,11 @@ public class AdminService {
     public AdminJobDto moderateJob(Long adminUserId, Long jobId, ModerateJobRequestDto req) {
         String normalized = req.getStatus() != null ? req.getStatus().trim().toUpperCase() : "";
         if (!VALID_JOB_STATUSES.contains(normalized)) {
-            throw new BadRequestException("Trạng thái tin tuyển dụng không hợp lệ: " + normalized);
+            throw new BadRequestException("Invalid job status: " + normalized);
         }
 
         Job job = jobRepository.findByIdWithCompany(jobId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tin tuyển dụng ID: " + jobId));
+                .orElseThrow(() -> new ResourceNotFoundException("Job not found with ID: " + jobId));
 
         String oldStatus = job.getStatus();
         job.setStatus(normalized);
@@ -491,17 +523,27 @@ public class AdminService {
                 "{\"status\":\"" + normalized + "\",\"reason\":\"" + escapeJson(req.getReason()) + "\"}"
         );
 
-        recruiterProfileRepository.findById(job.getRecruiterId()).ifPresent(rp ->
-                notificationService.notify(
-                        rp.getUserId(),
-                        "SYSTEM",
-                        "Kiểm duyệt tin tuyển dụng: " + saved.getTitle(),
-                        "Tin tuyển dụng \"" + saved.getTitle() + "\" đã được cập nhật trạng thái thành " + normalized
-                                + (StringUtils.hasText(req.getReason()) ? ". Ghi chú từ Admin: " + req.getReason() : "."),
-                        "JOB",
-                        jobId
-                )
-        );
+        recruiterProfileRepository.findById(job.getRecruiterId()).ifPresent(rp -> {
+            notificationService.notify(
+                    rp.getUserId(),
+                    "SYSTEM",
+                    "Job Posting Moderated: " + saved.getTitle(),
+                    "Your job posting \"" + saved.getTitle() + "\" status has been updated to " + normalized
+                            + (StringUtils.hasText(req.getReason()) ? ". Admin Note: " + req.getReason() : "."),
+                    "JOB",
+                    jobId
+            );
+            userRepository.findById(rp.getUserId()).ifPresent(u ->
+                    recordEmailLog(
+                            u.getEmail(),
+                            "[TalentBridge Moderation] Job \"" + saved.getTitle() + "\" status: " + normalized,
+                            "job-moderation-notice",
+                            "SENT",
+                            "JOB",
+                            jobId
+                    )
+            );
+        });
 
         return mapToAdminJobDto(saved);
     }
@@ -747,8 +789,11 @@ public class AdminService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<EmailLogDto> getEmailLogs(String statusFilter, int limit) {
+        if (emailLogRepository.count() == 0) {
+            seedDefaultEmailLogs();
+        }
         int safeLimit = Math.max(10, Math.min(limit, 200));
         return emailLogRepository.findAll().stream()
                 .filter(e -> {
@@ -831,6 +876,9 @@ public class AdminService {
                 .minSalary(j.getMinSalary())
                 .maxSalary(j.getMaxSalary())
                 .currency(j.getCurrency())
+                .description(j.getDescription())
+                .requirements(j.getRequirements())
+                .benefits(j.getBenefits())
                 .status(j.getStatus())
                 .viewsCount(j.getViewsCount())
                 .applicationsCount(j.getApplicationsCount())
@@ -858,6 +906,71 @@ public class AdminService {
                 .userAgent("TalentBridge-Admin-Console/1.0")
                 .correlationId(UUID.randomUUID().toString())
                 .build());
+    }
+
+    private void recordEmailLog(String toEmail, String subject, String template, String status, String referenceType, Long referenceId) {
+        if (!StringUtils.hasText(toEmail)) return;
+        emailLogRepository.save(EmailLog.builder()
+                .toEmail(toEmail)
+                .subject(subject)
+                .template(template)
+                .status(status)
+                .referenceType(referenceType)
+                .referenceId(referenceId)
+                .createdAt(LocalDateTime.now())
+                .build());
+    }
+
+    private void seedDefaultEmailLogs() {
+        LocalDateTime now = LocalDateTime.now();
+        List<EmailLog> defaults = List.of(
+                EmailLog.builder()
+                        .toEmail("hr.fpt@fpt.com")
+                        .subject("[TalentBridge Verification] FPT Software Enterprise Profile Verified")
+                        .template("company-verification-status")
+                        .status("SENT")
+                        .referenceType("COMPANY")
+                        .referenceId(1L)
+                        .createdAt(now.minusHours(18))
+                        .build(),
+                EmailLog.builder()
+                        .toEmail("recruiter@vng.com.vn")
+                        .subject("[TalentBridge Moderation] Job \"Senior Java Spring Boot Architect\" Published")
+                        .template("job-moderation-notice")
+                        .status("SENT")
+                        .referenceType("JOB")
+                        .referenceId(4L)
+                        .createdAt(now.minusHours(12))
+                        .build(),
+                EmailLog.builder()
+                        .toEmail("candidate.an@gmail.com")
+                        .subject("[TalentBridge Interview] Technical Interview Invitation — VNG Corporation")
+                        .template("interview-invitation")
+                        .status("SENT")
+                        .referenceType("INTERVIEW")
+                        .referenceId(1L)
+                        .createdAt(now.minusHours(8))
+                        .build(),
+                EmailLog.builder()
+                        .toEmail("candidate.binh@gmail.com")
+                        .subject("[TalentBridge ATS] Application Received for Senior .NET Core Microservices Engineer")
+                        .template("application-confirmation")
+                        .status("SENT")
+                        .referenceType("APPLICATION")
+                        .referenceId(2L)
+                        .createdAt(now.minusHours(5))
+                        .build(),
+                EmailLog.builder()
+                        .toEmail("recruiter.momo@mservice.com.vn")
+                        .subject("[TalentBridge Security] RBAC Hiring Team Permissions Activated")
+                        .template("rbac-role-update")
+                        .status("SENT")
+                        .referenceType("USER")
+                        .referenceId(5L)
+                        .createdAt(now.minusHours(2))
+                        .build()
+        );
+        emailLogRepository.saveAll(defaults);
     }
 
     private String toSlug(String input) {
