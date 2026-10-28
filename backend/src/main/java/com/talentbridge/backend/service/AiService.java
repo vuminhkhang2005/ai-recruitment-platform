@@ -752,11 +752,8 @@ public class AiService {
         User user = candidateUserId != null ? userRepository.findById(candidateUserId).orElse(null) : null;
         String fullName = user != null ? user.getFullName() : extractFullName(content);
 
-        // 2. City
-        String city = "Ho Chi Minh City";
-        if (lower.contains("hà nội") || lower.contains("ha noi") || lower.contains("hanoi")) city = "Ha Noi";
-        else if (lower.contains("đà nẵng") || lower.contains("da nang") || lower.contains("danang")) city = "Da Nang";
-        else if (lower.contains("cần thơ") || lower.contains("can tho")) city = "Can Tho";
+        // 2. City (explicit address/location first, then contact header, then university, then mentions)
+        String city = extractCityFromCvText(content);
 
         // 3. Skills extraction (using word-boundary matching and CV experience baseline)
         int baseCvYears = extractExperienceYearsFromCvText(lower);
@@ -1142,25 +1139,119 @@ public class AiService {
         return detected != null ? detected : "Ho Chi Minh City";
     }
 
-    /** Detects the candidate's city from CV text; returns null when no city is mentioned. */
+    /** Detects the candidate's city from CV text; returns null when no city can be determined. */
     private String detectCityFromCvText(String lower) {
-        if (lower == null) return null;
-        if (lower.contains("ho chi minh") || lower.contains("hcmc") || lower.contains("hcmute")
-                || lower.contains("hồ chí minh") || lower.contains("tp.hcm") || lower.contains("tphcm")
-                || lower.contains("sài gòn") || lower.contains("saigon") || lower.contains("thủ đức")) {
-            return "Ho Chi Minh City";
+        CityDetection d = detectCityWithSource(lower);
+        return d != null ? d.city : null;
+    }
+
+    /** City detected from a CV together with where it came from (CV_ADDRESS, CV_HEADER, CV_SCHOOL, CV_MENTION). */
+    static final class CityDetection {
+        final String city;
+        final String source;
+        CityDetection(String city, String source) {
+            this.city = city;
+            this.source = source;
         }
-        if (lower.contains("hà nội") || lower.contains("ha noi") || lower.contains("hanoi")
-                || lower.contains("cầu giấy") || lower.contains("đống đa") || lower.contains("bách khoa hà nội")) {
-            return "Ha Noi";
+    }
+
+    private static final String[][] CITY_PATTERNS = {
+            {"Ho Chi Minh City", "\\b(ho chi minh|hcmc|tp\\.? ?hcm|tphcm|hcm|sai gon|saigon|thu duc)\\b"},
+            {"Ha Noi", "\\b(ha noi|hanoi|cau giay)\\b"},
+            {"Da Nang", "\\b(da nang|danang|hai chau|ngu hanh son)\\b"},
+            {"Can Tho", "\\b(can tho|cantho)\\b"},
+            {"Hai Phong", "\\b(hai phong|haiphong)\\b"},
+    };
+
+    /** Universities whose name/abbreviation implies a city even when the city itself is not written. */
+    private static final String[][] SCHOOL_CITY_PATTERNS = {
+            {"Ho Chi Minh City", "\\b(hcmute|hcmus|hcmut|hcmue|uit|uel|ueh|iuh|hutech|tdtu|ton duc thang|van lang|nong lam|spkt)\\b"},
+            {"Ha Noi", "\\b(hust|bach khoa ha noi|neu|hanu|uet|vnu-?hn)\\b"},
+            {"Da Nang", "\\b(dut|duy tan|bach khoa da nang)\\b"},
+            {"Can Tho", "\\b(ctu|dai hoc can tho)\\b"},
+    };
+
+    private static final Pattern ADDRESS_LABEL = Pattern.compile(
+            "\\b(address|current location|location|dia chi|noi o|cho o|thanh pho|city|residence)\\s*[:：]"
+                    + "|\\b(based in|living in|song tai)\\b");
+    private static final Pattern SECTION_HEADING = Pattern.compile(
+            "^\\s*(objective|career objective|summary|profile|about me|education|experience|work experience|skills|technical skills|projects|"
+                    + "muc tieu|muc tieu nghe nghiep|gioi thieu|hoc van|kinh nghiem|ky nang|du an)\\b.*");
+    private static final Pattern SCHOOL_LINE = Pattern.compile("\\b(university|college|institute|academy|school|dai hoc|cao dang|truong|hoc vien)\\b");
+
+    private static String stripAccentsLower(String s) {
+        if (s == null) return "";
+        return java.text.Normalizer.normalize(s.toLowerCase(), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replace('đ', 'd');
+    }
+
+    /** Returns the city whose keyword appears first in the segment, or null. */
+    private static String findFirstCity(String segment, String[][] patterns) {
+        String found = null;
+        int bestIdx = Integer.MAX_VALUE;
+        for (String[] p : patterns) {
+            java.util.regex.Matcher m = Pattern.compile(p[1]).matcher(segment);
+            if (m.find() && m.start() < bestIdx) {
+                bestIdx = m.start();
+                found = p[0];
+            }
         }
-        if (lower.contains("đà nẵng") || lower.contains("da nang") || lower.contains("danang")) {
-            return "Da Nang";
+        return found;
+    }
+
+    /**
+     * Detects the candidate's city with a clear priority:
+     * 1. An explicit address/location line ("Address: ...", "Địa chỉ: ...", "Location: ...")
+     * 2. The contact header at the top of the CV (before the first section such as OBJECTIVE/EDUCATION)
+     * 3. Inferred from the university name (e.g. HCMUTE → Ho Chi Minh City)
+     * 4. The city mentioned most often anywhere in the CV
+     */
+    static CityDetection detectCityWithSource(String text) {
+        if (!StringUtils.hasText(text)) return null;
+        String[] lines = stripAccentsLower(text).split("\\r?\\n");
+
+        // 1. Explicit address / location label
+        for (String line : lines) {
+            java.util.regex.Matcher m = ADDRESS_LABEL.matcher(line);
+            if (m.find()) {
+                String city = findFirstCity(line.substring(m.start()), CITY_PATTERNS);
+                if (city != null) return new CityDetection(city, "CV_ADDRESS");
+            }
         }
-        if (lower.contains("cần thơ") || lower.contains("can tho")) {
-            return "Can Tho";
+
+        // 2. Contact header block (top lines before the first section heading), ignoring school lines
+        int nonEmpty = 0;
+        for (String line : lines) {
+            if (line.isBlank()) continue;
+            if (SECTION_HEADING.matcher(line).matches() || ++nonEmpty > 8) break;
+            if (SCHOOL_LINE.matcher(line).find()) continue;
+            String city = findFirstCity(line, CITY_PATTERNS);
+            if (city != null) return new CityDetection(city, "CV_HEADER");
         }
-        return null;
+
+        // 3. University name
+        for (String line : lines) {
+            if (!SCHOOL_LINE.matcher(line).find() && findFirstCity(line, SCHOOL_CITY_PATTERNS) == null) continue;
+            String city = findFirstCity(line, CITY_PATTERNS);
+            if (city == null) city = findFirstCity(line, SCHOOL_CITY_PATTERNS);
+            if (city != null) return new CityDetection(city, "CV_SCHOOL");
+        }
+
+        // 4. Most frequently mentioned city anywhere in the CV
+        String all = String.join("\n", lines);
+        String best = null;
+        int bestCount = 0;
+        for (String[] p : CITY_PATTERNS) {
+            java.util.regex.Matcher m = Pattern.compile(p[1]).matcher(all);
+            int count = 0;
+            while (m.find()) count++;
+            if (count > bestCount) {
+                bestCount = count;
+                best = p[0];
+            }
+        }
+        return best != null ? new CityDetection(best, "CV_MENTION") : null;
     }
 
     /**
@@ -1340,11 +1431,21 @@ public class AiService {
                         .filter(Objects::nonNull)
                         .max(Integer::compareTo)
                         .orElse(0));
-        // Preferred work location: the city set explicitly on the profile wins, otherwise detect it from the CV.
-        // When neither is known, location is treated as neutral (no penalty).
-        String candidateCity = profile != null && StringUtils.hasText(profile.getCity())
-                ? profile.getCity().trim()
-                : detectCityFromCvText(cvTextLower);
+        // Preferred work location priority:
+        //   1. City set explicitly on the profile
+        //   2. Explicit address/location in the CV, then the CV contact header
+        //   3. Inferred from the university name, then the most mentioned city
+        // When nothing is known, location is treated as neutral (no penalty).
+        String candidateCity;
+        String candidateCitySource;
+        if (profile != null && StringUtils.hasText(profile.getCity())) {
+            candidateCity = profile.getCity().trim();
+            candidateCitySource = "PROFILE";
+        } else {
+            CityDetection cityDetection = detectCityWithSource(cvRawText);
+            candidateCity = cityDetection != null ? cityDetection.city : null;
+            candidateCitySource = cityDetection != null ? cityDetection.source : null;
+        }
         String candidateCityKey = normalizeCityKey(candidateCity);
         String candidateDomain = inferCareerDomain(cvTextLower, allCandidateSkillNamesLower, behavioralSkillLower);
         String candidateSubTrack = inferTechSubTrack(cvTextLower, allCandidateSkillNamesLower);
@@ -1569,6 +1670,7 @@ public class AiService {
                     .locationMatched(cityMatched)
                     .locationStatus(locationStatus)
                     .candidateCity(candidateCity)
+                    .candidateCitySource(candidateCitySource)
                     .alreadyApplied(appliedJobIds.contains(job.getId()))
                     .analyzedCvId(resolvedCvId)
                     .analyzedCvName(analyzedCvName)

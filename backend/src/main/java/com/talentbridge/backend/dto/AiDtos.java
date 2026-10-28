@@ -198,6 +198,8 @@ public class AiDtos {
         /** SAME_CITY | REMOTE | UNKNOWN | OTHER_CITY */
         private String locationStatus;
         private String candidateCity;
+        /** PROFILE | CV_ADDRESS | CV_HEADER | CV_SCHOOL | CV_MENTION */
+        private String candidateCitySource;
         private Boolean alreadyApplied;
         private Long analyzedCvId;
         private String analyzedCvName;
