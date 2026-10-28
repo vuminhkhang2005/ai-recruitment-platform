@@ -19,9 +19,10 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { adminApi } from '../../lib/api';
+import { adminApi, exportApi } from '../../lib/api';
 import type { AdminUser } from '../../lib/types';
 import { EmptyState, ErrorBox, PageLoader, inputCls } from '../../components/ui/primitives';
+import { ExportMenu } from '../../components/ui/ExportMenu';
 import { Avatar } from '../../components/layout/Navbar';
 import { usePageTitle } from '../../lib/usePageTitle';
 import { useAuth } from '../../context/AuthContext';
@@ -278,17 +279,29 @@ export const AdminUsersPage: React.FC = () => {
             : 'Search, filter by role/status, suspend or reactivate accounts, and assign real-time RBAC permissions.'
         }
         rightSlot={
-          <button
-            type="button"
-            onClick={loadUsers}
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-soft-xs transition cursor-pointer disabled:opacity-60"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>
-              {isVi ? 'Tải lại' : 'Refresh'} ({filteredUsers.length})
-            </span>
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportMenu
+              testId="export-admin-users"
+              onExportCsv={(l) =>
+                exportApi.adminUsers(l, {
+                  keyword: keyword.trim() || undefined,
+                  role: roleFilter !== 'ALL' ? roleFilter : undefined,
+                  status: statusFilter !== 'ALL' ? statusFilter : undefined,
+                })
+              }
+            />
+            <button
+              type="button"
+              onClick={loadUsers}
+              disabled={loading}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-soft-xs transition cursor-pointer disabled:opacity-60"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>
+                {isVi ? 'Tải lại' : 'Refresh'} ({filteredUsers.length})
+              </span>
+            </button>
+          </div>
         }
       />
 

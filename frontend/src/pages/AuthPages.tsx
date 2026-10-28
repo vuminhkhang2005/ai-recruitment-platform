@@ -673,6 +673,14 @@ export const LoginPage: React.FC = () => {
           `&state=linkedin_oauth2`;
         return;
       }
+      if (!cfg.sandboxEnabled) {
+        setError(
+          isVi
+            ? `Máy chủ chưa cấu hình đăng nhập ${provider === 'google' ? 'Google' : 'LinkedIn'}. Vui lòng dùng email & mật khẩu.`
+            : `${provider === 'google' ? 'Google' : 'LinkedIn'} sign-in is not configured on the server. Please use email & password.`
+        );
+        return;
+      }
     } catch {
       // Fallback to in-app OAuth2 dialog if config check fails
     }
@@ -877,6 +885,14 @@ export const RegisterPage: React.FC = () => {
           `&redirect_uri=${encodeURIComponent(redirectUri)}` +
           `&scope=${encodeURIComponent('openid profile email')}` +
           `&state=linkedin_oauth2`;
+        return;
+      }
+      if (!cfg.sandboxEnabled) {
+        setError(
+          isVi
+            ? `Máy chủ chưa cấu hình đăng ký bằng ${provider === 'google' ? 'Google' : 'LinkedIn'}. Vui lòng đăng ký bằng email.`
+            : `${provider === 'google' ? 'Google' : 'LinkedIn'} sign-up is not configured on the server. Please register with email.`
+        );
         return;
       }
     } catch {

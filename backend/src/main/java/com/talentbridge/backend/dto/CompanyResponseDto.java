@@ -54,4 +54,10 @@ public class CompanyResponseDto {
 
     @Schema(description = "Number of active job openings", example = "8")
     private Long openJobsCount;
+
+    @Schema(description = "Average rating of published candidate reviews (1 decimal), null when there is no review", example = "4.3")
+    private Double ratingAverage;
+
+    @Schema(description = "Number of published candidate reviews", example = "12")
+    private Long reviewCount;
 }

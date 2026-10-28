@@ -282,3 +282,42 @@
 :where(.dark) .text-teal-700 { color: #99D2CC; }
 
 
+
+/* ---------------------------------------------------------------------------
+   Print / "Save as PDF" stylesheet (used by the Export menu on recruiter & admin pages)
+   - hides navigation, footer, buttons and anything marked .no-print
+   - forces a light, ink-friendly palette even when dark mode is active
+--------------------------------------------------------------------------- */
+@media print {
+  @page { size: A4; margin: 12mm; }
+
+  html, body { background: #fff !important; color: #0f172a !important; }
+  html.dark { color-scheme: light; }
+
+  header, footer, nav, aside,
+  button, [role="menu"], .no-print,
+  [data-testid="notification-bell"] { display: none !important; }
+
+  .print-only { display: block !important; }
+
+  *, *::before, *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .dark *, .dark { background-color: transparent !important; color: #0f172a !important; border-color: #cbd5e1 !important; }
+
+  .sticky, .fixed { position: static !important; }
+  .overflow-auto, .overflow-y-auto, .overflow-x-auto, .overflow-hidden { overflow: visible !important; max-height: none !important; }
+
+  table { width: 100% !important; border-collapse: collapse !important; font-size: 11px; }
+  th, td { border: 1px solid #cbd5e1 !important; padding: 4px 6px !important; }
+  thead { display: table-header-group; }
+  tr, img, svg, .print-avoid-break { break-inside: avoid; page-break-inside: avoid; }
+
+  a[href]::after { content: none !important; }
+}
+
+.print-only { display: none; }

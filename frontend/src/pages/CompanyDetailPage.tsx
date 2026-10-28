@@ -10,6 +10,7 @@ import { useMyApplications } from '../context/MyApplicationsContext';
 import { usePageTitle } from '../lib/usePageTitle';
 import { useLanguage } from '../i18n/LanguageContext';
 import { NotFoundPage } from './NotFoundPage';
+import { CompanyReviewsSection, StarRating } from '../components/companies/CompanyReviewsSection';
 
 export const CompanyDetailPage: React.FC = () => {
   const { id } = useParams();
@@ -98,6 +99,19 @@ export const CompanyDetailPage: React.FC = () => {
                       {company.companySize} {isVi ? 'nhân viên' : 'employees'}
                     </span>
                   )}
+                  <a href="#reviews" className="inline-flex items-center gap-1.5 hover:text-amber-600" data-testid="company-rating-chip">
+                    {company.reviewCount ? (
+                      <>
+                        <StarRating value={company.ratingAverage ?? 0} />
+                        <span className="text-slate-800 dark:text-slate-200">{company.ratingAverage?.toFixed(1)}</span>
+                        <span>
+                          ({company.reviewCount} {isVi ? 'đánh giá' : company.reviewCount === 1 ? 'review' : 'reviews'})
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-slate-400">{isVi ? 'Chưa có đánh giá' : 'No reviews yet'}</span>
+                    )}
+                  </a>
                 </div>
               </div>
             </div>
@@ -178,6 +192,12 @@ export const CompanyDetailPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      <CompanyReviewsSection
+        companyId={company.id}
+        companyName={company.name}
+        onSummaryChange={() => companyApi.get(id!).then(setCompany).catch(() => undefined)}
+      />
     </>
   );
 };

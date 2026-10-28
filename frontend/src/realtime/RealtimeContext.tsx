@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
-import { tokens } from '../lib/api';
+import { isJwtExpired, refreshAccessToken, tokens } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import type { MessageDto, NotificationItem, ReadReceiptDto } from '../lib/types';
 
@@ -45,21 +45,42 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
     const brokerURL = `${protocol}//${loc.host}/ws`;
 
+    // Consecutive connection attempts that never reached CONNECTED (e.g. expired / rotated JWT)
+    let failedAttempts = 0;
+
     const client = new Client({
       brokerURL,
-      connectHeaders: {
-        Authorization: `Bearer ${token}`,
-      },
       reconnectDelay: 5000,
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
+      // Read the CURRENT token on every (re)connect instead of the one captured at mount time,
+      // refreshing it when expired or after repeated rejections. Stops retrying when the session is gone.
+      beforeConnect: async () => {
+        let current = tokens.access;
+        if (current && (isJwtExpired(current) || failedAttempts >= 2)) {
+          const refreshed = await refreshAccessToken();
+          current = refreshed ? tokens.access : null;
+          failedAttempts = 0;
+        }
+        if (!current) {
+          void client.deactivate();
+          return;
+        }
+        client.connectHeaders = { Authorization: `Bearer ${current}` };
+      },
       onConnect: () => {
+        failedAttempts = 0;
         setConnected(true);
       },
       onDisconnect: () => {
         setConnected(false);
       },
+      onWebSocketClose: () => {
+        if (!client.connected) failedAttempts += 1;
+        setConnected(false);
+      },
       onStompError: (frame) => {
+        failedAttempts += 1;
         console.warn('STOMP protocol error:', frame.headers['message']);
       },
     });

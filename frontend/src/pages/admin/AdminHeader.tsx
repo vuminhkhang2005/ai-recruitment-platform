@@ -6,6 +6,7 @@ import {
   Building2,
   FileSearch,
   LayoutDashboard,
+  MessageSquareText,
   ShieldCheck,
   Users,
 } from 'lucide-react';
@@ -42,6 +43,13 @@ const ADMIN_TABS: AdminNavTab[] = [
     labelEn: 'Company & Job Moderation',
     icon: Building2,
     testId: 'admin-tab-moderation',
+  },
+  {
+    to: '/admin/reviews',
+    labelVi: 'Đánh giá công ty',
+    labelEn: 'Company Reviews',
+    icon: MessageSquareText,
+    testId: 'admin-tab-reviews',
   },
   {
     to: '/admin/skills',

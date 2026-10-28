@@ -159,6 +159,64 @@ export interface Company {
   city: string | null;
   verificationStatus: string;
   openJobsCount: number;
+  /** Average of published candidate reviews (1 decimal); null when there is no review yet. */
+  ratingAverage?: number | null;
+  reviewCount?: number;
+}
+
+export type ReviewExperienceLevel = 'APPLIED' | 'INTERVIEWED' | 'HIRED';
+
+export interface CompanyReview {
+  id: number;
+  companyId: number;
+  companyName?: string | null;
+  rating: number;
+  title: string;
+  pros: string | null;
+  cons: string | null;
+  experienceLevel: ReviewExperienceLevel;
+  jobTitle: string | null;
+  anonymous: boolean;
+  authorName: string | null;
+  authorAvatarUrl: string | null;
+  authorEmail?: string | null;
+  mine: boolean;
+  status: 'PUBLISHED' | 'HIDDEN';
+  moderationNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CompanyReviewSummary {
+  companyId: number;
+  average: number | null;
+  count: number;
+  /** index 0 = 5 stars ... index 4 = 1 star */
+  distribution: number[];
+}
+
+export interface CompanyReviewPage {
+  summary: CompanyReviewSummary;
+  items: CompanyReview[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface CompanyReviewEligibility {
+  canReview: boolean;
+  reason: 'NOT_CANDIDATE' | 'NO_APPLICATION' | 'ALREADY_REVIEWED' | 'OK';
+  experienceLevel: ReviewExperienceLevel | null;
+  myReview: CompanyReview | null;
+}
+
+export interface CompanyReviewInput {
+  rating: number;
+  title: string;
+  pros: string;
+  cons: string;
+  anonymous: boolean;
 }
 
 export type Stage = 'APPLIED' | 'SCREENING' | 'INTERVIEW' | 'OFFERED' | 'HIRED' | 'REJECTED' | 'WITHDRAWN';

@@ -18,11 +18,12 @@ import {
   UserCheck,
   Users,
 } from 'lucide-react';
-import { analyticsApi } from '../../lib/api';
+import { analyticsApi, exportApi } from '../../lib/api';
 import type { RecruitmentAnalytics, TopJobMetric } from '../../lib/types';
 import { usePageTitle } from '../../lib/usePageTitle';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { EmptyState, ErrorBox, PageLoader, btnPrimary, btnSecondary } from '../../components/ui/primitives';
+import { ExportMenu } from '../../components/ui/ExportMenu';
 
 export const EmployerAnalyticsPage: React.FC = () => {
   const { language } = useLanguage();
@@ -68,10 +69,15 @@ export const EmployerAnalyticsPage: React.FC = () => {
                   ? 'Real-time performance metrics, applicant funnel, and ATS quality breakdown'
                   : 'Chỉ số hiệu quả tuyển dụng, phễu ứng tuyển 5 giai đoạn và phân bổ chất lượng ATS'}
               </p>
+              <p className="print-only text-xs text-slate-500 mt-1">
+                {isEn ? 'Exported on ' : 'Xuất ngày '}
+                {new Date().toLocaleString(isEn ? 'en-GB' : 'vi-VN')} · TalentBridge
+              </p>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 no-print">
+          <ExportMenu testId="export-analytics" disabled={!data} onExportCsv={(l) => exportApi.analytics(l)} />
           <button
             type="button"
             onClick={fetchAnalytics}

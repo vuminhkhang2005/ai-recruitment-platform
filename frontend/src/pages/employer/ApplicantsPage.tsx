@@ -30,11 +30,12 @@ import {
   X,
   ArrowRight,
 } from 'lucide-react';
-import { applicationApi, jobApi, interviewApi, noteApi, messageApi, teamApi, openCvFile } from '../../lib/api';
+import { applicationApi, jobApi, interviewApi, noteApi, messageApi, teamApi, openCvFile, exportApi } from '../../lib/api';
 import type { Application, Job, Stage, InterviewDto, NoteDto, MessageDto, TeamMember } from '../../lib/types';
 import { STAGES, getStageLabels, formatDate, formatDateTime, timeAgo } from '../../lib/format';
 import { useToast } from '../../context/ToastContext';
 import { EmptyState, ErrorBox, PageLoader, btnPrimary, btnSecondary, inputCls } from '../../components/ui/primitives';
+import { ExportMenu } from '../../components/ui/ExportMenu';
 import { Avatar } from '../../components/layout/Navbar';
 import { StageBadge } from '../MyApplicationsPage';
 import { usePageTitle } from '../../lib/usePageTitle';
@@ -2157,6 +2158,12 @@ export const ApplicantsPage: React.FC = () => {
               : 'Select one or multiple candidates to invite to the next round or send polite rejection emails using templates or custom text.'}
           </p>
         </div>
+        <ExportMenu
+          testId="export-applicants"
+          allowPrint={false}
+          disabled={apps.length === 0}
+          onExportCsv={(l) => exportApi.applications(l, jobFilter ? Number(jobFilter) : null)}
+        />
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">

@@ -480,7 +480,8 @@ public class EmailService {
     /**
      * Returns true if the address belongs to one of the seeded demo accounts (e.g. recruiter.fpt@fpt.com, nguyenvanan.it@gmail.com).
      */
-    private boolean isSeededDemoAddress(String email) {
+    /** True for seeded demo inboxes that do not really exist (never send real e-mail to them). */
+    public static boolean isSeededDemoAddress(String email) {
         if (!StringUtils.hasText(email) || !email.contains("@")) {
             return false;
         }

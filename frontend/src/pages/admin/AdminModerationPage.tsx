@@ -18,9 +18,10 @@ import {
   XCircle,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { adminApi } from '../../lib/api';
+import { adminApi, exportApi } from '../../lib/api';
 import type { AdminCompany, AdminJob } from '../../lib/types';
 import { CompanyAvatar, EmptyState, ErrorBox, PageLoader, inputCls } from '../../components/ui/primitives';
+import { ExportMenu } from '../../components/ui/ExportMenu';
 import { formatSalary, getExpLevels, getJobTypes, label, toLines } from '../../lib/format';
 import { usePageTitle } from '../../lib/usePageTitle';
 import { AdminHeader } from './AdminHeader';
@@ -192,15 +193,31 @@ export const AdminModerationPage: React.FC = () => {
             : 'Verify partner company legal profiles (Tax Code, Website) and moderate job postings across the platform.'
         }
         rightSlot={
-          <button
-            type="button"
-            onClick={loadData}
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-soft-xs transition cursor-pointer disabled:opacity-60"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>{isVi ? 'Đồng bộ dữ liệu' : 'Sync Data'}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportMenu
+              testId={`export-admin-${activeTab}`}
+              onExportCsv={(l) =>
+                activeTab === 'companies'
+                  ? exportApi.adminCompanies(l, {
+                      keyword: companyKeyword.trim() || undefined,
+                      verificationStatus: verificationFilter !== 'ALL' ? verificationFilter : undefined,
+                    })
+                  : exportApi.adminJobs(l, {
+                      keyword: jobKeyword.trim() || undefined,
+                      status: jobStatusFilter !== 'ALL' ? jobStatusFilter : undefined,
+                    })
+              }
+            />
+            <button
+              type="button"
+              onClick={loadData}
+              disabled={loading}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-soft-xs transition cursor-pointer disabled:opacity-60"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>{isVi ? 'Đồng bộ dữ liệu' : 'Sync Data'}</span>
+            </button>
+          </div>
         }
       />
 

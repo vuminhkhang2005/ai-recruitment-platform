@@ -16,6 +16,11 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
 
     List<JobApplication> findByCandidateProfileId(Long candidateProfileId);
 
+    /** A candidate's applications to any job of the given company (used for company-review eligibility). */
+    @Query("SELECT a FROM JobApplication a JOIN FETCH a.job j WHERE a.candidateProfileId = :candidateProfileId AND j.company.id = :companyId")
+    List<JobApplication> findByCandidateProfileIdAndCompanyId(@Param("candidateProfileId") Long candidateProfileId,
+                                                              @Param("companyId") Long companyId);
+
     Optional<JobApplication> findByUuid(String uuid);
 
     Optional<JobApplication> findByJobIdAndCandidateProfileId(Long jobId, Long candidateProfileId);

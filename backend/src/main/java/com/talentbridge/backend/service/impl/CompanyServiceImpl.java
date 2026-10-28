@@ -32,6 +32,7 @@ public class CompanyServiceImpl implements CompanyService {
     private final CompanyRepository companyRepository;
     private final JobRepository jobRepository;
     private final com.talentbridge.backend.service.JobService jobService;
+    private final com.talentbridge.backend.repository.CompanyReviewRepository companyReviewRepository;
 
     private static final Pattern NONLATIN = Pattern.compile("[^\\w-]");
     private static final Pattern WHITESPACE = Pattern.compile("[\\s]");
@@ -39,9 +40,14 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     @Transactional(readOnly = true)
     public List<CompanyResponseDto> getAllCompanies() {
+        // One aggregate query for all ratings instead of one query per company
+        java.util.Map<Long, Object[]> ratings = new java.util.HashMap<>();
+        for (Object[] row : companyReviewRepository.ratingSummaryByCompany()) {
+            ratings.put(((Number) row[0]).longValue(), row);
+        }
         return companyRepository.findAll().stream()
                 .filter(c -> c.getDeletedAt() == null)
-                .map(this::mapToDto)
+                .map(c -> withRating(mapToDtoBase(c), ratings.get(c.getId())))
                 .toList();
     }
 
@@ -153,6 +159,29 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     private CompanyResponseDto mapToDto(Company company) {
+        Object[] row = null;
+        for (Object[] r : companyReviewRepository.ratingSummaryByCompany()) {
+            if (((Number) r[0]).longValue() == company.getId()) {
+                row = r;
+                break;
+            }
+        }
+        return withRating(mapToDtoBase(company), row);
+    }
+
+    /** Applies [companyId, avg, count] of published reviews to the DTO (null row = no reviews yet). */
+    private static CompanyResponseDto withRating(CompanyResponseDto dto, Object[] row) {
+        if (row == null) {
+            dto.setRatingAverage(null);
+            dto.setReviewCount(0L);
+        } else {
+            dto.setRatingAverage(BigDecimal.valueOf(((Number) row[1]).doubleValue()).setScale(1, RoundingMode.HALF_UP).doubleValue());
+            dto.setReviewCount(((Number) row[2]).longValue());
+        }
+        return dto;
+    }
+
+    private CompanyResponseDto mapToDtoBase(Company company) {
         long openJobs = jobRepository.findByCompanyId(company.getId()).stream().filter(CompanyServiceImpl::isOpen).count();
 
         return CompanyResponseDto.builder()

@@ -106,7 +106,7 @@ public class SecurityConfig {
                 "Access-Control-Request-Headers",
                 "X-Refresh-Token"
         ));
-        configuration.setExposedHeaders(Arrays.asList("Set-Cookie", "Authorization", "X-Refresh-Token"));
+        configuration.setExposedHeaders(Arrays.asList("Set-Cookie", "Authorization", "X-Refresh-Token", "Content-Disposition"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 

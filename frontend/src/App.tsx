@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
@@ -8,28 +8,33 @@ import { JobDetailPage } from './pages/JobDetailPage';
 import { CompaniesPage } from './pages/CompaniesPage';
 import { CompanyDetailPage } from './pages/CompanyDetailPage';
 import { LoginPage, RegisterPage } from './pages/AuthPages';
-import { EmployersPage } from './pages/EmployersPage';
-import { ToolsPage } from './pages/ToolsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { MyApplicationsPage } from './pages/MyApplicationsPage';
-import { SavedJobsPage } from './pages/SavedJobsPage';
-import { EmployerDashboard } from './pages/employer/EmployerDashboard';
-import { JobFormPage } from './pages/employer/JobFormPage';
-import { ApplicantsPage } from './pages/employer/ApplicantsPage';
-import { TeamPage } from './pages/employer/TeamPage';
-import { InterviewsAgendaPage } from './pages/employer/InterviewsAgendaPage';
-import { EmployerCompanyPage } from './pages/employer/EmployerCompanyPage';
-import { EmployerAnalyticsPage } from './pages/employer/EmployerAnalyticsPage';
-import { TalentPoolPage } from './pages/employer/TalentPoolPage';
-import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
-import { AdminUsersPage } from './pages/admin/AdminUsersPage';
-import { AdminModerationPage } from './pages/admin/AdminModerationPage';
-import { AdminSkillsPage } from './pages/admin/AdminSkillsPage';
-import { AdminAuditLogsPage } from './pages/admin/AdminAuditLogsPage';
-import { AcceptInvitationPage } from './pages/AcceptInvitationPage';
-import { MessagesPage } from './pages/MessagesPage';
 import { RequireRole } from './routes/RequireRole';
+import { PageLoader } from './components/ui/primitives';
+
+// Public browsing pages stay in the main bundle for a fast first paint; dashboards, admin and
+// account pages are code-split and only downloaded when the user opens them.
+const AcceptInvitationPage = lazy(() => import('./pages/AcceptInvitationPage').then((m) => ({ default: m.AcceptInvitationPage })));
+const AdminAuditLogsPage = lazy(() => import('./pages/admin/AdminAuditLogsPage').then((m) => ({ default: m.AdminAuditLogsPage })));
+const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })));
+const AdminModerationPage = lazy(() => import('./pages/admin/AdminModerationPage').then((m) => ({ default: m.AdminModerationPage })));
+const AdminReviewsPage = lazy(() => import('./pages/admin/AdminReviewsPage').then((m) => ({ default: m.AdminReviewsPage })));
+const AdminSkillsPage = lazy(() => import('./pages/admin/AdminSkillsPage').then((m) => ({ default: m.AdminSkillsPage })));
+const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })));
+const ApplicantsPage = lazy(() => import('./pages/employer/ApplicantsPage').then((m) => ({ default: m.ApplicantsPage })));
+const EmployerAnalyticsPage = lazy(() => import('./pages/employer/EmployerAnalyticsPage').then((m) => ({ default: m.EmployerAnalyticsPage })));
+const EmployerCompanyPage = lazy(() => import('./pages/employer/EmployerCompanyPage').then((m) => ({ default: m.EmployerCompanyPage })));
+const EmployerDashboard = lazy(() => import('./pages/employer/EmployerDashboard').then((m) => ({ default: m.EmployerDashboard })));
+const EmployersPage = lazy(() => import('./pages/EmployersPage').then((m) => ({ default: m.EmployersPage })));
+const InterviewsAgendaPage = lazy(() => import('./pages/employer/InterviewsAgendaPage').then((m) => ({ default: m.InterviewsAgendaPage })));
+const JobFormPage = lazy(() => import('./pages/employer/JobFormPage').then((m) => ({ default: m.JobFormPage })));
+const MessagesPage = lazy(() => import('./pages/MessagesPage').then((m) => ({ default: m.MessagesPage })));
+const MyApplicationsPage = lazy(() => import('./pages/MyApplicationsPage').then((m) => ({ default: m.MyApplicationsPage })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
+const SavedJobsPage = lazy(() => import('./pages/SavedJobsPage').then((m) => ({ default: m.SavedJobsPage })));
+const TalentPoolPage = lazy(() => import('./pages/employer/TalentPoolPage').then((m) => ({ default: m.TalentPoolPage })));
+const TeamPage = lazy(() => import('./pages/employer/TeamPage').then((m) => ({ default: m.TeamPage })));
+const ToolsPage = lazy(() => import('./pages/ToolsPage').then((m) => ({ default: m.ToolsPage })));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -47,7 +52,9 @@ const Layout: React.FC = () => {
       <ScrollToTop />
       <Navbar />
       <main className="flex-1">
-        <Outlet />
+        <Suspense fallback={<PageLoader />}>
+          <Outlet />
+        </Suspense>
       </main>
       {!isFullHeightApp && <Footer />}
     </div>
@@ -210,6 +217,14 @@ export function App() {
           element={
             <RequireRole role="admin">
               <AdminAuditLogsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="admin/reviews"
+          element={
+            <RequireRole role="admin">
+              <AdminReviewsPage />
             </RequireRole>
           }
         />

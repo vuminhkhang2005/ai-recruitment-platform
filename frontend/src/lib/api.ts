@@ -41,6 +41,10 @@ import type {
   SaveSkillInput,
   AuditLogEntry,
   EmailLogEntry,
+  CompanyReview,
+  CompanyReviewEligibility,
+  CompanyReviewInput,
+  CompanyReviewPage,
 } from './types';
 
 /** Same-origin base path; Vite proxies /api to the Spring Boot server. */
@@ -131,6 +135,20 @@ async function tryRefresh(): Promise<boolean> {
   return refreshing;
 }
 
+/** Exchanges the stored refresh token for a new access token (shared single-flight with HTTP requests). */
+export const refreshAccessToken = tryRefresh;
+
+/** True when the JWT is malformed or expires within `skewMs`. */
+export function isJwtExpired(token: string, skewMs = 15_000): boolean {
+  try {
+    const payload = token.split('.')[1];
+    const json = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof json.exp !== 'number' || json.exp * 1000 <= Date.now() + skewMs;
+  } catch {
+    return true;
+  }
+}
+
 interface RequestOptions {
   method?: string;
   query?: Query;
@@ -199,6 +217,7 @@ export const authApi = {
       linkedinClientId: string;
       googleConfigured: boolean;
       linkedinConfigured: boolean;
+      sandboxEnabled?: boolean;
     }>('/auth/oauth2/config'),
   oauth2Authorize: (
     provider: 'google' | 'linkedin',
@@ -266,6 +285,26 @@ export const companyApi = {
   jobs: (id: number | string) => request<Job[]>(`/companies/${id}/jobs`),
   update: (id: number | string, data: Partial<Company>) =>
     request<Company>(`/companies/${id}`, { method: 'PUT', body: data }),
+};
+
+export type ReviewSort = 'newest' | 'highest' | 'lowest';
+
+export const reviewApi = {
+  list: (companyId: number | string, sort: ReviewSort = 'newest', page = 0, size = 5) =>
+    request<CompanyReviewPage>(`/companies/${companyId}/reviews`, { query: { sort, page, size } }),
+  eligibility: (companyId: number | string) =>
+    request<CompanyReviewEligibility>(`/companies/${companyId}/reviews/eligibility`),
+  create: (companyId: number | string, input: CompanyReviewInput) =>
+    request<CompanyReview>(`/companies/${companyId}/reviews`, { method: 'POST', body: input }),
+  updateMine: (companyId: number | string, input: CompanyReviewInput) =>
+    request<CompanyReview>(`/companies/${companyId}/reviews/mine`, { method: 'PUT', body: input }),
+  deleteMine: (companyId: number | string) =>
+    request<void>(`/companies/${companyId}/reviews/mine`, { method: 'DELETE' }),
+  // Admin moderation
+  adminList: (filters: { status?: string; keyword?: string } = {}) =>
+    request<CompanyReview[]>('/admin/reviews', { query: filters }),
+  adminModerate: (reviewId: number, status: 'PUBLISHED' | 'HIDDEN', note?: string) =>
+    request<CompanyReview>(`/admin/reviews/${reviewId}/status`, { method: 'PATCH', body: { status, note } }),
 };
 
 export const applicationApi = {
@@ -371,6 +410,50 @@ export async function openCvFile(cvId: number) {
     throw e;
   }
 }
+
+/** Reads the file name from a Content-Disposition header (RFC 5987 filename* first). */
+function fileNameFromDisposition(header: string | null, fallback: string) {
+  if (!header) return fallback;
+  const star = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  if (star) {
+    try {
+      return decodeURIComponent(star[1].trim().replace(/"/g, ''));
+    } catch {
+      /* ignore malformed encoding */
+    }
+  }
+  const plain = /filename="?([^";]+)"?/i.exec(header);
+  return plain ? plain[1].trim() : fallback;
+}
+
+/** Downloads an authenticated file (e.g. CSV export) and saves it with the server-provided file name. */
+export async function downloadAuthenticatedFile(path: string, query?: Query, fallbackName = 'export.csv') {
+  const res = await request<Response>(path, { raw: true, query });
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileNameFromDisposition(res.headers.get('Content-Disposition'), fallbackName);
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+export type ExportLang = 'vi' | 'en';
+
+export const exportApi = {
+  /** Applicants of one job, or of all the recruiter's jobs when jobId is omitted. */
+  applications: (lang: ExportLang, jobId?: number | null) =>
+    downloadAuthenticatedFile('/exports/applications', { jobId: jobId ?? undefined, lang }, 'applicants.csv'),
+  analytics: (lang: ExportLang) => downloadAuthenticatedFile('/exports/analytics', { lang }, 'recruitment_report.csv'),
+  adminUsers: (lang: ExportLang, filters: { keyword?: string; role?: string; status?: string } = {}) =>
+    downloadAuthenticatedFile('/exports/admin/users', { ...filters, lang }, 'users.csv'),
+  adminCompanies: (lang: ExportLang, filters: { keyword?: string; verificationStatus?: string } = {}) =>
+    downloadAuthenticatedFile('/exports/admin/companies', { ...filters, lang }, 'companies.csv'),
+  adminJobs: (lang: ExportLang, filters: { keyword?: string; status?: string; companyId?: number } = {}) =>
+    downloadAuthenticatedFile('/exports/admin/jobs', { ...filters, lang }, 'jobs.csv'),
+};
 
 export const notificationApi = {
   list: (limit = 20) => request<NotificationItem[]>('/notifications', { query: { limit } }),

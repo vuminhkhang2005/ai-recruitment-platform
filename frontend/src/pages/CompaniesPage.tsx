@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, MapPin, Users, Briefcase, BadgeCheck } from 'lucide-react';
+import { Search, MapPin, Users, Briefcase, BadgeCheck, Star } from 'lucide-react';
 import { companyApi } from '../lib/api';
 import type { Company } from '../lib/types';
 import { CompanyAvatar, EmptyState, ErrorBox, PageLoader, inputCls, resolveCompanyBanner } from '../components/ui/primitives';
@@ -114,6 +114,13 @@ export const CompaniesPage: React.FC = () => {
                           {c.companySize} {isVi ? 'nhân viên' : 'employees'}
                         </span>
                       )}
+                      {c.reviewCount ? (
+                        <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400" data-testid="company-card-rating">
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                          {c.ratingAverage?.toFixed(1)}
+                          <span className="text-slate-400 font-medium">({c.reviewCount})</span>
+                        </span>
+                      ) : null}
                     </div>
                     {c.description && (
                       <p className="text-sm text-slate-600 dark:text-slate-300 mt-2.5 line-clamp-2 flex-1">

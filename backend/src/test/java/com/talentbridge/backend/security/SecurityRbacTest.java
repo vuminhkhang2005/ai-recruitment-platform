@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(properties = "app.oauth2.sandbox-enabled=false")
 @AutoConfigureMockMvc
 class SecurityRbacTest {
 
@@ -72,6 +72,60 @@ class SecurityRbacTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    @DisplayName("RBAC: Anonymous user cannot change OAuth2 client config - 401 Unauthorized")
+    void testAnonymous_CannotUpdateOAuth2Config() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/oauth2/config")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"provider\":\"GOOGLE\",\"clientId\":\"attacker-client\",\"clientSecret\":\"x\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "candidate@talentbridge.vn", roles = {"CANDIDATE"})
+    @DisplayName("RBAC: CANDIDATE cannot change OAuth2 client config - 403 Forbidden")
+    void testCandidate_CannotUpdateOAuth2Config() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/oauth2/config")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"provider\":\"GOOGLE\",\"clientId\":\"attacker-client\",\"clientSecret\":\"x\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Security: OAuth2 e-mail-only sign-in is rejected when sandbox mode is off - 400")
+    void testOAuth2EmailOnlyLoginRejected() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/oauth2/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"provider\":\"GOOGLE\",\"email\":\"candidate@talentbridge.vn\",\"role\":\"ROLE_CANDIDATE\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    @WithMockUser(username = "candidate@talentbridge.vn", roles = {"CANDIDATE"})
+    @DisplayName("RBAC: CANDIDATE cannot export applicants or admin CSV - 403 Forbidden")
+    void testCandidate_CannotExportCsv() throws Exception {
+        mockMvc.perform(get("/api/v1/exports/applications").param("jobId", "1"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/exports/admin/users"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "recruiter@talentbridge.vn", roles = {"RECRUITER"})
+    @DisplayName("RBAC: RECRUITER cannot export admin user list - 403 Forbidden")
+    void testRecruiter_CannotExportAdminUsers() throws Exception {
+        mockMvc.perform(get("/api/v1/exports/admin/users"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("RBAC: Anonymous user cannot export CSV - 401 Unauthorized")
+    void testAnonymous_CannotExportCsv() throws Exception {
+        mockMvc.perform(get("/api/v1/exports/analytics"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
