@@ -458,7 +458,7 @@ export const CompanyReviewsSection: React.FC<{ companyId: number; companyName: s
               value={sort}
               onChange={(e) => setSort(e.target.value as ReviewSort)}
               aria-label={isVi ? 'Sắp xếp đánh giá' : 'Sort reviews'}
-              className={`${inputCls} w-auto py-1.5 text-sm`}
+              className={`${inputCls} !w-auto py-1.5 text-sm`}
               data-testid="review-sort"
             >
               <option value="newest">{isVi ? 'Mới nhất' : 'Newest'}</option>

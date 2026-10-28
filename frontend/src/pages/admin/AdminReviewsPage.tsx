@@ -141,16 +141,16 @@ export const AdminReviewsPage: React.FC = () => {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder={isVi ? 'Tìm trong tiêu đề, ưu / nhược điểm' : 'Search title, pros, cons'}
-            className={`${inputCls} pl-9 w-72`}
+            className={`${inputCls} pl-9 !w-80`}
             aria-label={isVi ? 'Tìm đánh giá' : 'Search reviews'}
           />
         </div>
-        <select value={status} onChange={(e) => setStatus(e.target.value as StatusFilter)} className={`${inputCls} w-auto`} aria-label="status">
+        <select value={status} onChange={(e) => setStatus(e.target.value as StatusFilter)} className={`${inputCls} !w-auto`} aria-label="status">
           <option value="ALL">{isVi ? 'Mọi trạng thái' : 'All statuses'}</option>
           <option value="PUBLISHED">{isVi ? 'Đang hiển thị' : 'Published'}</option>
           <option value="HIDDEN">{isVi ? 'Đang ẩn' : 'Hidden'}</option>
         </select>
-        <select value={ratingFilter} onChange={(e) => setRatingFilter(Number(e.target.value))} className={`${inputCls} w-auto`} aria-label="rating">
+        <select value={ratingFilter} onChange={(e) => setRatingFilter(Number(e.target.value))} className={`${inputCls} !w-auto`} aria-label="rating">
           <option value={0}>{isVi ? 'Mọi số sao' : 'All ratings'}</option>
           {[5, 4, 3, 2, 1].map((n) => (
             <option key={n} value={n}>

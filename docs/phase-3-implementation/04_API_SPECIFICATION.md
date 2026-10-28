@@ -211,6 +211,127 @@
 
 ---
 
+### 1.7 AI Gợi Ý Việc Làm Đa Chiều (Personalized AI Job Recommendations)
+
+#### `GET /api/v1/ai/recommended-jobs?limit=6`
+- **Quyền hạn**: `ROLE_CANDIDATE`
+- **Mô tả**: Gợi ý danh sách việc làm phù hợp nhất với hồ sơ và CV mặc định của ứng viên dựa trên mô hình **Dual-Tower PyTorch Bi-Encoder + 4-Pillar Hybrid Scoring** (Skills 45%, Title & Specialization 25%, Location Priority 15%, Experience & Seniority 15%).
+- **Response 200 OK**:
+```json
+{
+  "success": true,
+  "message": "AI Job Recommendations retrieved successfully",
+  "data": {
+    "profileReady": true,
+    "detectedSection": "Công nghệ thông tin",
+    "candidateCity": "TP. Hồ Chí Minh",
+    "candidateCitySource": "PROFILE",
+    "candidateSkillCount": 8,
+    "recommendations": [
+      {
+        "job": {
+          "id": 102,
+          "title": "Java Backend Developer (Spring Boot)",
+          "companyName": "FPT Software",
+          "location": "TP. Hồ Chí Minh",
+          "experienceLevel": "JUNIOR"
+        },
+        "matchScore": 84.5,
+        "matchLabel": "STRONG_MATCH",
+        "matchedSkills": ["Java", "Spring Boot", "MySQL", "REST API", "Git"],
+        "missingSkills": ["Docker"],
+        "reasons": [
+          "Khớp 5/6 kỹ năng yêu cầu (83%)",
+          "Vị trí tương đồng cao với định hướng: Backend Developer",
+          "Cùng khu vực làm việc: TP. Hồ Chí Minh (từ Hồ sơ cá nhân)",
+          "Cấp bậc phù hợp năng lực hiện tại (Junior)"
+        ],
+        "locationMatch": "SAME_CITY",
+        "detectedCandidateCity": "TP. Hồ Chí Minh",
+        "detectedJobCity": "TP. Hồ Chí Minh"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 1.8 Thao Tác Hàng Loạt & Gửi Email Tuyển Dụng (HR Bulk Actions & Email Composer)
+
+#### `PATCH /api/v1/applications/bulk-status`
+- **Quyền hạn**: `ROLE_RECRUITER`
+- **Mô tả**: Chuyển trạng thái đồng loạt nhiều hồ sơ ứng tuyển (tối đa 100 hồ sơ/lần) kèm gửi email thông báo cá nhân hóa (hỗ trợ biến trộn `{{candidateName}}`, `{{jobTitle}}`, `{{companyName}}`) và ghi nhật ký thời gian tuyển dụng.
+- **Request Body**:
+```json
+{
+  "applicationIds": [12, 15, 19],
+  "status": "INTERVIEW",
+  "note": "Vượt qua vòng sàng lọc CV, mời làm bài test kỹ thuật",
+  "sendCustomEmail": true,
+  "emailSubject": "[{{companyName}}] Thư mời phỏng vấn vị trí {{jobTitle}}",
+  "emailBody": "Chào {{candidateName}},\n\nChúc mừng bạn đã vượt qua vòng hồ sơ vị trí {{jobTitle}} tại {{companyName}}..."
+}
+```
+- **Response 200 OK**: Trả về số lượng hồ sơ cập nhật thành công và số lượng email đã gửi.
+
+---
+
+### 1.9 Xuất Báo Cáo Dữ Liệu CSV & In PDF (Data Export & Reporting)
+
+- **`GET /api/v1/exports/applications?jobId={optional}&lang={vi|en}`** (`ROLE_RECRUITER`): Xuất danh sách ứng viên kèm điểm AI Match, kỹ năng khớp/thiếu và trạng thái tuyển dụng ra chuẩn RFC 4180 CSV (UTF-8 BOM mở trực tiếp trên Microsoft Excel).
+- **`GET /api/v1/exports/analytics?lang={vi|en}`** (`ROLE_RECRUITER`): Xuất báo cáo thống kê phễu tuyển dụng (Recruitment Funnel), phân phối điểm AI và hiệu quả theo từng tin đăng.
+- **`GET /api/v1/exports/admin/users?keyword=&role=&status=&lang={vi|en}`** (`ROLE_ADMIN`): Xuất danh sách tài khoản người dùng toàn hệ thống.
+- **`GET /api/v1/exports/admin/companies?keyword=&verificationStatus=&lang={vi|en}`** (`ROLE_ADMIN`): Xuất danh sách doanh nghiệp và trạng thái xác thực.
+- **`GET /api/v1/exports/admin/jobs?keyword=&status=&companyId=&lang={vi|en}`** (`ROLE_ADMIN`): Xuất danh sách tin tuyển dụng toàn sàn.
+
+---
+
+### 1.10 Đánh Giá Công Ty & Kiểm Duyệt (Verified Company Reviews & Moderation)
+
+#### `GET /api/v1/companies/{companyId}/reviews?rating={1..5}&page=0&size=10`
+- **Quyền hạn**: Công khai (`permitAll`)
+- **Mô tả**: Lấy thống kê điểm sao trung bình, biểu đồ phân phối 1-5 sao, tỷ lệ giới thiệu (`recommendRate`) và danh sách đánh giá đã duyệt (`APPROVED`) của công ty.
+
+#### `GET /api/v1/companies/{companyId}/reviews/eligibility`
+- **Quyền hạn**: `isAuthenticated()`
+- **Mô tả**: Kiểm tra xem ứng viên hiện tại đã từng nộp hồ sơ ứng tuyển vào công ty chưa (`hasApplied`) và đã gửi đánh giá trước đó chưa (`alreadyReviewed`).
+
+#### `POST /api/v1/companies/{companyId}/reviews`
+- **Quyền hạn**: `ROLE_CANDIDATE` (Bắt buộc đã có ít nhất 1 hồ sơ ứng tuyển tại công ty)
+- **Request Body**:
+```json
+{
+  "rating": 5,
+  "title": "Môi trường kỹ thuật xuất sắc, quy trình phỏng vấn chuyên nghiệp",
+  "pros": "Đội ngũ mentor giàu kinh nghiệm, lương thưởng minh bạch, văn phòng hiện đại.",
+  "cons": "Dự án đôi lúc nhịp độ nhanh vào giai đoạn release.",
+  "isAnonymous": false,
+  "workStatus": "INTERVIEWED",
+  "jobTitle": "Java Backend Developer",
+  "recommend": true
+}
+```
+- **Response 201 Created**: Tạo đánh giá thành công và tự động tính toán lại điểm xếp hạng công ty.
+
+#### `DELETE /api/v1/companies/{companyId}/reviews/{reviewId}`
+- **Quyền hạn**: `ROLE_CANDIDATE` (Tác giả của đánh giá)
+
+#### `GET /api/v1/admin/reviews?companyId=&status=&rating=&keyword=&page=0&size=15`
+- **Quyền hạn**: `ROLE_ADMIN`
+- **Mô tả**: Truy vấn toàn bộ đánh giá công ty trên hệ thống (hiển thị cả tác giả thật đối với đánh giá ẩn danh để phục vụ kiểm duyệt).
+
+#### `PATCH /api/v1/admin/reviews/{reviewId}/status`
+- **Quyền hạn**: `ROLE_ADMIN`
+- **Request Body**: `{"status": "APPROVED" | "HIDDEN" | "REJECTED", "reason": "..."}`
+- **Mô tả**: Ẩn/duyệt đánh giá và ghi nhận vào nhật ký kiểm toán (`AuditLog`).
+
+#### `DELETE /api/v1/admin/reviews/{reviewId}`
+- **Quyền hạn**: `ROLE_ADMIN`
+- **Mô tả**: Xóa vĩnh viễn đánh giá vi phạm tiêu chuẩn cộng đồng và ghi nhận vào `AuditLog`.
+
+---
+
 ## 2. Đặc Tả Giao Thức STOMP WebSocket
 
 ### 2.1 Cổng Kết Nối (Handshake)

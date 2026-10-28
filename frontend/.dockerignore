@@ -1,0 +1,8 @@
+node_modules/
+dist/
+screenshots/
+shots/
+test_*.cjs
+test-results/
+*.log
+.env*
