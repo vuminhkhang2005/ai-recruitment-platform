@@ -98,7 +98,8 @@ class JobServiceTest {
         assertThat(result.getId()).isEqualTo(1L);
         assertThat(result.getTitle()).isEqualTo("Senior Fullstack Engineer (React & Golang)");
         assertThat(result.getCompanyName()).isEqualTo("VNG Corporation");
-        assertThat(result.getSalaryFormatted()).isEqualTo("35 - 55 triệu");
+        // Salary labels are stored/formatted in English since the week-10 bilingual data migration
+        assertThat(result.getSalaryFormatted()).isEqualTo("35 - 55M VND");
 
         verify(jobRepository, times(1)).findByIdWithCompany(1L);
         verify(jobRepository, times(1)).save(sampleJob);

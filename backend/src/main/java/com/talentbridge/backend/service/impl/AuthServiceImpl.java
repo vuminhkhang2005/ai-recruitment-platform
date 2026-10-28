@@ -59,18 +59,24 @@ public class AuthServiceImpl implements AuthService {
     @Value("${app.oauth2.google.client-secret:}")
     private String googleClientSecret;
 
+    /**
+     * Local sandbox mode lets the in-app OAuth dialog sign in with any e-mail WITHOUT verifying it
+     * with Google/LinkedIn. It must stay disabled outside local development.
+     */
+    @Value("${app.oauth2.sandbox-enabled:false}")
+    private boolean oauth2SandboxEnabled;
+
+    private static String cleanConfigValue(String value, String placeholder) {
+        if (!StringUtils.hasText(value) || value.trim().equals(placeholder)) return "";
+        return value.trim();
+    }
+
     private String resolveGoogleClientId() {
-        if (StringUtils.hasText(googleClientId) && !"talentbridge-google-client-id".equals(googleClientId)) {
-            return googleClientId.trim();
-        }
-        return String.join("", "436067634610-", "nrh0budsn1no8kiq2ijmvba25kedv9mb", ".apps.google", "usercontent.com");
+        return cleanConfigValue(googleClientId, "talentbridge-google-client-id");
     }
 
     private String resolveGoogleClientSecret() {
-        if (StringUtils.hasText(googleClientSecret)) {
-            return googleClientSecret.trim();
-        }
-        return String.join("", "GOC", "SPX-Z0Sdm-", "gXgIXhQ2mu9i", "YBbInrfF4a");
+        return cleanConfigValue(googleClientSecret, "");
     }
 
     @Value("${app.oauth2.linkedin.client-id:}")
@@ -80,17 +86,11 @@ public class AuthServiceImpl implements AuthService {
     private String linkedinClientSecret;
 
     private String resolveLinkedinClientId() {
-        if (StringUtils.hasText(linkedinClientId) && !"talentbridge-linkedin-client-id".equals(linkedinClientId)) {
-            return linkedinClientId.trim();
-        }
-        return String.join("", "86h3lfj", "flpzwb7");
+        return cleanConfigValue(linkedinClientId, "talentbridge-linkedin-client-id");
     }
 
     private String resolveLinkedinClientSecret() {
-        if (StringUtils.hasText(linkedinClientSecret)) {
-            return linkedinClientSecret.trim();
-        }
-        return String.join("", "WPL_AP1.", "T8SUYVYQQvhnC6gd.", "JB6dGw==");
+        return cleanConfigValue(linkedinClientSecret, "");
     }
 
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -120,6 +120,7 @@ public class AuthServiceImpl implements AuthService {
         map.put("linkedinClientId", linkedinConfigured ? resolvedLinkedinId : "");
         map.put("googleConfigured", googleConfigured);
         map.put("linkedinConfigured", linkedinConfigured);
+        map.put("sandboxEnabled", oauth2SandboxEnabled);
         return map;
     }
 
@@ -141,6 +142,10 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public Map<String, String> issueOAuth2AuthorizationCode(OAuth2LoginRequestDto request) {
+        if (!oauth2SandboxEnabled) {
+            // Without sandbox mode, codes must come from the real Google/LinkedIn authorization server.
+            throw new BadRequestException("Chế độ OAuth2 sandbox đang tắt. Vui lòng đăng nhập qua trang xác thực chính thức của Google/LinkedIn.");
+        }
         String provider = request.getProvider() != null ? request.getProvider().trim().toUpperCase() : "GOOGLE";
         if (!"GOOGLE".equals(provider) && !"LINKEDIN".equals(provider)) {
             throw new BadRequestException("Nhà cung cấp OAuth2 không được hỗ trợ: " + provider);
@@ -376,14 +381,27 @@ public class AuthServiceImpl implements AuthService {
 
         // 2. If a real external OAuth2 token (Access Token or ID Token) is provided, verify it with Google / LinkedIn servers
         boolean isSandboxToken = resolvedToken != null && resolvedToken.startsWith("oauth2_sandbox_");
+        if (isSandboxToken && !oauth2SandboxEnabled) {
+            throw new BadRequestException("Token OAuth2 sandbox không được chấp nhận khi chế độ sandbox đang tắt.");
+        }
         if (StringUtils.hasText(resolvedToken) && !isSandboxToken && !StringUtils.hasText(email)) {
+            // Tokens obtained by our own code exchange are trusted; tokens sent by the client must be issued to OUR app.
+            boolean tokenFromOwnCodeExchange = StringUtils.hasText(request.getAuthCode());
+            if (!tokenFromOwnCodeExchange) {
+                assertTokenIssuedToThisApp(provider, resolvedToken.trim());
+            }
             Map<String, String> verifiedProfile = verifyExternalOAuth2Token(provider, resolvedToken.trim());
             email = verifiedProfile.get("email");
             fullName = verifiedProfile.get("fullName");
             avatarUrl = verifiedProfile.get("avatarUrl");
         }
 
-        // 3. Fallback to OAuth2 Account Chooser / Sandbox parameters if in local sandbox mode
+        // 3. Without a verified identity, only the local sandbox may fall back to client-supplied parameters.
+        if (!StringUtils.hasText(email) && !oauth2SandboxEnabled) {
+            throw new BadRequestException("Không xác minh được danh tính OAuth2. Vui lòng đăng nhập lại qua Google/LinkedIn.");
+        }
+
+        // 3b. Fallback to OAuth2 Account Chooser / Sandbox parameters (local sandbox mode only)
         if (!StringUtils.hasText(email)) {
             String defaultEmail = "GOOGLE".equals(provider)
                     ? "khang.google@gmail.com"
@@ -523,6 +541,47 @@ public class AuthServiceImpl implements AuthService {
         } catch (Exception e) {
             log.error("OAuth2 code exchange error for {}: {}", provider, e.getMessage());
             throw new BadRequestException("Lỗi kết nối tới máy chủ OAuth2 " + provider + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Prevents token substitution: a Google token issued to ANOTHER application must not be able to sign in here.
+     * LinkedIn access tokens cannot be audience-checked, so they are only accepted through our own code exchange.
+     */
+    private void assertTokenIssuedToThisApp(String provider, String token) {
+        if (!"GOOGLE".equals(provider)) {
+            throw new BadRequestException("LinkedIn chỉ hỗ trợ đăng nhập qua luồng Authorization Code chính thức.");
+        }
+        String clientId = resolveGoogleClientId();
+        if (!StringUtils.hasText(clientId)) {
+            throw new BadRequestException("Máy chủ chưa cấu hình GOOGLE_CLIENT_ID nên không thể xác minh token Google.");
+        }
+        boolean looksLikeJwtIdToken = token.startsWith("eyJ") && token.chars().filter(ch -> ch == '.').count() == 2;
+        String param = looksLikeJwtIdToken ? "id_token" : "access_token";
+        try {
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create("https://oauth2.googleapis.com/tokeninfo?" + param + "=" + URLEncoder.encode(token, StandardCharsets.UTF_8)))
+                    .GET()
+                    .build();
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() != 200) {
+                throw new BadRequestException("Token Google không hợp lệ hoặc đã hết hạn.");
+            }
+            JsonNode node = objectMapper.readTree(resp.body());
+            String aud = node.path("aud").asText("");
+            String azp = node.path("azp").asText("");
+            if (!clientId.equals(aud) && !clientId.equals(azp)) {
+                log.warn("Rejected Google token issued to another client (aud={}, azp={})", aud, azp);
+                throw new BadRequestException("Token Google không được cấp cho ứng dụng TalentBridge.");
+            }
+            if (node.has("email_verified") && !node.path("email_verified").asBoolean(false)
+                    && !"true".equalsIgnoreCase(node.path("email_verified").asText())) {
+                throw new BadRequestException("Email của tài khoản Google chưa được xác minh.");
+            }
+        } catch (BadRequestException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BadRequestException("Không thể xác minh token với Google: " + e.getMessage());
         }
     }
 

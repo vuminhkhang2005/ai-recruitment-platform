@@ -7,14 +7,19 @@ spring:
   application:
     name: talentbridge-backend
 
+  # Local secrets (OAuth client secrets, mail relay secret, JWT secret...) live in backend/.env,
+  # which is git-ignored. See backend/.env.example. Real environment variables always take precedence.
+  config:
+    import: optional:file:.env[.properties]
+
   servlet:
     multipart:
       max-file-size: 5MB
       max-request-size: 6MB
 
   datasource:
-    url: jdbc:mysql://localhost:3306/ai_recruitment_db?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
-    username: root
+    url: ${DB_URL:jdbc:mysql://localhost:3306/ai_recruitment_db?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
@@ -83,19 +88,23 @@ logging:
 # Application Security & JWT Properties
 app:
   jwt:
-    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    # Dev-only default; set JWT_SECRET (hex, >= 64 chars) in backend/.env or the deployment environment.
+    secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
     access-token-expiration-ms: 1800000 # 30 mins
     refresh-token-expiration-ms: 604800000 # 7 days
     cookie-name-access: accessToken
     cookie-name-refresh: refreshToken
-    cookie-secure: false # Set true in HTTPS production
+    cookie-secure: ${JWT_COOKIE_SECURE:false} # Set true in HTTPS production
     same-site: Lax
   oauth2:
+    # When true, the in-app OAuth dialog can sign in with ANY e-mail without Google/LinkedIn verification.
+    # Local development / automated tests only. Never enable in production.
+    sandbox-enabled: ${OAUTH2_SANDBOX_ENABLED:false}
     google:
       client-id: ${GOOGLE_CLIENT_ID:}
       client-secret: ${GOOGLE_CLIENT_SECRET:}
     linkedin:
-      client-id: ${LINKEDIN_CLIENT_ID:talentbridge-linkedin-client-id}
+      client-id: ${LINKEDIN_CLIENT_ID:}
       client-secret: ${LINKEDIN_CLIENT_SECRET:}
   storage:
     dir: ${APP_STORAGE_DIR:uploads}
@@ -105,8 +114,9 @@ app:
     enabled: ${APP_MAIL_ENABLED:true}
     from: ${APP_MAIL_FROM:TalentBridge <no-reply@talentbridge.vn>}
     # Default Free Production Email Relay: Google Apps Script (works on Render/Railway where SMTP is blocked, 0 third-party registration)
-    google-script-url: ${GOOGLE_SCRIPT_MAIL_URL:https://script.google.com/macros/s/AKfycbxo2xyo_XhcV8BQeDL6hlNDF2TgLT31vWOlErJ45lO5tzgLCfjORjuwGJDmxKQJFoTjWg/exec}
-    google-script-secret: ${GOOGLE_SCRIPT_MAIL_SECRET:minlish_mail_secret_2026}
+    # URL + secret are set in backend/.env (anyone holding both could send mail from the owner's Gmail).
+    google-script-url: ${GOOGLE_SCRIPT_MAIL_URL:}
+    google-script-secret: ${GOOGLE_SCRIPT_MAIL_SECRET:}
     # Optional alternative providers:
     brevo-api-key: ${BREVO_API_KEY:}
     brevo-sender-email: ${BREVO_SENDER_EMAIL:}

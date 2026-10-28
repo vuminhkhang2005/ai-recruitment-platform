@@ -16,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -185,6 +186,7 @@ public class AuthController {
     }
 
     @PostMapping("/oauth2/config")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Cập nhật nhanh OAuth2 Client ID & Client Secret (Google / LinkedIn)", description = "Cập nhật Client ID & Client Secret trực tiếp trên máy chủ mà không cần khởi động lại.")
     public ResponseEntity<ApiResponse<Map<String, Object>>> updateOAuth2Config(
             @RequestBody Map<String, String> body) {

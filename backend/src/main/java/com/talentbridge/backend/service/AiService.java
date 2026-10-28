@@ -878,7 +878,7 @@ public class AiService {
      * Strict token/word-boundary skill matcher to prevent substring false positives
      * (e.g., "ts" matching "projects", "java" matching "javascript", "go" matching "mongodb").
      */
-    private boolean containsSkillKeyword(String textLower, String keywordLower) {
+    static boolean containsSkillKeyword(String textLower, String keywordLower) {
         if (!StringUtils.hasText(textLower) || !StringUtils.hasText(keywordLower)) {
             return false;
         }
@@ -888,7 +888,7 @@ public class AiService {
         return Pattern.compile(regex).matcher(textLower).find();
     }
 
-    private boolean skillMatchesCvText(String textLower, String skillName) {
+    static boolean skillMatchesCvText(String textLower, String skillName) {
         if (!StringUtils.hasText(textLower) || !StringUtils.hasText(skillName)) {
             return false;
         }
@@ -904,7 +904,7 @@ public class AiService {
         return false;
     }
 
-    private List<String> extractAllSkillsFromCvText(String cvTextLower) {
+    static List<String> extractAllSkillsFromCvText(String cvTextLower) {
         List<String> detected = new ArrayList<>();
         for (Map.Entry<String, List<String>> entry : SKILL_TAXONOMY.entrySet()) {
             String skillName = entry.getKey();
@@ -915,7 +915,7 @@ public class AiService {
         return detected;
     }
 
-    private boolean isInternOrFresherText(String cvTextLower) {
+    static boolean isInternOrFresherText(String cvTextLower) {
         if (!StringUtils.hasText(cvTextLower)) return false;
         boolean hasExplicitYears = Pattern.compile("\\b([1-9]|1[0-5])\\s*\\+?\\s*(?:years?|năm)\\s+(?:of\\s+)?(?:experience|kinh nghiệm|làm việc)")
                 .matcher(cvTextLower).find();
@@ -930,7 +930,7 @@ public class AiService {
                 || cvTextLower.contains("mới tốt nghiệp");
     }
 
-    private int extractExperienceYearsFromCvText(String cvTextLower) {
+    static int extractExperienceYearsFromCvText(String cvTextLower) {
         // Check explicit "X years of experience" or "X năm kinh nghiệm"
         Pattern expPattern = Pattern.compile("\\b([1-9]|1[0-5])\\s*\\+?\\s*(?:years?|năm)\\s+(?:of\\s+)?(?:experience|kinh nghiệm|làm việc)");
         Matcher m = expPattern.matcher(cvTextLower);
@@ -950,7 +950,7 @@ public class AiService {
         return 1;
     }
 
-    private boolean isRealReadableCvText(String txt) {
+    static boolean isRealReadableCvText(String txt) {
         if (!StringUtils.hasText(txt)) return false;
         String trimmed = txt.trim();
         if (trimmed.length() < 220) return false;
@@ -989,7 +989,7 @@ public class AiService {
         return "";
     }
 
-    private static class SeniorityCalibration {
+    static final class SeniorityCalibration {
         final int expScore;
         final double skillDepthFactor;
         final int seniorityCap;
@@ -1007,7 +1007,7 @@ public class AiService {
      * Computes realistic seniority alignment, skill-depth attenuation, and maximum overall score cap.
      * Prevents an Intern/Fresher (0 yrs) from scoring >90% on Junior (1-3 yrs), Middle (2-4 yrs), or Senior (4+ yrs) JDs.
      */
-    private SeniorityCalibration computeSeniorityCalibration(int candidateYears, String jdLevelUpper, int requiredExpYears) {
+    static SeniorityCalibration computeSeniorityCalibration(int candidateYears, String jdLevelUpper, int requiredExpYears) {
         String level = jdLevelUpper != null ? jdLevelUpper.toUpperCase() : "JUNIOR";
         if (candidateYears == 0) {
             return switch (level) {
@@ -1051,7 +1051,7 @@ public class AiService {
      * Detects if a Job Title explicitly demands a core specialization (e.g., Flutter, Mobile, Android/Kotlin, Golang,
      * Next.js, DevOps, QA Automation, Data/Python) that is completely absent from the candidate's CV.
      */
-    private String detectMissingTitleCoreSkill(String jobTitle, String cvTextLower, Set<String> candidateSkillsLower) {
+    static String detectMissingTitleCoreSkill(String jobTitle, String cvTextLower, Set<String> candidateSkillsLower) {
         if (!StringUtils.hasText(jobTitle)) return null;
         String t = jobTitle.toLowerCase();
 
@@ -1097,7 +1097,7 @@ public class AiService {
         return null;
     }
 
-    private boolean hasAnySkill(String cvTextLower, Set<String> candidateSkillsLower, String... targets) {
+    private static boolean hasAnySkill(String cvTextLower, Set<String> candidateSkillsLower, String... targets) {
         for (String target : targets) {
             String tl = target.toLowerCase();
             if (candidateSkillsLower != null && candidateSkillsLower.contains(tl)) return true;

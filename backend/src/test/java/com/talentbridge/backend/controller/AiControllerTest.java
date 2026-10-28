@@ -212,7 +212,9 @@ class AiControllerTest {
                 .recommendationReason("Khớp 3/3 kỹ năng cốt lõi của bạn")
                 .build();
 
-        when(aiService.getRecommendedJobsForCandidate(anyLong(), anyInt())).thenReturn(List.of(item));
+        // Controller now resolves the selected CV and the minimum score (limit, cvId, minScore)
+        when(aiService.getRecommendedJobsForCandidate(anyLong(), org.mockito.ArgumentMatchers.isNull(), eq(5), eq(45)))
+                .thenReturn(List.of(item));
 
         mockMvc.perform(get("/api/v1/ai/recommended-jobs")
                         .with(authentication(auth))
