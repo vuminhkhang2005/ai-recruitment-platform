@@ -592,6 +592,8 @@ export interface RecommendedJob {
   ratingColor: string;
   levelMatched?: boolean;
   locationMatched?: boolean;
+  locationStatus?: 'SAME_CITY' | 'REMOTE' | 'UNKNOWN' | 'OTHER_CITY';
+  candidateCity?: string | null;
   alreadyApplied?: boolean;
   analyzedCvId?: number | null;
   analyzedCvName?: string;

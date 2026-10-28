@@ -137,8 +137,16 @@ export const JobsPage: React.FC = () => {
   }, [recommendedJobs]);
 
   const topRecommendedJobs = useMemo(() => {
-    return recommendedJobs.filter((r) => r.matchScore >= 52).slice(0, 12);
+    // Only recommend jobs in the candidate's area (or remote); other-city jobs still show their score in the main list.
+    return recommendedJobs
+      .filter((r) => r.matchScore >= 52 && r.locationMatched !== false)
+      .slice(0, 12);
   }, [recommendedJobs]);
+
+  const recCandidateCity = useMemo(
+    () => recommendedJobs.find((r) => r.candidateCity)?.candidateCity ?? null,
+    [recommendedJobs]
+  );
 
   const filteredRecommendedJobs = useMemo(() => {
     return topRecommendedJobs.filter((rec) => {
@@ -443,8 +451,8 @@ export const JobsPage: React.FC = () => {
                                 ? 'Đang phân tích CV & hồ sơ của bạn...'
                                 : 'Analyzing your CV & profile...'
                               : isVi
-                                ? `${topRecommendedJobs.length} công việc khớp với CV & kỹ năng của bạn`
-                                : `${topRecommendedJobs.length} jobs matched with your CV & skills`}
+                                ? `${topRecommendedJobs.length} công việc khớp với CV & kỹ năng của bạn${recCandidateCity ? ` • 📍 ${recCandidateCity}` : ''}`
+                                : `${topRecommendedJobs.length} jobs matched with your CV & skills${recCandidateCity ? ` • 📍 ${recCandidateCity}` : ''}`}
                           </p>
                         </div>
                       </div>
@@ -505,19 +513,19 @@ export const JobsPage: React.FC = () => {
                           {[
                             {
                               key: 'all' as const,
-                              label: isVi ? `Tất cả (${recommendedJobs.length})` : `All (${recommendedJobs.length})`,
+                              label: isVi ? `Tất cả (${topRecommendedJobs.length})` : `All (${topRecommendedJobs.length})`,
                             },
                             {
                               key: 'strong' as const,
                               label: isVi
-                                ? `🔥 Rất hợp ≥80% (${recommendedJobs.filter((r) => r.matchScore >= 80).length})`
-                                : `🔥 Strong ≥80% (${recommendedJobs.filter((r) => r.matchScore >= 80).length})`,
+                                ? `🔥 Rất hợp ≥80% (${topRecommendedJobs.filter((r) => r.matchScore >= 80).length})`
+                                : `🔥 Strong ≥80% (${topRecommendedJobs.filter((r) => r.matchScore >= 80).length})`,
                             },
                             {
                               key: 'level' as const,
                               label: isVi
-                                ? `🎯 Đúng cấp bậc (${recommendedJobs.filter((r) => r.levelMatched).length})`
-                                : `🎯 Right Level (${recommendedJobs.filter((r) => r.levelMatched).length})`,
+                                ? `🎯 Đúng cấp bậc (${topRecommendedJobs.filter((r) => r.levelMatched).length})`
+                                : `🎯 Right Level (${topRecommendedJobs.filter((r) => r.levelMatched).length})`,
                             },
                             {
                               key: 'unapplied' as const,
@@ -638,6 +646,11 @@ export const JobsPage: React.FC = () => {
                                     🎯 {isVi ? `Đúng cấp bậc ${j.expLevel}` : `Fits ${j.expLevel}`}
                                   </span>
                                 )}
+                                {(rec.locationStatus === 'SAME_CITY' || rec.locationStatus === 'REMOTE') && (
+                                  <span className="px-1.5 py-0.5 rounded-md bg-sky-100/80 dark:bg-sky-900/50 text-[10px] font-semibold text-sky-800 dark:text-sky-300">
+                                    📍 {rec.locationStatus === 'REMOTE' ? 'Remote' : isVi ? `Gần bạn · ${j.locationCity}` : `Near you · ${j.locationCity}`}
+                                  </span>
+                                )}
                               </div>
 
                               {rec.improvementTip && rec.missingSkills.length > 0 && (
@@ -710,7 +723,7 @@ export const JobsPage: React.FC = () => {
                     job={selectedJob}
                     company={selectedCompany}
                     match={recMatchMap[selectedJob.id] ?? scores[selectedJob.id]}
-                    recommendedJobs={recommendedJobs}
+                    recommendedJobs={topRecommendedJobs}
                     onSelectJob={(nextJob) => {
                       setSelectedJobId(nextJob.id);
                       setSelectedJob(nextJob);

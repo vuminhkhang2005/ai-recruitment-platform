@@ -195,6 +195,9 @@ public class AiDtos {
         private String ratingColor;
         private Boolean levelMatched;
         private Boolean locationMatched;
+        /** SAME_CITY | REMOTE | UNKNOWN | OTHER_CITY */
+        private String locationStatus;
+        private String candidateCity;
         private Boolean alreadyApplied;
         private Long analyzedCvId;
         private String analyzedCvName;

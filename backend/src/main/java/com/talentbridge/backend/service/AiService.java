@@ -588,17 +588,18 @@ public class AiService {
                 .status(expFulfilled ? "MATCH" : expScore >= 58 ? "PARTIAL" : "GAP")
                 .build());
 
-        String candCity = parsedCvCity;
+        String candCity = profile != null && StringUtils.hasText(profile.getCity()) ? profile.getCity().trim() : parsedCvCity;
         String jobCity = StringUtils.hasText(job.getLocationCity()) ? job.getLocationCity() : "Vietnam";
-        boolean cityMatch = candCity.equalsIgnoreCase(jobCity)
-                || (candCity.toLowerCase().contains("ho chi minh") && jobCity.toLowerCase().contains("hồ chí minh"))
-                || (candCity.toLowerCase().contains("ha noi") && jobCity.toLowerCase().contains("hà nội"))
-                || "REMOTE".equalsIgnoreCase(job.getJobType());
+        String candCityKey = normalizeCityKey(candCity);
+        String jobCityKey = normalizeCityKey(job.getLocationCity());
+        boolean cityMatch = "REMOTE".equalsIgnoreCase(job.getJobType())
+                || candCityKey == null || jobCityKey == null
+                || candCityKey.equals(jobCityKey);
         criteriaList.add(JdCriterionComparisonItem.builder()
                 .criterion("Location & Work Mode")
                 .cvValue(candCity)
                 .jdValue(jobCity + (job.getJobType() != null ? " · " + job.getJobType() : ""))
-                .status(cityMatch ? "MATCH" : "PARTIAL")
+                .status(cityMatch ? "MATCH" : "GAP")
                 .build());
 
         List<String> strengths = new ArrayList<>();
@@ -1137,6 +1138,13 @@ public class AiService {
     }
 
     private String extractCityFromCvText(String lower) {
+        String detected = detectCityFromCvText(lower);
+        return detected != null ? detected : "Ho Chi Minh City";
+    }
+
+    /** Detects the candidate's city from CV text; returns null when no city is mentioned. */
+    private String detectCityFromCvText(String lower) {
+        if (lower == null) return null;
         if (lower.contains("ho chi minh") || lower.contains("hcmc") || lower.contains("hcmute")
                 || lower.contains("hồ chí minh") || lower.contains("tp.hcm") || lower.contains("tphcm")
                 || lower.contains("sài gòn") || lower.contains("saigon") || lower.contains("thủ đức")) {
@@ -1152,7 +1160,30 @@ public class AiService {
         if (lower.contains("cần thơ") || lower.contains("can tho")) {
             return "Can Tho";
         }
-        return "Ho Chi Minh City";
+        return null;
+    }
+
+    /**
+     * Normalizes free-form city names ("TP.HCM", "Hồ Chí Minh", "Ho Chi Minh City", "Hanoi", ...)
+     * to a canonical key so CV/profile cities can be compared reliably with job cities.
+     */
+    static String normalizeCityKey(String city) {
+        if (!StringUtils.hasText(city)) return null;
+        String c = java.text.Normalizer.normalize(city.toLowerCase(), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replace('đ', 'd')
+                .replaceAll("[^a-z0-9 ]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+        if (c.isEmpty()) return null;
+        if (c.contains("ho chi minh") || c.contains("hcm") || c.contains("sai gon") || c.contains("saigon")
+                || c.contains("thu duc")) return "HCM";
+        if (c.contains("ha noi") || c.contains("hanoi")) return "HN";
+        if (c.contains("da nang") || c.contains("danang")) return "DN";
+        if (c.contains("can tho")) return "CT";
+        if (c.contains("hai phong")) return "HP";
+        if (c.equals("vietnam") || c.equals("viet nam") || c.contains("remote") || c.contains("toan quoc")) return null;
+        return c;
     }
 
     private String buildCoverLetterTemplate(String candidateName, String jobTitle, String companyName,
@@ -1309,9 +1340,12 @@ public class AiService {
                         .filter(Objects::nonNull)
                         .max(Integer::compareTo)
                         .orElse(0));
-        String candidateCity = hasRealCvFileText
-                ? extractCityFromCvText(cvTextLower)
-                : (profile != null && StringUtils.hasText(profile.getCity()) ? profile.getCity() : "Ho Chi Minh City");
+        // Preferred work location: the city set explicitly on the profile wins, otherwise detect it from the CV.
+        // When neither is known, location is treated as neutral (no penalty).
+        String candidateCity = profile != null && StringUtils.hasText(profile.getCity())
+                ? profile.getCity().trim()
+                : detectCityFromCvText(cvTextLower);
+        String candidateCityKey = normalizeCityKey(candidateCity);
         String candidateDomain = inferCareerDomain(cvTextLower, allCandidateSkillNamesLower, behavioralSkillLower);
         String candidateSubTrack = inferTechSubTrack(cvTextLower, allCandidateSkillNamesLower);
 
@@ -1423,16 +1457,29 @@ public class AiService {
                 domainScore = matched.isEmpty() ? 15 : 45;
             }
 
-            // Pillar 4: Location, Work Mode & Behavioral Affinity (8%)
+            // Pillar 4: Location, Work Mode & Behavioral Affinity (8%) + hard location gate
             String jobCity = StringUtils.hasText(job.getLocationCity()) ? job.getLocationCity() : "Vietnam";
-            boolean isRemoteOrHybrid = "REMOTE".equalsIgnoreCase(job.getJobType()) || "HYBRID".equalsIgnoreCase(job.getJobType());
-            boolean cityMatched = candidateCity.equalsIgnoreCase(jobCity)
-                    || (candidateCity.toLowerCase().contains("ho chi minh") && jobCity.toLowerCase().contains("hồ chí minh"))
-                    || (candidateCity.toLowerCase().contains("ha noi") && jobCity.toLowerCase().contains("hà nội"))
-                    || (candidateCity.toLowerCase().contains("da nang") && jobCity.toLowerCase().contains("đà nẵng"))
-                    || isRemoteOrHybrid;
+            String jobCityKey = normalizeCityKey(job.getLocationCity());
+            boolean isRemote = "REMOTE".equalsIgnoreCase(job.getJobType());
+            String locationStatus;
+            if (isRemote) {
+                locationStatus = "REMOTE";
+            } else if (candidateCityKey == null || jobCityKey == null) {
+                locationStatus = "UNKNOWN";
+            } else if (candidateCityKey.equals(jobCityKey)) {
+                locationStatus = "SAME_CITY";
+            } else {
+                // Onsite / Hybrid / Internship in another city still requires relocating or commuting.
+                locationStatus = "OTHER_CITY";
+            }
+            boolean cityMatched = !"OTHER_CITY".equals(locationStatus);
             long behavioralOverlap = jobSkillNamesLower.stream().filter(behavioralSkillLower::contains).count();
-            int contextScore = (cityMatched ? 88 : 65) + (behavioralOverlap >= 2 ? 10 : behavioralOverlap == 1 ? 5 : 0);
+            int baseLocationScore = switch (locationStatus) {
+                case "SAME_CITY", "REMOTE" -> 92;
+                case "UNKNOWN" -> 78;
+                default -> 30;
+            };
+            int contextScore = baseLocationScore + (behavioralOverlap >= 2 ? 8 : behavioralOverlap == 1 ? 4 : 0);
             contextScore = Math.min(100, contextScore);
 
             // Composite Weighted Score (50% Skills + 30% Level/Exp + 12% Domain + 8% Location/Behavior)
@@ -1442,6 +1489,10 @@ public class AiService {
                 score = Math.min(34, score);
             } else if (matched.isEmpty() && domainScore < 50) {
                 score = Math.min(score, 25);
+            }
+            if ("OTHER_CITY".equals(locationStatus)) {
+                // A job in another city is not a realistic "strong match": attenuate and cap it.
+                score = Math.min(55, (int) Math.round(score * 0.75));
             }
             score = Math.max(15, Math.min(97, score));
 
@@ -1476,8 +1527,13 @@ public class AiService {
                         jdLevelUpper,
                         requiredExpYears));
             }
-            if (cityMatched) {
-                reasons.add("REMOTE".equalsIgnoreCase(job.getJobType()) ? "Làm việc Remote linh hoạt" : "Khu vực " + jobCity);
+            if ("OTHER_CITY".equals(locationStatus)) {
+                // Location mismatch is a key reason, so put it first.
+                reasons.add(0, String.format("Khác khu vực: JD tại %s, bạn ở %s", jobCity, candidateCity));
+            } else if ("REMOTE".equals(locationStatus)) {
+                reasons.add("Làm việc Remote linh hoạt");
+            } else if ("SAME_CITY".equals(locationStatus)) {
+                reasons.add("Cùng khu vực " + jobCity);
             }
 
             String primaryReason = !reasons.isEmpty()
@@ -1485,7 +1541,10 @@ public class AiService {
                     : "Cơ hội phù hợp với định hướng chuyên môn của bạn";
 
             String tip;
-            if (!levelMatched && requiredExpYears > candidateYears) {
+            if ("OTHER_CITY".equals(locationStatus)) {
+                tip = String.format("Công việc làm tại %s (%s), khác khu vực bạn đang ở (%s). Chỉ ứng tuyển nếu bạn sẵn sàng chuyển nơi làm việc.",
+                        jobCity, job.getJobType() != null ? job.getJobType() : "ONSITE", candidateCity);
+            } else if (!levelMatched && requiredExpYears > candidateYears) {
                 tip = String.format("JD yêu cầu cấp bậc %s (%d+ năm KN), trong khi CV của bạn đang ở mức %s (%d năm KN thực tế).",
                         jdLevelUpper, requiredExpYears,
                         candidateYears == 0 ? "Intern / Fresher" : (candidateYears + " năm"),
@@ -1508,6 +1567,8 @@ public class AiService {
                     .ratingColor(color)
                     .levelMatched(levelMatched)
                     .locationMatched(cityMatched)
+                    .locationStatus(locationStatus)
+                    .candidateCity(candidateCity)
                     .alreadyApplied(appliedJobIds.contains(job.getId()))
                     .analyzedCvId(resolvedCvId)
                     .analyzedCvName(analyzedCvName)
@@ -1522,16 +1583,27 @@ public class AiService {
         allScored.sort((a, b) -> {
             int cmp = Integer.compare(b.getMatchScore(), a.getMatchScore());
             if (cmp != 0) return cmp;
+            cmp = Boolean.compare(Boolean.TRUE.equals(b.getLocationMatched()), Boolean.TRUE.equals(a.getLocationMatched()));
+            if (cmp != 0) return cmp;
             return Integer.compare(b.getMatchedSkills().size(), a.getMatchedSkills().size());
         });
 
         int effectiveMinScore = Math.max(0, minScore);
         List<RecommendedJobDto> filtered = allScored.stream()
                 .filter(r -> r.getMatchScore() >= effectiveMinScore)
+                // Curated recommendation lists (minScore > 0) only include jobs in the candidate's area or remote.
+                .filter(r -> effectiveMinScore == 0 || Boolean.TRUE.equals(r.getLocationMatched()))
                 .collect(Collectors.toList());
 
         if (filtered.size() < 3 && !allScored.isEmpty()) {
-            filtered = allScored.stream().limit(Math.min(6, allScored.size())).collect(Collectors.toList());
+            // Not enough strong local matches: top up with the best remaining jobs, local/remote ones first.
+            List<RecommendedJobDto> topUp = new ArrayList<>(filtered);
+            allScored.stream()
+                    .filter(r -> !topUp.contains(r))
+                    .sorted((a, b) -> Boolean.compare(Boolean.TRUE.equals(b.getLocationMatched()), Boolean.TRUE.equals(a.getLocationMatched())))
+                    .limit(Math.max(0, 6 - topUp.size()))
+                    .forEach(topUp::add);
+            filtered = topUp;
         }
 
         return filtered.stream()
