@@ -100,11 +100,22 @@ export const JobCard: React.FC<JobCardProps> = ({
   const chip = 'px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-300';
   const targetTo = preserveSearch ? `/jobs/${job.id}${location.search}` : `/jobs/${job.id}`;
 
+  // In split-view lists (desktop), a plain left-click should only select the job and show
+  // the preview panel on the right instead of navigating to the full detail page.
+  // Ctrl/Cmd/Shift/middle-click still open the full page; mobile keeps full-page navigation.
+  const handleClick = (e: React.MouseEvent) => {
+    if (!onClick) return;
+    const isPlainLeftClick = e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+    const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches;
+    if (isPlainLeftClick && isDesktop) e.preventDefault();
+    onClick(e);
+  };
+
   if (compact) {
     return (
       <Link
         to={targetTo}
-        onClick={onClick}
+        onClick={handleClick}
         className={`group flex flex-col relative transition-all duration-200 cursor-pointer p-3 sm:p-3.5 rounded-2xl ${
           selected
             ? 'border-2 border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/40 shadow-[0_6px_20px_-4px_rgba(16,185,129,0.25)] ring-1 ring-emerald-500/20'
@@ -194,7 +205,7 @@ export const JobCard: React.FC<JobCardProps> = ({
   return (
     <Link
       to={targetTo}
-      onClick={onClick}
+      onClick={handleClick}
       className={`group flex flex-col relative transition-all duration-200 cursor-pointer p-6 rounded-3xl ${
         selected
           ? 'border-2 border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/40 shadow-[0_6px_20px_-4px_rgba(16,185,129,0.25)] ring-1 ring-emerald-500/20'
