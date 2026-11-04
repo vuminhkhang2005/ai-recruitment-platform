@@ -86,6 +86,16 @@ ___
 
 ___
 
+## 5. Kế hoạch tuần 12 (Dự kiến)
+### 5.1. Rà soát & Tinh chỉnh thêm các luồng nghiệp vụ
+- Kiểm tra chéo các trường hợp biên (edge cases) khi bóc tách nhiều mẫu CV thực tế có bố cục khác nhau (CV 2 cột, CV tiếng Việt/tiếng Anh hỗn hợp).
+- Rà soát lại trải nghiệm người dùng trên từng vai trò (Ứng viên, Nhà tuyển dụng, Quản trị viên) và sửa các lỗi hiển thị nhỏ nếu phát sinh.
+### 5.2. Kiểm thử triển khai Docker & Bổ sung tài liệu
+- Chạy kiểm tra thực tế toàn bộ hệ thống qua `docker-compose` trên môi trường sạch để đảm bảo các dịch vụ (`mysql`, `ai-engine`, `backend`, `frontend`) kết nối ổn định.
+- Tổng hợp kết quả thực nghiệm của mô hình AI và viết tiếp phần nội dung báo cáo thuyết minh đồ án.
+
+___
+
 ## AI hỗ trợ
 **Google Antigravity**  
 **Gemini 4 Argon**
