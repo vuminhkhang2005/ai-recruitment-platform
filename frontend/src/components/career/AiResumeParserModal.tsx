@@ -57,6 +57,29 @@ export const AiResumeParserModal: React.FC<AiResumeParserModalProps> = ({
 
   const handleStartParsing = async () => {
     setError(null);
+    if (inputMode === 'upload' && !file) {
+      setError(
+        isVi
+          ? 'Vui lòng chọn tệp CV (PDF hoặc DOCX) từ máy trước khi phân tích.'
+          : 'Please select a CV file (PDF or DOCX) from your computer before parsing.'
+      );
+      return;
+    }
+    if (inputMode === 'existing' && !selectedCvId) {
+      setError(
+        isVi
+          ? 'Vui lòng chọn một CV đã lưu để phân tích.'
+          : 'Please select an uploaded CV to parse.'
+      );
+      return;
+    }
+    if (inputMode === 'text' && !rawText.trim()) {
+      setError(
+        isVi ? 'Vui lòng dán nội dung văn bản CV để phân tích.' : 'Please paste CV text to parse.'
+      );
+      return;
+    }
+
     setParsing(true);
     setResult(null);
 
@@ -76,11 +99,6 @@ export const AiResumeParserModal: React.FC<AiResumeParserModalProps> = ({
       } else if (inputMode === 'existing' && selectedCvId) {
         parseRes = await aiApi.parseCvText('', selectedCvId);
       } else {
-        if (!rawText.trim()) {
-          throw new Error(
-            isVi ? 'Vui lòng dán nội dung văn bản CV để phân tích.' : 'Please paste CV text to parse.'
-          );
-        }
         parseRes = await aiApi.parseCvText(rawText);
       }
 

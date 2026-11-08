@@ -245,7 +245,7 @@ export const ApplyModal: React.FC<{
     <Modal title={t.modalTitle(job.title)} onClose={onClose} wide>
       <form onSubmit={submit} className="space-y-5">
         <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-          {job.companyName} · {lang === 'en' ? formatSalary(job.salaryFormatted, 'en') : job.salaryFormatted}
+          {job.companyName} · {formatSalary(job.salaryFormatted, lang)}
         </p>
 
         {/* STEP 1: SELECT CV */}

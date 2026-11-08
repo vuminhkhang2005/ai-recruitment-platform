@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   Smartphone,
   Sparkles,
+  Star,
   TrendingUp,
   UploadCloud,
   UserPlus,
@@ -47,12 +48,48 @@ const POPULAR_KEYWORDS_EN = ['Business', 'Marketing', 'Java', 'ReactJS', '.NET',
 
 /** Categories shown in the "Top ngành nghề" grid. */
 const getSpecialties = (lang: string) => [
-  { keyword: 'Developer', label: lang === 'vi' ? 'Công nghệ thông tin' : 'Information Technology', icon: Layout, tint: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400' },
-  { keyword: 'Kinh doanh', label: lang === 'vi' ? 'Kinh doanh & Bán hàng' : 'Sales & Business', icon: TrendingUp, tint: 'bg-sky-50 text-sky-600 dark:bg-sky-950/60 dark:text-sky-400' },
-  { keyword: 'Marketing', label: lang === 'vi' ? 'Marketing & Truyền thông' : 'Marketing & Media', icon: Send, tint: 'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400' },
-  { keyword: 'Tài chính', label: lang === 'vi' ? 'Tài chính - Ngân hàng' : 'Finance & Banking', icon: Building2, tint: 'bg-violet-50 text-violet-600 dark:bg-violet-950/60 dark:text-violet-400' },
-  { keyword: 'Thiết kế', label: lang === 'vi' ? 'Thiết kế & Sáng tạo' : 'Design & Creative', icon: Sparkles, tint: 'bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400' },
-  { keyword: 'Nhân sự', label: lang === 'vi' ? 'Nhân sự & Hành chính' : 'HR & Administration', icon: Users, tint: 'bg-teal-50 text-teal-600 dark:bg-teal-950/60 dark:text-teal-400' },
+  {
+    keyword: 'Developer',
+    matchTerms: ['developer', 'engineer', 'backend', 'frontend', 'fullstack', 'full-stack', 'java', 'react', 'python', 'devops', 'qa', 'flutter', 'kotlin', 'golang'],
+    label: lang === 'vi' ? 'Công nghệ thông tin' : 'Information Technology',
+    icon: Layout,
+    tint: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400',
+  },
+  {
+    keyword: 'Kinh doanh',
+    matchTerms: ['kinh doanh', 'bán hàng', 'sales', 'b2b', 'account executive', 'business development', 'crm'],
+    label: lang === 'vi' ? 'Kinh doanh & Bán hàng' : 'Sales & Business',
+    icon: TrendingUp,
+    tint: 'bg-sky-50 text-sky-600 dark:bg-sky-950/60 dark:text-sky-400',
+  },
+  {
+    keyword: 'Marketing',
+    matchTerms: ['marketing', 'seo', 'sem', 'content', 'digital marketing', 'growth', 'truyền thông'],
+    label: lang === 'vi' ? 'Marketing & Truyền thông' : 'Marketing & Media',
+    icon: Send,
+    tint: 'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400',
+  },
+  {
+    keyword: 'Tài chính',
+    matchTerms: ['tài chính', 'ngân hàng', 'kế toán', 'finance', 'financial', 'accounting', 'banking', 'fp&a', 'tax'],
+    label: lang === 'vi' ? 'Tài chính - Ngân hàng' : 'Finance & Banking',
+    icon: Building2,
+    tint: 'bg-violet-50 text-violet-600 dark:bg-violet-950/60 dark:text-violet-400',
+  },
+  {
+    keyword: 'Thiết kế',
+    matchTerms: ['thiết kế', 'đồ họa', 'design', 'designer', 'ui/ux', 'figma', 'ux'],
+    label: lang === 'vi' ? 'Thiết kế & Sáng tạo' : 'Design & Creative',
+    icon: Sparkles,
+    tint: 'bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400',
+  },
+  {
+    keyword: 'Nhân sự',
+    matchTerms: ['nhân sự', 'tuyển dụng', 'hành chính', 'talent acquisition', 'recruiter', 'recruitment', 'human resources'],
+    label: lang === 'vi' ? 'Nhân sự & Hành chính' : 'HR & Administration',
+    icon: Users,
+    tint: 'bg-teal-50 text-teal-600 dark:bg-teal-950/60 dark:text-teal-400',
+  },
 ];
 
 type TabKey = 'all' | 'salary' | 'urgent' | 'remote';
@@ -426,10 +463,10 @@ export const HomePage: React.FC = () => {
         setTotal(p.totalElements);
         const counts: Record<string, number> = {};
         for (const s of specialties) {
-          const kw = s.keyword.toLowerCase();
+          const terms = s.matchTerms?.map((t) => t.toLowerCase()) ?? [s.keyword.toLowerCase()];
           counts[s.keyword] = p.items.filter((j) => {
             const haystack = `${j.title ?? ''} ${j.description ?? ''} ${(j.skills ?? []).join(' ')}`.toLowerCase();
-            return haystack.includes(kw);
+            return terms.some((term) => haystack.includes(term));
           }).length;
         }
         setSpecialtyCounts(counts);
@@ -830,6 +867,13 @@ export const HomePage: React.FC = () => {
                       {c.description || (isVi ? 'Doanh nghiệp đang tuyển dụng trên TalentBridge.' : 'Leading employer hiring on TalentBridge.')}
                     </p>
                     <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      {(c.reviewCount ?? 0) > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60 font-bold">
+                          <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                          {(c.ratingAverage ?? 0).toFixed(1)}
+                          <span className="font-semibold text-slate-500 dark:text-slate-400">({c.reviewCount})</span>
+                        </span>
+                      )}
                       {c.city && (
                         <span className="inline-flex items-center gap-1">
                           <MapPin className="w-3.5 h-3.5" />

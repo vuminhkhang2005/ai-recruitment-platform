@@ -59,6 +59,7 @@ export interface JobDetailPanelProps {
   company: Company | null;
   match?: MatchScore;
   recommendedJobs?: RecommendedJob[];
+  selectedCvId?: number | null;
   onSelectJob?: (job: Job) => void;
   onApplied?: () => void;
   standalone?: boolean;
@@ -69,6 +70,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
   company,
   match,
   recommendedJobs = [],
+  selectedCvId,
   onSelectJob,
   onApplied,
   standalone = false,
@@ -89,7 +91,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
     setAtsData(null);
     setAnalyzingCvJd(false);
     setShowTips(false);
-  }, [job.id]);
+  }, [job.id, selectedCvId]);
 
   const handleQuickAnalyzeCvJd = async () => {
     if (!isAuthenticated) {
@@ -98,7 +100,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
     }
     setAnalyzingCvJd(true);
     try {
-      const res = await aiApi.matchAnalysis(job.id);
+      const res = await aiApi.matchAnalysis(job.id, selectedCvId);
       setAtsData(res);
     } catch {
       // fallback to opening ApplyModal with AI enabled
@@ -334,10 +336,14 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     {language === 'vi' ? 'Đánh giá mức độ: ' : 'Rating level: '}
-                    <span className="font-bold text-indigo-600 dark:text-indigo-400 uppercase">
-                      {atsData.matchRating === 'HIGH' ? (language === 'vi' ? 'Rất cao (Ưu tiên phỏng vấn)' : 'High (Interview Priority)') :
-                       atsData.matchRating === 'MEDIUM' ? (language === 'vi' ? 'Tiềm năng' : 'Medium / Potential') :
-                       (language === 'vi' ? 'Cần bổ sung kỹ năng' : 'Needs Skill Growth')}
+                    <span className="font-bold text-indigo-600 dark:text-indigo-400 uppercase" data-testid="ats-match-rating-label">
+                      {atsData.matchRating === 'STRONG MATCH' || atsData.matchRating === 'HIGH'
+                        ? (language === 'vi' ? 'Rất cao (Ưu tiên phỏng vấn)' : 'Strong Match (Interview Priority)')
+                        : atsData.matchRating === 'GOOD MATCH'
+                        ? (language === 'vi' ? 'Phù hợp tốt' : 'Good Match')
+                        : atsData.matchRating === 'POTENTIAL FIT' || atsData.matchRating === 'MEDIUM'
+                        ? (language === 'vi' ? 'Tiềm năng' : 'Potential Fit')
+                        : (language === 'vi' ? 'Cần bổ sung kỹ năng' : 'Needs Skill Growth')}
                     </span>
                   </p>
                 </div>
@@ -351,6 +357,13 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
               </span>
             </div>
 
+            {atsData.analyzedCvName && (
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <span className="font-semibold">{language === 'vi' ? 'CV đang đối chiếu:' : 'Analyzed CV:'}</span>
+                <span className="font-bold text-slate-700 dark:text-slate-200 truncate">{atsData.analyzedCvName}</span>
+              </p>
+            )}
+
             {/* Progress bar */}
             <div className="h-2 rounded-full bg-indigo-100 dark:bg-indigo-950 overflow-hidden">
               <div
@@ -358,6 +371,41 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
                 style={{ width: `${atsData.matchScore}%` }}
               />
             </div>
+
+            {/* 3-Criteria Comparison (Skills, Experience, Location) */}
+            {atsData.jdCriteriaComparison && atsData.jdCriteriaComparison.length > 0 && (
+              <div className="rounded-xl bg-white/95 dark:bg-slate-900/90 border border-indigo-200/70 dark:border-indigo-900/60 divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                {atsData.jdCriteriaComparison.map((row) => {
+                  const isMatch = row.status === 'MATCH';
+                  const isPartial = row.status === 'PARTIAL';
+                  return (
+                    <div key={row.criterion} className="p-2.5 flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${isMatch ? 'bg-emerald-500' : isPartial ? 'bg-amber-500' : 'bg-rose-500'}`} />
+                          <span>{row.criterion}</span>
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                          <span className="font-semibold">{language === 'vi' ? 'Yêu cầu JD:' : 'JD:'}</span> {row.jdValue}
+                        </p>
+                        <p className="text-[11px] text-slate-700 dark:text-slate-300">
+                          <span className="font-semibold">{language === 'vi' ? 'Hồ sơ của bạn:' : 'Your CV:'}</span> {row.cvValue}
+                        </p>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-md font-extrabold text-[10px] shrink-0 ${
+                        isMatch
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                          : isPartial
+                          ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                          : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                      }`}>
+                        {isMatch ? (language === 'vi' ? 'Đạt' : 'Match') : isPartial ? (language === 'vi' ? 'Một phần' : 'Partial') : (language === 'vi' ? 'Chưa đạt' : 'Gap')}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Matched vs Missing Skills */}
             <div className="grid sm:grid-cols-2 gap-2 text-xs">

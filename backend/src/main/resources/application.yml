@@ -129,3 +129,8 @@ app:
     # accounts get a real hash of default-password at startup so demo logins work.
     reset-placeholder-passwords: ${APP_DEMO_RESET_PASSWORDS:true}
     default-password: ${APP_DEMO_PASSWORD:Password@123}
+
+# Python FastAPI AI Engine (Two-Tower Neural Bi-Encoder + Cross-Attention Scorer)
+ai:
+  engine:
+    url: ${AI_ENGINE_URL:http://localhost:8000}

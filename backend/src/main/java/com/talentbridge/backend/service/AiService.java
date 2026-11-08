@@ -152,14 +152,14 @@ public class AiService {
         }
 
         if (!StringUtils.hasText(content) && StringUtils.hasText(rawText)) {
-            content = rawText;
+            content = normalizeUnicodeNfc(rawText);
         }
 
         if (!StringUtils.hasText(content)) {
             throw new BadRequestException("Không tìm thấy nội dung văn bản CV để xử lý.");
         }
 
-        return extractStructuredResume(content, candidateUserId);
+        return extractStructuredResume(normalizeUnicodeNfc(content), candidateUserId);
     }
 
     /**
@@ -298,7 +298,7 @@ public class AiService {
                 if (StringUtils.hasText(profile.getBio())) cvContentBuilder.append(profile.getBio()).append("\n");
             }
         }
-        String cvRawText = cvContentBuilder.toString();
+        String cvRawText = normalizeUnicodeNfc(cvContentBuilder.toString());
         String cvTextLower = cvRawText.toLowerCase();
 
         // Extract pure CV metadata directly from the CV text when available
@@ -322,9 +322,10 @@ public class AiService {
         String parsedCvHeadline = hasRealCvFileText
                 ? extractHeadlineFromCvText(cvRawText)
                 : (profile != null && StringUtils.hasText(profile.getHeadline()) ? profile.getHeadline() : "Candidate");
-        String parsedCvCity = hasRealCvFileText
-                ? extractCityFromCvText(cvTextLower)
-                : (profile != null && StringUtils.hasText(profile.getCity()) ? profile.getCity() : "Ho Chi Minh City");
+        String detectedCvCity = detectCityFromCvText(cvRawText);
+        String parsedCvCity = detectedCvCity != null
+                ? detectedCvCity
+                : (profile != null && StringUtils.hasText(profile.getCity()) ? profile.getCity().trim() : "Vietnam");
 
         // 2. Experience & Level requirement of the target JD
         String jdLevelUpper = job.getExpLevel() != null ? job.getExpLevel().toUpperCase() : "JUNIOR";
@@ -659,10 +660,16 @@ public class AiService {
 
     // ------------------------------------------------------------------ helpers
 
+    static String normalizeUnicodeNfc(String text) {
+        if (text == null) return "";
+        return java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFC);
+    }
+
     /**
      * Extracts plain text from .pdf (Apache PDFBox), .docx (OpenXML word/document.xml), or UTF-8 text files.
+     * Preserves line breaks for both single-column and 2-column resumes and normalizes Unicode to NFC.
      */
-    private String extractDocumentText(byte[] bytes, String fileName) {
+    String extractDocumentText(byte[] bytes, String fileName) {
         if (bytes == null || bytes.length == 0) {
             return "";
         }
@@ -674,9 +681,10 @@ public class AiService {
         if (isPdfMagic || lowerName.endsWith(".pdf")) {
             try (PDDocument pdfDoc = Loader.loadPDF(bytes)) {
                 PDFTextStripper stripper = new PDFTextStripper();
+                stripper.setSortByPosition(true);
                 String extracted = stripper.getText(pdfDoc);
                 if (StringUtils.hasText(extracted)) {
-                    return extracted.trim();
+                    return normalizeUnicodeNfc(extracted.trim());
                 }
             } catch (Exception e) {
                 log.debug("PDFBox fallback to UTF-8 string for {}: {}", fileName, e.getMessage());
@@ -685,15 +693,26 @@ public class AiService {
 
         // 2. Check DOCX (ZIP archive containing word/document.xml)
         boolean isZipMagic = bytes.length > 4 && bytes[0] == 'P' && bytes[1] == 'K';
-        if (isZipMagic && lowerName.endsWith(".docx")) {
+        if (isZipMagic && (lowerName.endsWith(".docx") || lowerName.isEmpty())) {
             try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(bytes))) {
                 ZipEntry entry;
                 while ((entry = zis.getNextEntry()) != null) {
                     if ("word/document.xml".equalsIgnoreCase(entry.getName())) {
                         String xml = new String(zis.readAllBytes(), StandardCharsets.UTF_8);
-                        String stripped = xml.replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim();
+                        String withNewlines = xml
+                                .replaceAll("(?i)</w:p>", "\n")
+                                .replaceAll("(?i)</w:tr>", "\n")
+                                .replaceAll("(?i)<w:br[^>]*/?>", "\n")
+                                .replaceAll("(?i)<w:cr[^>]*/?>", "\n")
+                                .replaceAll("(?i)</w:tc>", "   ");
+                        String stripped = withNewlines
+                                .replaceAll("<[^>]+>", " ")
+                                .replaceAll("[ \\t\\x0B\\f]+", " ")
+                                .replaceAll(" *\\n *", "\n")
+                                .replaceAll("\\n{3,}", "\n\n")
+                                .trim();
                         if (StringUtils.hasText(stripped)) {
-                            return stripped;
+                            return normalizeUnicodeNfc(stripped);
                         }
                     }
                 }
@@ -702,7 +721,7 @@ public class AiService {
             }
         }
 
-        return new String(bytes, StandardCharsets.UTF_8);
+        return normalizeUnicodeNfc(new String(bytes, StandardCharsets.UTF_8));
     }
 
     /**
@@ -742,12 +761,13 @@ public class AiService {
         return null;
     }
 
-    private AiResumeParseResultDto extractStructuredResume(String content, Long candidateUserId) {
+    AiResumeParseResultDto extractStructuredResume(String rawContent, Long candidateUserId) {
+        String content = normalizeUnicodeNfc(rawContent != null ? rawContent : "");
         String lower = content.toLowerCase();
 
         // 1. Contact info extraction
         String email = extractPattern(content, "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}");
-        String phone = extractPattern(content, "(\\+?84|0)[0-9]{8,10}");
+        String phone = extractPhoneFromCvText(content);
 
         User user = candidateUserId != null ? userRepository.findById(candidateUserId).orElse(null) : null;
         String fullName = user != null ? user.getFullName() : extractFullName(content);
@@ -810,9 +830,10 @@ public class AiService {
                 .build());
 
         // 7. Educations
+        String extractedSchool = extractSchoolFromCvText(content);
         List<ExtractedEducationItem> educations = new ArrayList<>();
         educations.add(ExtractedEducationItem.builder()
-                .school("University of Information Technology & Engineering")
+                .school(extractedSchool != null ? extractedSchool : "University of Information Technology & Engineering")
                 .degree("B.S. in Software Engineering")
                 .year(baseCvYears == 0 ? "2023 - 2027 (Expected)" : "2019 - 2023")
                 .details("Completed Capstone & Full-stack Web Engineering Projects.")
@@ -845,11 +866,50 @@ public class AiService {
         return null;
     }
 
-    private String extractFullName(String text) {
-        String[] lines = text.split("\\r?\\n");
+    static String extractPhoneFromCvText(String text) {
+        if (!StringUtils.hasText(text)) return null;
+        Matcher m = Pattern.compile("(?:\\(?\\+?84\\)?[\\s.-]?|0)\\d(?:[\\s.-]?\\d){7,9}\\b").matcher(text);
+        while (m.find()) {
+            String raw = m.group().trim();
+            String digitsOnly = raw.replaceAll("[^0-9+]", "");
+            if (digitsOnly.length() >= 9 && digitsOnly.length() <= 13) {
+                return raw.replaceAll("\\s+", " ");
+            }
+        }
+        return null;
+    }
+
+    static String extractSchoolFromCvText(String text) {
+        if (!StringUtils.hasText(text)) return null;
+        String[] lines = normalizeUnicodeNfc(text).split("\\r?\\n");
         for (String line : lines) {
-            String trimmed = line.trim();
-            if (trimmed.length() >= 3 && trimmed.length() <= 40 && !trimmed.contains("@") && !trimmed.contains("http")) {
+            for (String segment : line.split("\\s{3,}|\\t|\\|")) {
+                String clean = segment.trim();
+                if (clean.length() < 6 || clean.length() > 110) continue;
+                String stripped = stripAccentsLower(clean);
+                if (SCHOOL_LINE.matcher(stripped).find() || findFirstCity(stripped, SCHOOL_CITY_PATTERNS) != null) {
+                    return clean;
+                }
+            }
+        }
+        return null;
+    }
+
+    static String extractFullName(String text) {
+        if (!StringUtils.hasText(text)) return "Ứng viên";
+        Set<String> ignoredHeaders = Set.of(
+                "CV", "RESUME", "CURRICULUM VITAE", "CONTACT", "CONTACT INFO", "PERSONAL INFORMATION",
+                "THÔNG TIN LIÊN HỆ", "LIÊN HỆ", "THÔNG TIN CÁ NHÂN", "SƠ YẾU LÝ LỊCH",
+                "OBJECTIVE", "SUMMARY", "PROFILE", "ABOUT ME", "SKILLS", "EDUCATION", "EXPERIENCE"
+        );
+        String[] lines = normalizeUnicodeNfc(text).split("\\r?\\n");
+        for (String line : lines) {
+            for (String col : line.split("\\s{3,}|\\t")) {
+                String trimmed = col.trim();
+                if (trimmed.length() < 3 || trimmed.length() > 45) continue;
+                if (trimmed.contains("@") || trimmed.contains("http") || trimmed.contains(":")) continue;
+                if (trimmed.matches(".*\\d{3,}.*")) continue;
+                if (ignoredHeaders.contains(trimmed.toUpperCase())) continue;
                 return trimmed;
             }
         }
@@ -905,46 +965,59 @@ public class AiService {
     }
 
     static List<String> extractAllSkillsFromCvText(String cvTextLower) {
+        String normalized = normalizeUnicodeNfc(cvTextLower != null ? cvTextLower : "").toLowerCase();
         List<String> detected = new ArrayList<>();
         for (Map.Entry<String, List<String>> entry : SKILL_TAXONOMY.entrySet()) {
             String skillName = entry.getKey();
-            if (skillMatchesCvText(cvTextLower, skillName)) {
+            if (skillMatchesCvText(normalized, skillName)) {
                 detected.add(skillName);
             }
         }
         return detected;
     }
 
+    private static final Pattern EXPLICIT_EXP_YEARS_FORWARD = Pattern.compile(
+            "\\b([1-9]|1[0-5])\\s*\\+?\\s*(?:years?|yrs?|năm)\\s+(?:of\\s+)?(?:experience|kinh nghiệm|làm việc)");
+    private static final Pattern EXPLICIT_EXP_YEARS_REVERSE = Pattern.compile(
+            "(?:experience|kinh nghiệm(?:\\s+làm\\s+việc)?)\\s*(?:[:：-]\\s*)?(?:hơn\\s+|trên\\s+|over\\s+|more\\s+than\\s+|around\\s+|khoảng\\s+)?([1-9]|1[0-5])\\s*\\+?\\s*(?:years?|yrs?|năm)");
+
     static boolean isInternOrFresherText(String cvTextLower) {
         if (!StringUtils.hasText(cvTextLower)) return false;
-        boolean hasExplicitYears = Pattern.compile("\\b([1-9]|1[0-5])\\s*\\+?\\s*(?:years?|năm)\\s+(?:of\\s+)?(?:experience|kinh nghiệm|làm việc)")
-                .matcher(cvTextLower).find();
+        String normalized = normalizeUnicodeNfc(cvTextLower).toLowerCase();
+        boolean hasExplicitYears = EXPLICIT_EXP_YEARS_FORWARD.matcher(normalized).find()
+                || EXPLICIT_EXP_YEARS_REVERSE.matcher(normalized).find();
         if (hasExplicitYears) return false;
-        return containsSkillKeyword(cvTextLower, "intern")
-                || containsSkillKeyword(cvTextLower, "internship")
-                || containsSkillKeyword(cvTextLower, "fresher")
-                || cvTextLower.contains("final-year")
-                || containsSkillKeyword(cvTextLower, "student")
-                || cvTextLower.contains("sinh viên")
-                || cvTextLower.contains("thực tập")
-                || cvTextLower.contains("mới tốt nghiệp");
+        return containsSkillKeyword(normalized, "intern")
+                || containsSkillKeyword(normalized, "internship")
+                || containsSkillKeyword(normalized, "fresher")
+                || normalized.contains("final-year")
+                || containsSkillKeyword(normalized, "student")
+                || normalized.contains("sinh viên")
+                || normalized.contains("thực tập")
+                || normalized.contains("mới tốt nghiệp");
     }
 
     static int extractExperienceYearsFromCvText(String cvTextLower) {
-        // Check explicit "X years of experience" or "X năm kinh nghiệm"
-        Pattern expPattern = Pattern.compile("\\b([1-9]|1[0-5])\\s*\\+?\\s*(?:years?|năm)\\s+(?:of\\s+)?(?:experience|kinh nghiệm|làm việc)");
-        Matcher m = expPattern.matcher(cvTextLower);
+        if (!StringUtils.hasText(cvTextLower)) return 1;
+        String normalized = normalizeUnicodeNfc(cvTextLower).toLowerCase();
         int maxFound = -1;
-        while (m.find()) {
+        Matcher m1 = EXPLICIT_EXP_YEARS_FORWARD.matcher(normalized);
+        while (m1.find()) {
             try {
-                maxFound = Math.max(maxFound, Integer.parseInt(m.group(1)));
+                maxFound = Math.max(maxFound, Integer.parseInt(m1.group(1)));
+            } catch (Exception ignored) {}
+        }
+        Matcher m2 = EXPLICIT_EXP_YEARS_REVERSE.matcher(normalized);
+        while (m2.find()) {
+            try {
+                maxFound = Math.max(maxFound, Integer.parseInt(m2.group(1)));
             } catch (Exception ignored) {}
         }
         if (maxFound >= 0) {
             return maxFound;
         }
         // If CV mentions intern/fresher/final-year student without explicit years of experience -> 0 years
-        if (isInternOrFresherText(cvTextLower)) {
+        if (isInternOrFresherText(normalized)) {
             return 0;
         }
         return 1;
@@ -952,7 +1025,7 @@ public class AiService {
 
     static boolean isRealReadableCvText(String txt) {
         if (!StringUtils.hasText(txt)) return false;
-        String trimmed = txt.trim();
+        String trimmed = normalizeUnicodeNfc(txt).trim();
         if (trimmed.length() < 220) return false;
         return !extractAllSkillsFromCvText(trimmed.toLowerCase()).isEmpty();
     }
@@ -1106,27 +1179,47 @@ public class AiService {
         return false;
     }
 
-    private String extractHeadlineFromCvText(String rawText) {
-        String[] lines = rawText.split("\\r?\\n");
+    static String extractHeadlineFromCvText(String rawText) {
+        if (!StringUtils.hasText(rawText)) return "Software Engineer";
+        String[] lines = normalizeUnicodeNfc(rawText).split("\\r?\\n");
         Set<String> sectionHeaders = Set.of(
-                "OBJECTIVE", "SUMMARY", "EDUCATION", "TECHNICAL SKILLS", "SKILLS",
+                "CV", "RESUME", "CURRICULUM VITAE", "CONTACT", "CONTACT INFO", "PERSONAL INFORMATION",
+                "THÔNG TIN LIÊN HỆ", "LIÊN HỆ", "THÔNG TIN CÁ NHÂN", "SƠ YẾU LÝ LỊCH",
+                "OBJECTIVE", "CAREER OBJECTIVE", "SUMMARY", "PROFILE", "ABOUT ME",
+                "EDUCATION", "TECHNICAL SKILLS", "SKILLS",
                 "EXPERIENCE", "WORK EXPERIENCE", "PROJECTS", "TEAM PROJECT", "PERSONAL PROJECT",
-                "MỤC TIÊU", "HỌC VẤN", "KỸ NĂNG", "KINH NGHIỆM", "DỰ ÁN"
+                "MỤC TIÊU", "MỤC TIÊU NGHỀ NGHIỆP", "GIỚI THIỆU", "HỌC VẤN", "KỸ NĂNG", "KINH NGHIỆM", "DỰ ÁN"
         );
         List<String> topLines = new ArrayList<>();
+        outer:
         for (String line : lines) {
-            String clean = line.replaceAll("[^\\p{L}\\p{N}\\s|/.+#&-]", " ").replaceAll("\\s+", " ").trim();
-            if (clean.length() < 4 || clean.length() > 95) continue;
-            if (clean.contains("@") || clean.contains("http") || clean.matches(".*\\d{8,}.*")) continue;
-            if (sectionHeaders.contains(clean.toUpperCase())) break;
-            topLines.add(clean);
-            if (topLines.size() >= 3) break;
+            for (String col : line.split("\\s{3,}|\\t")) {
+                String rawCol = col.trim();
+                if (rawCol.isEmpty()) continue;
+                String lowerCol = rawCol.toLowerCase();
+                if (lowerCol.contains("@") || lowerCol.contains("http") || lowerCol.contains("github.com")
+                        || lowerCol.contains("linkedin.com") || lowerCol.matches(".*\\d{4,}.*")
+                        || lowerCol.matches("^(phone|tel|email|address|location|city|dob|date of birth|địa chỉ|sđt|điện thoại|ngày sinh)\\b.*")) {
+                    continue;
+                }
+                String clean = rawCol.replaceAll("[^\\p{L}\\p{N}\\s|/.+#&()-]", " ").replaceAll("\\s+", " ").trim();
+                if (clean.length() < 4 || clean.length() > 95) continue;
+                String upper = clean.toUpperCase();
+                if (sectionHeaders.contains(upper)) {
+                    if (!topLines.isEmpty() && !Set.of("CV", "RESUME", "CURRICULUM VITAE", "CONTACT", "CONTACT INFO", "LIÊN HỆ", "THÔNG TIN LIÊN HỆ").contains(upper)) {
+                        break outer;
+                    }
+                    continue;
+                }
+                topLines.add(clean);
+                if (topLines.size() >= 3) break outer;
+            }
         }
         // Usually line 0 is Full Name, line 1 is Headline/Role (e.g., "Backend Software Engineer Intern | Full-stack Experience")
         if (topLines.size() >= 2) {
             return topLines.get(1);
         }
-        String lower = rawText.toLowerCase();
+        String lower = normalizeUnicodeNfc(rawText).toLowerCase();
         if (lower.contains("backend") && lower.contains("intern")) return "Backend Software Engineer Intern";
         if (lower.contains("backend")) return "Backend Software Engineer";
         if (lower.contains("fullstack") || lower.contains("full-stack")) return "Full-stack Developer";
@@ -1220,14 +1313,16 @@ public class AiService {
             }
         }
 
-        // 2. Contact header block (top lines before the first section heading), ignoring school lines
+        // 2. Contact header block (top lines before the first section heading), ignoring school segments
         int nonEmpty = 0;
         for (String line : lines) {
             if (line.isBlank()) continue;
-            if (SECTION_HEADING.matcher(line).matches() || ++nonEmpty > 8) break;
-            if (SCHOOL_LINE.matcher(line).find()) continue;
-            String city = findFirstCity(line, CITY_PATTERNS);
-            if (city != null) return new CityDetection(city, "CV_HEADER");
+            if (SECTION_HEADING.matcher(line).matches() || ++nonEmpty > 10) break;
+            for (String col : line.split("\\s{3,}|\\t")) {
+                if (col.isBlank() || SCHOOL_LINE.matcher(col).find()) continue;
+                String city = findFirstCity(col, CITY_PATTERNS);
+                if (city != null) return new CityDetection(city, "CV_HEADER");
+            }
         }
 
         // 3. University name
@@ -1393,7 +1488,7 @@ public class AiService {
             }
         }
 
-        String cvRawText = cvContentBuilder.toString();
+        String cvRawText = normalizeUnicodeNfc(cvContentBuilder.toString());
         String cvTextLower = cvRawText.toLowerCase();
         List<String> allDetectedCvSkills = extractAllSkillsFromCvText(cvTextLower);
         Set<String> allCandidateSkillNamesLower = new HashSet<>();

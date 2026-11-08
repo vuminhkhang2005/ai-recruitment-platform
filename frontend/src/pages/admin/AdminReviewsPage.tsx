@@ -135,13 +135,13 @@ export const AdminReviewsPage: React.FC = () => {
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder={isVi ? 'Tìm trong tiêu đề, ưu / nhược điểm' : 'Search title, pros, cons'}
-            className={`${inputCls} pl-9 !w-80`}
+            className={`${inputCls} pl-9 w-full sm:!w-80`}
             aria-label={isVi ? 'Tìm đánh giá' : 'Search reviews'}
           />
         </div>
@@ -196,7 +196,11 @@ export const AdminReviewsPage: React.FC = () => {
                     {r.authorName} &lt;{r.authorEmail}&gt;
                     {r.anonymous && ` · ${isVi ? 'đăng ẩn danh' : 'posted anonymously'}`}
                     {' · '}
-                    {r.experienceLevel}
+                    {r.experienceLevel === 'HIRED'
+                      ? (isVi ? 'Đã nhận việc / Nhân viên' : 'Hired / Employee')
+                      : r.experienceLevel === 'INTERVIEWED'
+                      ? (isVi ? 'Đã phỏng vấn' : 'Interviewed')
+                      : (isVi ? 'Ứng viên đã nộp CV' : 'Applicant')}
                     {' · '}
                     {new Date(r.createdAt).toLocaleString(isVi ? 'vi-VN' : 'en-GB')}
                   </p>

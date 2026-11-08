@@ -95,9 +95,11 @@ export const JobsPage: React.FC = () => {
           if (selectedRecCvId === null && recs.length > 0 && recs[0].analyzedCvId) {
             setSelectedRecCvId(recs[0].analyzedCvId);
           }
-          if (showAiRecommendations && recs.length > 0 && !routeJobId) {
-            setSelectedJobId(recs[0].job.id);
-            setSelectedJob(recs[0].job);
+          const topLocalRecs = recs.filter((r) => r.matchScore >= 52 && r.locationMatched !== false);
+          const firstRec = topLocalRecs[0] ?? recs[0];
+          if (showAiRecommendations && firstRec && !routeJobId) {
+            setSelectedJobId(firstRec.job.id);
+            setSelectedJob(firstRec.job);
           }
         })
         .catch(() => {})
@@ -106,6 +108,14 @@ export const JobsPage: React.FC = () => {
   }, [isAuthenticated, isRecruiter, selectedRecCvId]);
 
   const activeJobId = routeJobId ? Number(routeJobId) : selectedJobId;
+
+  const handleSelectJob = (nextJob: Job) => {
+    setSelectedJobId(nextJob.id);
+    setSelectedJob(nextJob);
+    if (routeJobId) {
+      navigate(`/jobs/${nextJob.id}${location.search}`, { replace: true });
+    }
+  };
 
   // Title: If viewing a job, show job title, otherwise show search query
   usePageTitle(
@@ -296,9 +306,9 @@ export const JobsPage: React.FC = () => {
 
               <select aria-label="Hình thức" value={type} onChange={(e) => update({ type: e.target.value })} className={selectCls}>
                 <option value="">{isVi ? 'Tất cả hình thức' : 'All Job Types'}</option>
-                {['FULL_TIME', 'HYBRID', 'INTERNSHIP'].map((k) => (
+                {Object.entries(jobTypes).map(([k, v]) => (
                   <option key={k} value={k}>
-                    {jobTypes[k]}
+                    {v}
                   </option>
                 ))}
               </select>
@@ -462,9 +472,10 @@ export const JobsPage: React.FC = () => {
                         onClick={() => {
                           const nextVal = !showAiRecommendations;
                           setShowAiRecommendations(nextVal);
-                          if (nextVal && recommendedJobs.length > 0 && !routeJobId) {
-                            setSelectedJobId(recommendedJobs[0].job.id);
-                            setSelectedJob(recommendedJobs[0].job);
+                          const firstRec = topRecommendedJobs[0] ?? recommendedJobs[0];
+                          if (nextVal && firstRec && !routeJobId) {
+                            setSelectedJobId(firstRec.job.id);
+                            setSelectedJob(firstRec.job);
                           }
                         }}
                         className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 shadow-sm shrink-0 cursor-pointer ${
@@ -480,8 +491,8 @@ export const JobsPage: React.FC = () => {
                             ? 'Xem tất cả việc'
                             : 'Show All Jobs'
                           : isVi
-                            ? `Xem gợi ý (${recommendedJobs.length})`
-                            : `AI Matches (${recommendedJobs.length})`}
+                            ? `Xem gợi ý (${topRecommendedJobs.length})`
+                            : `AI Matches (${topRecommendedJobs.length})`}
                       </button>
                     </div>
 
@@ -605,10 +616,7 @@ export const JobsPage: React.FC = () => {
                               selected={isSelected}
                               compact
                               preserveSearch
-                              onClick={() => {
-                                setSelectedJobId(j.id);
-                                setSelectedJob(j);
-                              }}
+                              onClick={() => handleSelectJob(j)}
                             />
                             {/* Explainable AI Breakdown Card Footer */}
                             <div className="mx-1 px-3 py-2 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-900/50 rounded-xl text-[11px] space-y-1.5">
@@ -676,10 +684,7 @@ export const JobsPage: React.FC = () => {
                           selected={isSelected}
                           compact
                           preserveSearch
-                          onClick={() => {
-                            setSelectedJobId(j.id);
-                            setSelectedJob(j);
-                          }}
+                          onClick={() => handleSelectJob(j)}
                         />
                       );
                     })
@@ -724,10 +729,8 @@ export const JobsPage: React.FC = () => {
                     company={selectedCompany}
                     match={recMatchMap[selectedJob.id] ?? scores[selectedJob.id]}
                     recommendedJobs={topRecommendedJobs}
-                    onSelectJob={(nextJob) => {
-                      setSelectedJobId(nextJob.id);
-                      setSelectedJob(nextJob);
-                    }}
+                    selectedCvId={selectedRecCvId}
+                    onSelectJob={handleSelectJob}
                     onApplied={() => setReload((r) => r + 1)}
                   />
                 ) : loadingDetail ? (

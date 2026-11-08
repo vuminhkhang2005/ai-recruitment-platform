@@ -333,6 +333,52 @@ public class JobServiceImpl implements JobService {
         jobRepository.save(job);
     }
 
+    private static final String[][] BILINGUAL_DOMAIN_SYNONYMS = {
+            {"kinh doanh", "ban hang", "sales", "b2b", "account executive", "business development", "crm"},
+            {"tai chinh", "ngan hang", "ke toan", "kiem toan", "finance", "financial", "accounting", "banking", "fp&a", "tax"},
+            {"thiet ke", "do hoa", "design", "designer", "ui/ux", "ux", "figma", "creative"},
+            {"nhan su", "tuyen dung", "hanh chinh", "hr", "human resources", "talent acquisition", "recruiter", "recruitment"},
+            {"tiep thi", "quang cao", "truyen thong", "marketing", "digital marketing", "seo", "content", "growth"},
+            {"lap trinh", "phan mem", "cong nghe thong tin", "cntt", "developer", "software engineer", "backend", "frontend", "fullstack"},
+            {"kiem thu", "qa", "tester", "test automation", "quality assurance"},
+            {"du lieu", "tri tue nhan tao", "data", "ai", "machine learning", "analytics"},
+            {"thuc tap", "thuc tap sinh", "intern", "internship", "fresher"}
+    };
+
+    public static List<String> expandBilingualSearchKeywords(String rawKeyword) {
+        if (rawKeyword == null || rawKeyword.trim().isEmpty()) {
+            return List.of();
+        }
+        String clean = java.text.Normalizer.normalize(rawKeyword.trim(), java.text.Normalizer.Form.NFC).toLowerCase();
+        String ascii = java.text.Normalizer.normalize(clean, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replace('đ', 'd')
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        java.util.LinkedHashSet<String> expanded = new java.util.LinkedHashSet<>();
+        expanded.add(clean);
+        if (!ascii.isEmpty()) {
+            expanded.add(ascii);
+        }
+
+        for (String[] group : BILINGUAL_DOMAIN_SYNONYMS) {
+            boolean matchedGroup = false;
+            for (String term : group) {
+                if (clean.equals(term) || ascii.equals(term) || (ascii.length() >= 4 && ascii.contains(term))) {
+                    matchedGroup = true;
+                    break;
+                }
+            }
+            if (matchedGroup) {
+                for (String term : group) {
+                    expanded.add(term);
+                }
+            }
+        }
+        return new ArrayList<>(expanded);
+    }
+
     private Specification<Job> buildSpecification(JobFilterRequestDto filter) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -342,23 +388,27 @@ public class JobServiceImpl implements JobService {
             predicates.add(cb.isNull(root.get("deletedAt")));
             predicates.add(cb.or(cb.isNull(root.get("deadline")), cb.greaterThan(root.get("deadline"), LocalDateTime.now())));
 
-            // Keyword search in title, description, company name or skill names
+            // Keyword search in title, description, company name or skill names (with VI <-> EN domain synonym expansion)
             if (filter.getKeyword() != null && !filter.getKeyword().trim().isEmpty()) {
-                String searchPattern = "%" + filter.getKeyword().trim().toLowerCase() + "%";
+                List<String> terms = expandBilingualSearchKeywords(filter.getKeyword());
                 Join<Job, Company> companyJoin = root.join("company", JoinType.LEFT);
+                List<Predicate> keywordOrPredicates = new ArrayList<>();
 
-                Predicate titleMatch = cb.like(cb.lower(root.get("title")), searchPattern);
-                Predicate descMatch = cb.like(cb.lower(root.get("description")), searchPattern);
-                Predicate companyMatch = cb.like(cb.lower(companyJoin.get("name")), searchPattern);
+                for (String term : terms) {
+                    String searchPattern = "%" + term.toLowerCase() + "%";
+                    keywordOrPredicates.add(cb.like(cb.lower(root.get("title")), searchPattern));
+                    keywordOrPredicates.add(cb.like(cb.lower(root.get("description")), searchPattern));
+                    keywordOrPredicates.add(cb.like(cb.lower(companyJoin.get("name")), searchPattern));
 
-                Subquery<Long> skillQuery = query.subquery(Long.class);
-                Root<JobSkill> jobSkill = skillQuery.from(JobSkill.class);
-                skillQuery.select(jobSkill.get("id")).where(
-                        cb.equal(jobSkill.get("job"), root),
-                        cb.like(cb.lower(jobSkill.get("skill").get("name")), searchPattern));
-                Predicate skillMatch = cb.exists(skillQuery);
+                    Subquery<Long> skillQuery = query.subquery(Long.class);
+                    Root<JobSkill> jobSkill = skillQuery.from(JobSkill.class);
+                    skillQuery.select(jobSkill.get("id")).where(
+                            cb.equal(jobSkill.get("job"), root),
+                            cb.like(cb.lower(jobSkill.get("skill").get("name")), searchPattern));
+                    keywordOrPredicates.add(cb.exists(skillQuery));
+                }
 
-                predicates.add(cb.or(titleMatch, descMatch, companyMatch, skillMatch));
+                predicates.add(cb.or(keywordOrPredicates.toArray(new Predicate[0])));
             }
 
             // City location filter (supports both English and Vietnamese city names)

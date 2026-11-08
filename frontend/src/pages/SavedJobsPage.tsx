@@ -49,7 +49,7 @@ export const SavedJobsPage: React.FC = () => {
                       {s.title}
                     </Link>
                     <p className="text-sm text-slate-600">{s.companyName}</p>
-                    <p className="mt-2 inline-block px-2.5 py-0.5 rounded-lg bg-emerald-100/90 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-black text-xs border border-emerald-200/90 dark:border-emerald-800/60">{vi ? s.salaryFormatted : formatSalary(s.salaryFormatted, 'en')}</p>
+                    <p className="mt-2 inline-block px-2.5 py-0.5 rounded-lg bg-emerald-100/90 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-black text-xs border border-emerald-200/90 dark:border-emerald-800/60">{formatSalary(s.salaryFormatted, language)}</p>
                     <div className="mt-1 flex flex-wrap gap-x-4 text-xs text-slate-500">
                       {s.locationCity && <span>{vi ? s.locationCity : CITY_EN[s.locationCity] ?? s.locationCity}</span>}
                       <span>{vi ? 'Đã lưu ' : 'Saved '}{formatDate(s.savedAt, language)}</span>

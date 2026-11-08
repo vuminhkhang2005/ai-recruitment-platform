@@ -177,7 +177,7 @@ const ProfileForm: React.FC<{ profile: UserProfile; onSaved: (p: UserProfile) =>
 const PROFICIENCY_VI: Record<string, string> = { BEGINNER: 'Cơ bản', INTERMEDIATE: 'Khá', ADVANCED: 'Thành thạo', EXPERT: 'Chuyên gia' };
 const PROFICIENCY_EN: Record<string, string> = { BEGINNER: 'Beginner', INTERMEDIATE: 'Intermediate', ADVANCED: 'Advanced', EXPERT: 'Expert' };
 
-const SkillsEditor: React.FC = () => {
+const SkillsEditor: React.FC<{ refreshKey?: number }> = ({ refreshKey = 0 }) => {
   const toast = useToast();
   const { language } = useLanguage();
   const isVi = language === 'vi';
@@ -195,12 +195,15 @@ const SkillsEditor: React.FC = () => {
   useEffect(() => {
     candidateApi
       .getSkills()
-      .then(setSkills)
+      .then((res) => {
+        setSkills(res);
+        setDirty(false);
+      })
       .catch((e: Error) => {
         setSkills([]);
         setError(e.message);
       });
-  }, []);
+  }, [refreshKey]);
 
   const add = (e: React.FormEvent) => {
     e.preventDefault();
@@ -323,7 +326,7 @@ const SkillsEditor: React.FC = () => {
 
 // ------------------------------------------------------------------ CVs
 
-const CvManager: React.FC = () => {
+const CvManager: React.FC<{ onSkillsSynced?: () => void }> = ({ onSkillsSynced }) => {
   const toast = useToast();
   const { language } = useLanguage();
   const lang: 'vi' | 'en' = language === 'en' ? 'en' : 'vi';
@@ -471,6 +474,7 @@ const CvManager: React.FC = () => {
           existingCvs={cvs || []}
           onSkillsSynced={() => {
             void load();
+            onSkillsSynced?.();
             toast(isVi ? 'Đã cập nhật kỹ năng vào hồ sơ thành công!' : 'Skills synced to profile!');
           }}
         />
@@ -567,6 +571,7 @@ export const ProfilePage: React.FC = () => {
   const location = useLocation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [skillsRefreshKey, setSkillsRefreshKey] = useState(0);
   const { applications } = useMyApplications();
   const { saved } = useSavedJobs();
   usePageTitle(isCandidate ? (isVi ? 'Hồ sơ & CV' : 'Profile & CVs') : isVi ? 'Tài khoản' : 'Account');
@@ -707,7 +712,7 @@ export const ProfilePage: React.FC = () => {
           title={isVi ? 'CV của tôi' : 'My CVs'}
           description={isVi ? 'CV mặc định sẽ được chọn sẵn khi bạn ứng tuyển.' : 'Your default CV will be pre-selected when you apply for jobs.'}
         >
-          <CvManager />
+          <CvManager onSkillsSynced={() => setSkillsRefreshKey((k) => k + 1)} />
         </Card>
       )}
       {isCandidate && (
@@ -720,7 +725,7 @@ export const ProfilePage: React.FC = () => {
               : 'Used to compute AI match scores between your profile and job requirements.'
           }
         >
-          <SkillsEditor />
+          <SkillsEditor refreshKey={skillsRefreshKey} />
         </Card>
       )}
       <Card id="info" title={isVi ? 'Thông tin cá nhân' : 'Personal Information'}>
